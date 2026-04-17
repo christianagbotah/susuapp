@@ -657,7 +657,7 @@ export function CustomerLoans() {
 
             {/* Apply Dialog */}
             <Dialog open={applyDialogOpen} onOpenChange={setApplyDialogOpen}>
-              <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogContent className="mx-4 sm:mx-0 sm:max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Landmark className="h-5 w-5 text-emerald-600" />
@@ -690,10 +690,11 @@ export function CustomerLoans() {
                         <Input
                           id="apply-amount"
                           type="number"
+                          inputMode="decimal"
                           placeholder={`Min ${selectedProduct.minAmount}, Max ${selectedProduct.maxAmount}`}
                           value={applicationForm.amount}
                           onChange={(e) => setApplicationForm({ ...applicationForm, amount: e.target.value })}
-                          className="pl-12"
+                          className="pl-12 h-12"
                           min={selectedProduct.minAmount}
                           max={selectedProduct.maxAmount}
                           step="0.01"
@@ -859,9 +860,10 @@ export function CustomerLoans() {
                         <Input
                           id="calc-amount"
                           type="number"
+                          inputMode="decimal"
                           value={calcAmount}
                           onChange={(e) => setCalcAmount(e.target.value)}
-                          className="pl-12"
+                          className="pl-12 h-12"
                           min="0"
                           step="100"
                         />
@@ -878,9 +880,10 @@ export function CustomerLoans() {
                         <Input
                           id="calc-rate"
                           type="number"
+                          inputMode="decimal"
                           value={calcRate}
                           onChange={(e) => setCalcRate(e.target.value)}
-                          className="pr-8"
+                          className="pr-8 h-12"
                           min="0"
                           max="100"
                           step="0.5"
@@ -900,8 +903,10 @@ export function CustomerLoans() {
                       <Input
                         id="calc-term"
                         type="number"
+                        inputMode="numeric"
                         value={calcTerm}
                         onChange={(e) => setCalcTerm(e.target.value)}
+                        className="h-12"
                         min="1"
                         max="360"
                         step="1"

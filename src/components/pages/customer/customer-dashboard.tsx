@@ -188,14 +188,14 @@ export function CustomerDashboard() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 p-4 sm:p-6"
+      className="space-y-6 p-4 lg:p-6 overscroll-contain"
     >
       {/* ==============================
           1. Welcome Banner
           ============================== */}
       <motion.div variants={itemVariants}>
         <Card className="overflow-hidden border-0 shadow-lg shadow-emerald-900/10">
-          <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 px-5 py-6 sm:px-8 sm:py-8">
+          <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-4 lg:px-8 lg:py-8">
             {/* Decorative circles */}
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
             <div className="pointer-events-none absolute -bottom-16 -left-8 h-40 w-40 rounded-full bg-white/5" />
@@ -237,22 +237,22 @@ export function CustomerDashboard() {
       {/* ==============================
           2. Stats Row
           ============================== */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 lg:gap-4 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
             <motion.div key={stat.title} variants={itemVariants}>
-              <Card className="border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
-                <CardContent className="flex items-start gap-4 p-5">
+              <Card className="border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md touch-manipulation">
+                <CardContent className="flex flex-col items-center gap-2 p-3 lg:flex-row lg:items-start lg:gap-4 lg:p-5">
                   <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${stat.iconBg}`}>
                     <Icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-slate-500">{stat.title}</p>
-                    <p className="mt-0.5 text-lg font-bold tracking-tight text-slate-900">
+                  <div className="min-w-0 flex-1 text-center lg:text-left">
+                    <p className="text-[10px] font-medium text-slate-500 lg:text-xs">{stat.title}</p>
+                    <p className="mt-0.5 text-base font-bold tracking-tight text-slate-900 lg:text-lg">
                       {stat.value}
                     </p>
-                    <div className="mt-1 flex items-center gap-1.5">
+                    <div className="mt-1 flex items-center justify-center gap-1.5 lg:justify-start">
                       {stat.trend && (
                         <span
                           className={`flex items-center gap-0.5 text-xs font-medium ${
@@ -267,7 +267,7 @@ export function CustomerDashboard() {
                           {stat.trend.value}
                         </span>
                       )}
-                      <span className="truncate text-xs text-slate-400">{stat.subtitle}</span>
+                      <span className="truncate text-[10px] text-slate-400 lg:text-xs">{stat.subtitle}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -281,7 +281,7 @@ export function CustomerDashboard() {
           3. Quick Actions
           ============================== */}
       <motion.div variants={itemVariants}>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="flex gap-3 overflow-x-auto flex-nowrap overscroll-x-contain scrollbar-none lg:grid lg:grid-cols-4 lg:overflow-visible">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
@@ -290,7 +290,7 @@ export function CustomerDashboard() {
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
               >
-                <Card className="group cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md">
+                <Card className="group min-w-[120px] shrink-0 cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md lg:min-w-0 touch-manipulation">
                   <CardContent className="flex flex-col items-center gap-3 p-4 text-center">
                     <div
                       className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-colors ${action.bg}`}
@@ -527,7 +527,7 @@ export function CustomerDashboard() {
                 </CardHeader>
                 <CardContent className="p-0">
                   {/* Desktop table */}
-                  <div className="hidden sm:block">
+                  <div className="hidden sm:block overscroll-contain">
                     <Table>
                       <TableHeader>
                         <TableRow className="border-slate-100 hover:bg-transparent">
@@ -575,14 +575,14 @@ export function CustomerDashboard() {
                   </div>
 
                   {/* Mobile card list */}
-                  <div className="space-y-1 p-3 sm:hidden">
+                  <div className="space-y-1 p-3 sm:hidden overscroll-contain">
                     {recentTransactions.map((txn) => {
                       const typeInfo = getTxnTypeBadge(txn.type);
                       const positive = isPositiveAmount(txn.type);
                       return (
                         <div
                           key={txn.id}
-                          className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3"
+                          className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3 touch-manipulation"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-xs font-medium text-slate-800">
@@ -597,7 +597,7 @@ export function CustomerDashboard() {
                           </div>
                           <div className="ml-3 text-right">
                             <p
-                              className={`text-sm font-semibold ${
+                              className={`text-base font-semibold lg:text-sm ${
                                 positive ? 'text-emerald-600' : 'text-red-600'
                               }`}
                             >

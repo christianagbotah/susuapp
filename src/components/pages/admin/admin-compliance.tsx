@@ -70,7 +70,7 @@ export function AdminCompliance() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {[
           { label: 'Open Cases', value: openCases, icon: FileWarning, color: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30' },
           { label: 'Investigating', value: investigating, icon: Search, color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30' },
@@ -100,7 +100,7 @@ export function AdminCompliance() {
             <div className="space-y-3">
               {criticalAlerts.map(report => (
                 <motion.div key={report.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                  className="flex items-start gap-3 rounded-lg border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/10 p-4">
+                  className="flex items-start gap-3 rounded-lg border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/10 p-3 lg:p-4 touch-manipulation">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
                     <AlertTriangle className="h-5 w-5 text-red-600" />
                   </div>
@@ -112,7 +112,7 @@ export function AdminCompliance() {
                     <p className="mt-1 text-sm font-semibold">{report.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{report.description}</p>
                   </div>
-                  <Button size="sm" variant="outline" className="shrink-0 text-xs border-red-300 text-red-600 hover:bg-red-50"
+                  <Button size="sm" variant="outline" className="shrink-0 text-xs border-red-300 text-red-600 hover:bg-red-50 min-h-[44px]"
                     onClick={() => setSelectedReport(report)}>
                     <Eye className="mr-1 h-3 w-3" /> View
                   </Button>
@@ -120,7 +120,7 @@ export function AdminCompliance() {
               ))}
               {highAlerts.map(report => (
                 <motion.div key={report.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-                  className="flex items-start gap-3 rounded-lg border-2 border-orange-300 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10 p-4">
+                  className="flex items-start gap-3 rounded-lg border-2 border-orange-300 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10 p-3 lg:p-4 touch-manipulation">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
                     <ShieldAlert className="h-5 w-5 text-orange-600" />
                   </div>
@@ -132,7 +132,7 @@ export function AdminCompliance() {
                     <p className="mt-1 text-sm font-semibold">{report.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{report.description}</p>
                   </div>
-                  <Button size="sm" variant="outline" className="shrink-0 text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                  <Button size="sm" variant="outline" className="shrink-0 text-xs border-orange-300 text-orange-600 hover:bg-orange-50 min-h-[44px]"
                     onClick={() => setSelectedReport(report)}>
                     <Eye className="mr-1 h-3 w-3" /> View
                   </Button>
@@ -181,7 +181,7 @@ export function AdminCompliance() {
           </CardHeader>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto overscroll-x-contain">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -241,7 +241,7 @@ export function AdminCompliance() {
             {/* Mobile Cards */}
             <div className="md:hidden divide-y">
               {reports.map(report => (
-                <div key={report.id} className="p-4 space-y-2">
+                <div key={report.id} className="p-4 space-y-2 touch-manipulation">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-semibold text-sm">{report.title}</p>
@@ -256,14 +256,14 @@ export function AdminCompliance() {
                   </div>
                   {report.assignedTo && <p className="text-xs text-muted-foreground">Assigned: {report.assignedTo}</p>}
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setSelectedReport(report)}>
+                    <Button size="sm" variant="outline" className="text-xs min-h-[44px]" onClick={() => setSelectedReport(report)}>
                       <Eye className="mr-1 h-3 w-3" /> Details
                     </Button>
-                    <Button size="sm" variant="outline" className="text-xs" onClick={() => { setUpdateReport(report); setUpdateStatus(report.status); setUpdateNotes(''); }}>
+                    <Button size="sm" variant="outline" className="text-xs min-h-[44px]" onClick={() => { setUpdateReport(report); setUpdateStatus(report.status); setUpdateNotes(''); }}>
                       <RefreshCw className="mr-1 h-3 w-3" /> Update
                     </Button>
                     {!report.assignedTo && (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAssign(report)}>
+                      <Button size="sm" variant="outline" className="text-xs min-h-[44px]" onClick={() => handleAssign(report)}>
                         <UserCheck className="mr-1 h-3 w-3" /> Assign
                       </Button>
                     )}
@@ -277,7 +277,7 @@ export function AdminCompliance() {
 
       {/* View Details Dialog */}
       <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileWarning className="h-5 w-5" /> Compliance Report
@@ -315,7 +315,7 @@ export function AdminCompliance() {
 
       {/* Update Dialog */}
       <Dialog open={!!updateReport} onOpenChange={() => setUpdateReport(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5" /> Update Report

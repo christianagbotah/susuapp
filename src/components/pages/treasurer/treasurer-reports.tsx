@@ -185,13 +185,13 @@ export function TreasurerReports() {
       {/* Date Range Selector */}
       <motion.div {...fadeUp}>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 lg:p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Report Period:</span>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 overscroll-x-contain">
                 {([
                   { label: 'This Week', value: 'this_week' as DateRange },
                   { label: 'This Month', value: 'this_month' as DateRange },
@@ -201,7 +201,7 @@ export function TreasurerReports() {
                     key={option.value}
                     size="sm"
                     variant={dateRange === option.value ? 'default' : 'outline'}
-                    className={dateRange === option.value ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
+                    className={`min-h-[44px] touch-manipulation ${dateRange === option.value ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
                     onClick={() => setDateRange(option.value)}
                   >
                     {option.label}
@@ -224,11 +224,11 @@ export function TreasurerReports() {
                 <Badge variant="secondary" className="text-xs ml-2">{dateRangeLabel}</Badge>
               </CardTitle>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="text-xs" onClick={handleExportPDF}>
+                <Button size="sm" variant="outline" className="text-xs min-h-[44px] touch-manipulation" onClick={handleExportPDF}>
                   <FileText className="mr-1 h-3 w-3" />
                   PDF
                 </Button>
-                <Button size="sm" variant="outline" className="text-xs" onClick={handleExportExcel}>
+                <Button size="sm" variant="outline" className="text-xs min-h-[44px] touch-manipulation" onClick={handleExportExcel}>
                   <FileSpreadsheet className="mr-1 h-3 w-3" />
                   Excel
                 </Button>
@@ -237,7 +237,7 @@ export function TreasurerReports() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Collection Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:gap-4">
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-xs text-muted-foreground">Total Collected</p>
                 <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(totalCollected)}</p>
@@ -260,6 +260,7 @@ export function TreasurerReports() {
 
             {/* Collection Table */}
             <div className="rounded-lg border overflow-hidden">
+              <div className="overflow-x-auto overscroll-contain">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -302,6 +303,7 @@ export function TreasurerReports() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -318,7 +320,7 @@ export function TreasurerReports() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Payout Summary */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-4">
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-xs text-muted-foreground">Total Paid Out</p>
                 <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(totalPaidOut)}</p>
@@ -335,6 +337,7 @@ export function TreasurerReports() {
 
             {/* Payout Table */}
             <div className="rounded-lg border overflow-hidden">
+              <div className="overflow-x-auto overscroll-contain">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -371,13 +374,14 @@ export function TreasurerReports() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:gap-6 lg:grid-cols-2">
         {/* Group Performance Chart */}
         <motion.div {...fadeUp} transition={{ duration: 0.4, delay: 0.2 }}>
           <Card className="h-full">
@@ -474,22 +478,22 @@ export function TreasurerReports() {
       {/* Export Actions */}
       <motion.div {...fadeUp} transition={{ duration: 0.4, delay: 0.3 }}>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 lg:p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium">Export Reports</p>
                 <p className="text-xs text-muted-foreground">Generate and download reports for {dateRangeLabel}</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
+                <Button variant="outline" className="gap-2 min-h-[44px] touch-manipulation" onClick={handleExportPDF}>
                   <FileText className="h-4 w-4 text-red-500" />
                   PDF Report
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={handleExportExcel}>
+                <Button variant="outline" className="gap-2 min-h-[44px] touch-manipulation" onClick={handleExportExcel}>
                   <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                   Excel Export
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={() => toast.success('Report sent to printer!')}>
+                <Button variant="outline" className="gap-2 min-h-[44px] touch-manipulation" onClick={() => toast.success('Report sent to printer!')}>
                   <Printer className="h-4 w-4" />
                   Print
                 </Button>

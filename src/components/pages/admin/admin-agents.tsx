@@ -68,7 +68,7 @@ export function AdminAgents() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {[
           { label: 'Total Agents', value: allAgents.length, icon: Users, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
           { label: 'Active', value: activeAgents, icon: UserCheck, color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
@@ -77,7 +77,7 @@ export function AdminAgents() {
         ].map((s, i) => (
           <motion.div key={s.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
             <Card>
-              <CardContent className="flex items-center gap-3 p-4">
+              <CardContent className="flex items-center gap-3 p-3 lg:p-4">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
                   <s.icon className="h-5 w-5" />
                 </div>
@@ -107,7 +107,7 @@ export function AdminAgents() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 + idx * 0.1 }}
-                  className={`relative rounded-lg border p-4 ${idx === 0 ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
+                  className={`relative rounded-lg border p-3 lg:p-4 touch-manipulation ${idx === 0 ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
                 >
                   {idx === 0 && (
                     <div className="absolute -top-3 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
@@ -160,7 +160,7 @@ export function AdminAgents() {
           </CardHeader>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto overscroll-x-contain">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -221,7 +221,7 @@ export function AdminAgents() {
             {/* Mobile Cards */}
             <div className="md:hidden divide-y">
               {allAgents.map(agent => (
-                <div key={agent.id} className="p-4 space-y-3">
+                <div key={agent.id} className="p-4 space-y-3 touch-manipulation">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -252,10 +252,10 @@ export function AdminAgents() {
                   </div>
                   <p className="text-xs text-muted-foreground">Territory: {agent.territory}</p>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="text-xs flex-1" onClick={() => setSelectedAgent(agent)}>
+                    <Button size="sm" variant="outline" className="text-xs flex-1 min-h-[44px]" onClick={() => setSelectedAgent(agent)}>
                       <Eye className="mr-1 h-3 w-3" /> View Profile
                     </Button>
-                    <Button size="sm" variant="outline" className={`text-xs ${suspendedAgents.has(agent.id) ? 'text-emerald-600' : 'text-orange-500'}`}
+                    <Button size="sm" variant="outline" className={`text-xs min-h-[44px] ${suspendedAgents.has(agent.id) ? 'text-emerald-600' : 'text-orange-500'}`}
                       onClick={() => handleToggleSuspend(agent)}>
                       {suspendedAgents.has(agent.id)
                         ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Activate</>
@@ -272,7 +272,7 @@ export function AdminAgents() {
 
       {/* Agent Detail Dialog */}
       <Dialog open={!!selectedAgent} onOpenChange={() => setSelectedAgent(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle>Agent Profile</DialogTitle>
             <DialogDescription>Full agent details and performance metrics</DialogDescription>

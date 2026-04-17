@@ -42,7 +42,7 @@ export function AdminSusuGroups() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {[
           { label: 'Total Groups', value: totalGroups, icon: UsersRound, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
           { label: 'Active Groups', value: activeGroups, icon: CircleDot, color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
@@ -73,7 +73,7 @@ export function AdminSusuGroups() {
           </CardHeader>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden xl:block overflow-x-auto">
+            <div className="hidden xl:block overflow-x-auto overscroll-x-contain">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -137,7 +137,7 @@ export function AdminSusuGroups() {
             {/* Mobile / Tablet Cards */}
             <div className="xl:hidden divide-y">
               {allSusuGroups.map(group => (
-                <div key={group.id} className="p-4 space-y-3">
+                <div key={group.id} className="p-4 space-y-3 touch-manipulation">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-semibold text-sm">{group.name}</p>
@@ -172,10 +172,10 @@ export function AdminSusuGroups() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => setSelectedGroup(group)}>
+                    <Button size="sm" variant="outline" className="flex-1 text-xs min-h-[44px]" onClick={() => setSelectedGroup(group)}>
                       <Eye className="mr-1 h-3 w-3" /> View Details
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1 text-xs">
+                    <Button size="sm" variant="outline" className="flex-1 text-xs min-h-[44px]">
                       <Users className="mr-1 h-3 w-3" /> View Members
                     </Button>
                   </div>
@@ -188,7 +188,7 @@ export function AdminSusuGroups() {
 
       {/* Group Detail Dialog */}
       <Dialog open={!!selectedGroup} onOpenChange={() => setSelectedGroup(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle>Susu Group Details</DialogTitle>
             <DialogDescription>Complete group information</DialogDescription>

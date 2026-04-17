@@ -110,7 +110,7 @@ export function TreasurerGroups() {
   return (
     <div className="space-y-6">
       {/* Stats Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.title}
@@ -118,11 +118,11 @@ export function TreasurerGroups() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
+            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+              <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-xs lg:text-sm text-muted-foreground">{stat.title}</p>
                     <p className="text-2xl font-bold">{stat.value}</p>
                   </div>
                   <div className={`rounded-lg p-3 ${stat.bg}`}>
@@ -142,7 +142,7 @@ export function TreasurerGroups() {
           Managed Groups
         </h2>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {managedGroups.map((group, i) => {
             const memberProgress = Math.round((group.members / group.maxMembers) * 100);
             const roundProgress = Math.round((group.currentRound / group.totalRounds) * 100);
@@ -154,8 +154,8 @@ export function TreasurerGroups() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.08 }}
               >
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4 space-y-3">
+                <Card className="hover:shadow-md transition-shadow touch-manipulation">
+                  <CardContent className="p-3 lg:p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0 flex-1">
                         <h3 className="font-semibold truncate">{group.name}</h3>
@@ -214,7 +214,7 @@ export function TreasurerGroups() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="w-full"
+                      className="w-full min-h-[44px] touch-manipulation"
                       onClick={() => setSelectedGroupId(group.id)}
                     >
                       <Info className="mr-1.5 h-3.5 w-3.5" />
@@ -230,7 +230,7 @@ export function TreasurerGroups() {
 
       {/* Group Management Dialog */}
       <Dialog open={!!selectedGroupId} onOpenChange={(open) => { if (!open) setSelectedGroupId(null); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="mx-4 sm:mx-0 max-w-3xl max-h-[90vh] overflow-y-auto overscroll-contain">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Layers className="h-5 w-5 text-emerald-600" />
@@ -274,7 +274,7 @@ export function TreasurerGroups() {
                     <h4 className="text-sm font-semibold">Round Management</h4>
                     <p className="text-xs text-muted-foreground">Currently in Round {selectedGroup.currentRound} of {selectedGroup.totalRounds}</p>
                   </div>
-                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700"
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] touch-manipulation"
                     onClick={() => toast.success('New round started!')}>
                     <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                     Start New Round

@@ -171,7 +171,7 @@ export function TreasurerMembers() {
   return (
     <div className="space-y-6">
       {/* Stats Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.title}
@@ -179,11 +179,11 @@ export function TreasurerMembers() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
+            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+              <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-xs lg:text-sm text-muted-foreground">{stat.title}</p>
                     <p className="text-2xl font-bold">{stat.value}</p>
                   </div>
                   <div className={`rounded-lg p-3 ${stat.bg}`}>
@@ -199,7 +199,7 @@ export function TreasurerMembers() {
       {/* Search and Filters */}
       <motion.div {...fadeUp}>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 lg:p-4">
             <div className="flex flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -207,12 +207,12 @@ export function TreasurerMembers() {
                   placeholder="Search by name, phone, or group..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-12 lg:h-10"
                 />
               </div>
               <div className="flex gap-2">
                 <Select value={groupFilter} onValueChange={setGroupFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[180px] h-12 lg:h-10">
                     <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                     <SelectValue placeholder="Filter by group" />
                   </SelectTrigger>
@@ -224,7 +224,7 @@ export function TreasurerMembers() {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as MemberStatus)}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[150px] h-12 lg:h-10">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -253,7 +253,7 @@ export function TreasurerMembers() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overscroll-contain">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -320,7 +320,7 @@ export function TreasurerMembers() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2 text-xs"
+                              className="h-7 min-h-[44px] px-2 text-xs touch-manipulation"
                               onClick={() => setProfileDialogId(member.id)}
                             >
                               <Eye className="h-3 w-3" />
@@ -328,7 +328,7 @@ export function TreasurerMembers() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2 text-xs"
+                              className="h-7 min-h-[44px] px-2 text-xs touch-manipulation"
                               onClick={() => handleSendReminder(member.name)}
                             >
                               <Bell className="h-3 w-3" />
@@ -336,7 +336,7 @@ export function TreasurerMembers() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2 text-xs"
+                              className="h-7 min-h-[44px] px-2 text-xs touch-manipulation"
                               onClick={() => setHistoryDialogId(member.id)}
                             >
                               <History className="h-3 w-3" />
@@ -355,7 +355,7 @@ export function TreasurerMembers() {
 
       {/* Member Profile Dialog */}
       <Dialog open={!!profileDialogId} onOpenChange={(open) => { if (!open) setProfileDialogId(null); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="mx-4 sm:mx-0 max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-emerald-600" />
@@ -434,7 +434,7 @@ export function TreasurerMembers() {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 min-h-[44px] touch-manipulation"
                   onClick={() => handleSendReminder(selectedMember.name)}
                 >
                   <Bell className="mr-1.5 h-4 w-4" />
@@ -442,7 +442,7 @@ export function TreasurerMembers() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 min-h-[44px] touch-manipulation"
                   onClick={() => {
                     setProfileDialogId(null);
                     setHistoryDialogId(selectedMember.id);
@@ -459,7 +459,7 @@ export function TreasurerMembers() {
 
       {/* Contribution History Dialog */}
       <Dialog open={!!historyDialogId} onOpenChange={(open) => { if (!open) setHistoryDialogId(null); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="mx-4 sm:mx-0 max-w-3xl max-h-[90vh] overflow-y-auto overscroll-contain">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-emerald-600" />

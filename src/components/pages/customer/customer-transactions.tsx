@@ -112,7 +112,7 @@ export function CustomerTransactions() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by description, reference, or type..."
+                placeholder="Search transactions..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -121,7 +121,7 @@ export function CustomerTransactions() {
                 className="pl-9"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto overscroll-x-contain flex-nowrap">
               <Select
                 value={typeFilter}
                 onValueChange={(val) => {
@@ -199,7 +199,8 @@ export function CustomerTransactions() {
       {/* Desktop Table */}
       <Card className="hidden md:block">
         <CardContent className="p-0">
-          <Table>
+          <div className="overflow-x-auto overscroll-contain">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[140px]">Date</TableHead>
@@ -291,6 +292,7 @@ export function CustomerTransactions() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -322,7 +324,7 @@ export function CustomerTransactions() {
             return (
               <Card key={txn.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 min-h-[60px]">
                     <span
                       className={`mt-0.5 inline-flex items-center justify-center rounded-lg p-2 ${typeInfo.color}`}
                     >
@@ -379,6 +381,7 @@ export function CustomerTransactions() {
               size="sm"
               disabled={safeCurrentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="min-w-[44px] min-h-[44px]"
             >
               Previous
             </Button>
@@ -387,6 +390,7 @@ export function CustomerTransactions() {
               size="sm"
               disabled={safeCurrentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="min-w-[44px] min-h-[44px]"
             >
               Next
             </Button>

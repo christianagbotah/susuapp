@@ -108,8 +108,8 @@ export function AgentDashboard() {
       {/* Welcome Banner */}
       <motion.div {...fadeIn}>
         <Card className="overflow-hidden border-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <CardContent className="p-4 lg:p-6">
+            <div className="flex flex-col gap-3 lg:gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-2">
                 <h1 className="text-2xl font-bold sm:text-3xl">Hello, {agent.name}!</h1>
                 <div className="flex flex-wrap items-center gap-3 text-emerald-100">
@@ -137,7 +137,7 @@ export function AgentDashboard() {
       </motion.div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 lg:grid-cols-4">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.title}
@@ -145,15 +145,15 @@ export function AgentDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
+            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="space-y-0.5 lg:space-y-1 min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-xl font-bold lg:text-2xl">{stat.value}</p>
                   </div>
-                  <div className={`rounded-lg p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  <div className={`rounded-lg p-2 lg:p-3 ${stat.bg}`}>
+                    <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
                   </div>
                 </div>
               </CardContent>
@@ -166,7 +166,7 @@ export function AgentDashboard() {
         {/* Today's Routes */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
+            <h2 className="text-base lg:text-lg font-semibold flex items-center gap-2">
               <Route className="h-5 w-5" />
               Today&apos;s Routes
             </h2>
@@ -201,13 +201,13 @@ export function AgentDashboard() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: i * 0.1 }}
                   >
-                    <Card className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex flex-col gap-4">
+                    <Card className="hover:shadow-md transition-shadow touch-manipulation">
+                      <CardContent className="p-3 lg:p-4">
+                        <div className="flex flex-col gap-3 lg:gap-4">
                           {/* Header */}
                           <div className="flex items-start justify-between">
                             <div className="space-y-1">
-                              <h3 className="font-semibold">{route.name}</h3>
+                              <h3 className="font-semibold text-sm lg:text-base">{route.name}</h3>
                               <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <MapPin className="h-3.5 w-3.5" />
@@ -245,6 +245,7 @@ export function AgentDashboard() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                className="min-h-[44px] lg:min-h-0"
                                 onClick={() => setActivePage('collections')}
                               >
                                 <ChevronRight className="mr-1 h-4 w-4" />
@@ -252,7 +253,7 @@ export function AgentDashboard() {
                               </Button>
                               <Button
                                 size="sm"
-                                className="bg-emerald-600 hover:bg-emerald-700"
+                                className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] lg:min-h-0"
                                 onClick={() => setActivePage('collections')}
                               >
                                 <Play className="mr-1 h-4 w-4" />
@@ -277,7 +278,7 @@ export function AgentDashboard() {
           transition={{ duration: 0.4, delay: 0.3 }}
           className="space-y-4"
         >
-          <h2 className="text-lg font-semibold flex items-center gap-2">
+          <h2 className="text-base lg:text-lg font-semibold flex items-center gap-2">
             <BadgeDollarSign className="h-5 w-5" />
             Commission Summary
           </h2>
@@ -308,7 +309,7 @@ export function AgentDashboard() {
 
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Recent Commissions</p>
-                <div className="max-h-48 space-y-2 overflow-y-auto">
+                <div className="max-h-48 space-y-2 overflow-y-auto overscroll-contain">
                   {commissions.slice(0, 4).map((c) => (
                     <div
                       key={c.id}
@@ -375,14 +376,14 @@ export function AgentDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.5 }}
         >
-          <h2 className="mb-3 text-lg font-semibold flex items-center gap-2">
+          <h2 className="mb-3 text-base lg:text-lg font-semibold flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-emerald-500" />
             Completed Routes
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {completedRoutes.map((route) => (
-              <Card key={route.id}>
-                <CardContent className="p-4">
+              <Card key={route.id} className="touch-manipulation">
+                <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">{route.name}</p>

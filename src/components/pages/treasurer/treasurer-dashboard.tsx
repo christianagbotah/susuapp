@@ -115,7 +115,7 @@ export function TreasurerDashboard() {
       </motion.div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.title}
@@ -123,11 +123,11 @@ export function TreasurerDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
+            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+              <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-xs lg:text-sm text-muted-foreground">{stat.title}</p>
                     <p className="text-2xl font-bold">{stat.value}</p>
                   </div>
                   <div className={`rounded-lg p-3 ${stat.bg}`}>
@@ -148,11 +148,11 @@ export function TreasurerDashboard() {
               <PiggyBank className="h-5 w-5" />
               Group Summary
             </h2>
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setActivePage('groups')}>
+            <Button variant="ghost" size="sm" className="text-xs touch-manipulation" onClick={() => setActivePage('groups')}>
               View All <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2">
             {managedGroups.map((group, i) => {
               const collection = getGroupCollectionProgress(group.id, group.members);
               const progress = collection.total > 0 ? Math.round((collection.paid / collection.total) * 100) : 0;
@@ -165,8 +165,8 @@ export function TreasurerDashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.08 }}
                 >
-                  <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4 space-y-3">
+                  <Card className="hover:shadow-md transition-shadow touch-manipulation">
+                    <CardContent className="p-3 lg:p-4 space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                           <h3 className="font-semibold text-sm truncate">{group.name}</h3>
@@ -223,16 +223,16 @@ export function TreasurerDashboard() {
           </h2>
 
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 lg:p-4 overscroll-contain">
               {pendingPayouts.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground">
                   <CheckCircle className="mx-auto mb-2 h-8 w-8 text-emerald-500" />
                   <p className="text-sm font-medium">All payouts processed!</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto overscroll-contain">
                   {pendingPayouts.map((payout) => (
-                    <div key={payout.id} className="rounded-lg border p-3 space-y-2">
+                    <div key={payout.id} className="rounded-lg border p-3 space-y-2 touch-manipulation">
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{payout.memberName}</p>
@@ -248,7 +248,7 @@ export function TreasurerDashboard() {
                       </div>
                       <Button
                         size="sm"
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white touch-manipulation"
                         onClick={() => handleProcessPayout(payout.id)}
                       >
                         <CircleDollarSign className="mr-1 h-3.5 w-3.5" />
@@ -267,13 +267,13 @@ export function TreasurerDashboard() {
             Quick Actions
           </h2>
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 lg:p-4">
               <div className="grid grid-cols-1 gap-2">
                 {quickActions.map((action) => (
                   <Button
                     key={action.label}
                     variant="outline"
-                    className="justify-start gap-3 h-auto py-3 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
+                    className="justify-start gap-3 min-h-[44px] h-auto py-3 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors touch-manipulation"
                     onClick={() => setActivePage(action.page)}
                   >
                     <action.icon className={`h-5 w-5 ${action.color}`} />
@@ -295,12 +295,12 @@ export function TreasurerDashboard() {
       >
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <CardTitle className="text-sm lg:text-base font-semibold flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
               Collection Status by Group
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 max-h-[500px] overflow-y-auto overscroll-contain">
             {managedGroups.filter(g => g.status === 'active').map((group) => {
               const collection = getGroupCollectionProgress(group.id, group.members);
               const progress = collection.total > 0 ? Math.round((collection.paid / collection.total) * 100) : 0;

@@ -252,7 +252,7 @@ export function CustomerWallet() {
                 <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-sm font-medium text-white/75">Total Balance</p>
-                    <p className="mt-2 text-4xl font-bold tracking-tight text-white sm:text-5xl">
+                    <p className="mt-2 text-3xl font-bold tracking-tight text-white lg:text-4xl sm:text-5xl">
                       {formatGHS(totalBalance)}
                     </p>
                     <p className="mt-2 text-sm text-white/70">Across {wallets.length} wallets</p>
@@ -483,7 +483,7 @@ export function CustomerWallet() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {/* Provider Cards */}
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="grid grid-cols-3 gap-3 lg:grid-cols-3">
                         {mobileMoneyProviders.map((provider) => {
                           const isSelected = depositProviderId === provider.id;
                           return (
@@ -492,7 +492,7 @@ export function CustomerWallet() {
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                               onClick={() => setDepositProviderId(provider.id)}
-                              className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
+                              className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 lg:p-4 transition-all touch-manipulation ${
                                 isSelected
                                   ? 'border-transparent shadow-md'
                                   : 'border-slate-200 hover:border-slate-300'
@@ -557,6 +557,7 @@ export function CustomerWallet() {
                               <Input
                                 id="deposit-amount"
                                 type="number"
+                                inputMode="numeric"
                                 placeholder="0.00"
                                 value={depositAmount}
                                 onChange={(e) => setDepositAmount(e.target.value)}
@@ -575,6 +576,7 @@ export function CustomerWallet() {
                               <Input
                                 id="deposit-pin"
                                 type="password"
+                                inputMode="numeric"
                                 placeholder="Enter your PIN"
                                 value={depositPin}
                                 onChange={(e) => setDepositPin(e.target.value)}
@@ -610,7 +612,7 @@ export function CustomerWallet() {
                           {/* Deposit Button */}
                           <Button
                             onClick={handleDepositSubmit}
-                            className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                            className="w-full h-12 min-h-[44px] bg-emerald-600 text-white hover:bg-emerald-700"
                             size="lg"
                           >
                             <ArrowDownLeft className="mr-2 h-4 w-4" />
@@ -774,6 +776,7 @@ export function CustomerWallet() {
                           <Input
                             id="withdraw-amount"
                             type="number"
+                            inputMode="numeric"
                             placeholder="0.00"
                             value={withdrawAmount}
                             onChange={(e) => setWithdrawAmount(e.target.value)}
@@ -923,7 +926,7 @@ export function CustomerWallet() {
                       {/* Withdraw Button */}
                       <Button
                         onClick={handleWithdrawSubmit}
-                        className="w-full bg-red-600 text-white hover:bg-red-700"
+                        className="w-full h-12 min-h-[44px] bg-red-600 text-white hover:bg-red-700"
                         size="lg"
                       >
                         <ArrowUpRight className="mr-2 h-4 w-4" />

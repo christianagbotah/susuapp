@@ -131,7 +131,7 @@ export function TreasurerPayouts() {
   return (
     <div className="space-y-6">
       {/* Stats Row */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.title}
@@ -139,11 +139,11 @@ export function TreasurerPayouts() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
+            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+              <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-xs lg:text-sm text-muted-foreground">{stat.title}</p>
                     <p className="text-lg font-bold">{stat.value}</p>
                   </div>
                   <div className={`rounded-lg p-3 ${stat.bg}`}>
@@ -159,16 +159,16 @@ export function TreasurerPayouts() {
       {/* Filter Bar + Batch Processing */}
       <motion.div {...fadeUp}>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 lg:p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 overscroll-x-contain">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 {filterButtons.map(btn => (
                   <Button
                     key={btn.value}
                     size="sm"
                     variant={statusFilter === btn.value ? 'default' : 'outline'}
-                    className={statusFilter === btn.value ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
+                    className={`min-h-[44px] touch-manipulation ${statusFilter === btn.value ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`}
                     onClick={() => setStatusFilter(btn.value)}
                   >
                     {btn.label}
@@ -181,7 +181,7 @@ export function TreasurerPayouts() {
               {pendingPayouts.length > 0 && (
                 <Button
                   size="sm"
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  className="min-h-[44px] bg-amber-600 hover:bg-amber-700 text-white touch-manipulation"
                   onClick={() => setBatchConfirm(true)}
                 >
                   <Zap className="mr-1.5 h-3.5 w-3.5" />
@@ -204,7 +204,7 @@ export function TreasurerPayouts() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overscroll-contain">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -253,7 +253,7 @@ export function TreasurerPayouts() {
                           {payout.status === 'pending' && (
                             <Button
                               size="sm"
-                              className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                              className="h-7 min-h-[44px] px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white touch-manipulation"
                               onClick={() => setProcessDialogId(payout.id)}
                             >
                               <CircleDollarSign className="mr-1 h-3 w-3" />
@@ -264,7 +264,7 @@ export function TreasurerPayouts() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2 text-xs"
+                              className="h-7 min-h-[44px] px-2 text-xs touch-manipulation"
                               onClick={() => setReceiptDialogId(payout.id)}
                             >
                               <FileText className="mr-1 h-3 w-3" />
@@ -328,7 +328,7 @@ export function TreasurerPayouts() {
 
       {/* Process Payout Confirmation Dialog */}
       <Dialog open={!!processDialogId} onOpenChange={(open) => { if (!open) setProcessDialogId(null); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="mx-4 sm:mx-0 max-w-md overscroll-contain">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CircleDollarSign className="h-5 w-5 text-emerald-600" />
@@ -377,11 +377,11 @@ export function TreasurerPayouts() {
               </div>
 
               <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => setProcessDialogId(null)}>
+                <Button variant="outline" className="min-h-[44px] touch-manipulation" onClick={() => setProcessDialogId(null)}>
                   Cancel
                 </Button>
                 <Button
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white touch-manipulation"
                   onClick={handleProcessPayout}
                 >
                   <CheckCircle className="mr-1.5 h-4 w-4" />
@@ -395,7 +395,7 @@ export function TreasurerPayouts() {
 
       {/* View Receipt Dialog */}
       <Dialog open={!!receiptDialogId} onOpenChange={(open) => { if (!open) setReceiptDialogId(null); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="mx-4 sm:mx-0 max-w-md overscroll-contain">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-emerald-600" />
@@ -449,7 +449,7 @@ export function TreasurerPayouts() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setReceiptDialogId(null)}>Close</Button>
+                <Button variant="outline" className="min-h-[44px] touch-manipulation" onClick={() => setReceiptDialogId(null)}>Close</Button>
               </DialogFooter>
             </div>
           )}
@@ -458,7 +458,7 @@ export function TreasurerPayouts() {
 
       {/* Batch Processing Confirmation Dialog */}
       <Dialog open={batchConfirm} onOpenChange={setBatchConfirm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="mx-4 sm:mx-0 max-w-md overscroll-contain">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-amber-600" />
@@ -470,9 +470,9 @@ export function TreasurerPayouts() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setBatchConfirm(false)}>Cancel</Button>
+            <Button variant="outline" className="min-h-[44px] touch-manipulation" onClick={() => setBatchConfirm(false)}>Cancel</Button>
             <Button
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="min-h-[44px] bg-amber-600 hover:bg-amber-700 text-white touch-manipulation"
               onClick={handleBatchProcess}
             >
               <Zap className="mr-1.5 h-4 w-4" />

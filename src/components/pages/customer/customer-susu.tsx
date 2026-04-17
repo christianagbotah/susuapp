@@ -217,21 +217,21 @@ export function CustomerSusu() {
           <TabsList className="h-10 w-full rounded-lg bg-slate-100 p-1 sm:w-auto">
             <TabsTrigger
               value="my-susu"
-              className="gap-1.5 rounded-md px-3 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              className="w-full gap-1.5 rounded-md px-2 text-xs sm:w-auto sm:px-3 sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
             >
               <PiggyBank className="h-3.5 w-3.5" />
               My Susu
             </TabsTrigger>
             <TabsTrigger
               value="discover"
-              className="gap-1.5 rounded-md px-3 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              className="w-full gap-1.5 rounded-md px-2 text-xs sm:w-auto sm:px-3 sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
             >
               <Sparkles className="h-3.5 w-3.5" />
               Discover Groups
             </TabsTrigger>
             <TabsTrigger
               value="goals"
-              className="gap-1.5 rounded-md px-3 text-xs sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              className="w-full gap-1.5 rounded-md px-2 text-xs sm:w-auto sm:px-3 sm:text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
             >
               <Target className="h-3.5 w-3.5" />
               Savings Goals
@@ -320,7 +320,7 @@ export function CustomerSusu() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {myGroups.map((group) => {
+                {myGroups.map((group, idx) => {
                   const progressPercent = Math.round(
                     (group.currentRound / group.totalRounds) * 100,
                   );
@@ -397,7 +397,7 @@ export function CustomerSusu() {
                           {/* Contribute Button */}
                           <Button
                             onClick={() => openContributeDialog(group.id)}
-                            className="w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
+                            className="w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700 h-11 min-h-[44px] lg:h-auto lg:min-h-0"
                             size="sm"
                           >
                             <Plus className="h-4 w-4" />
@@ -413,7 +413,7 @@ export function CustomerSusu() {
 
             {/* Contribution Dialog */}
             <Dialog open={contributeDialogOpen} onOpenChange={setContributeDialogOpen}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="mx-4 sm:mx-0 sm:max-w-[95vw] sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <PiggyBank className="h-5 w-5 text-emerald-600" />
@@ -453,6 +453,7 @@ export function CustomerSusu() {
                       <Input
                         id="contribute-amount"
                         type="number"
+                        inputMode="numeric"
                         placeholder="0.00"
                         value={contributionAmount}
                         onChange={(e) => setContributionAmount(e.target.value)}
@@ -514,7 +515,7 @@ export function CustomerSusu() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 overflow-x-auto overscroll-x-contain">
               {(['all', 'daily', 'weekly', 'monthly'] as const).map((f) => (
                 <Button
                   key={f}

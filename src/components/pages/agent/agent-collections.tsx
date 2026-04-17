@@ -187,13 +187,13 @@ export function AgentCollections() {
                     <button
                       type="button"
                       onClick={() => setExpandedRoute(isExpanded ? null : route.id)}
-                      className="w-full text-left"
+                      className="w-full text-left touch-manipulation"
                     >
-                      <CardContent className="p-4">
+                      <CardContent className="p-3 lg:p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1 space-y-2">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-semibold text-base">{route.name}</h3>
+                              <h3 className="font-semibold text-sm lg:text-base">{route.name}</h3>
                               <Badge className={getStatusColor(route.status)}>
                                 {route.status.replace('_', ' ')}
                               </Badge>
@@ -325,11 +325,11 @@ export function AgentCollections() {
                             </div>
 
                             {/* Mobile cards */}
-                            <div className="space-y-3 p-4 md:hidden">
+                            <div className="space-y-3 p-3 lg:p-4 md:hidden overscroll-y-contain max-h-[60vh] overflow-y-auto">
                               {route.customers.map((customer) => (
                                 <div
                                   key={customer.id}
-                                  className="flex items-start gap-3 rounded-lg border p-3"
+                                  className="flex items-start gap-3 rounded-lg border p-3 touch-manipulation"
                                 >
                                   <div className="mt-0.5">{getCustomerStatusIcon(customer.status)}</div>
                                   <div className="min-w-0 flex-1 space-y-1.5">
@@ -358,7 +358,7 @@ export function AgentCollections() {
                                       <div className="flex gap-2 pt-1">
                                         <Button
                                           size="sm"
-                                          className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 min-h-[44px] lg:min-h-0"
                                           onClick={() => openCollectDialog(route.id, customer)}
                                         >
                                           <DollarSign className="mr-1 h-3.5 w-3.5" />
@@ -367,6 +367,7 @@ export function AgentCollections() {
                                         <Button
                                           size="sm"
                                           variant="outline"
+                                          className="min-h-[44px] lg:min-h-0"
                                           onClick={() => openAbsentDialog(route.id, customer)}
                                         >
                                           <UserX className="mr-1 h-3.5 w-3.5" />
@@ -459,7 +460,7 @@ export function AgentCollections() {
 
       {/* Collect Dialog */}
       <Dialog open={collectDialog.open} onOpenChange={(open) => setCollectDialog((p) => ({ ...p, open }))}>
-        <DialogContent>
+        <DialogContent className="mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle>Record Collection</DialogTitle>
             <DialogDescription>
@@ -478,9 +479,11 @@ export function AgentCollections() {
               <Input
                 id="collect-amount"
                 type="number"
+                inputMode="decimal"
                 min="0"
                 step="0.01"
                 placeholder="0.00"
+                className="h-12 lg:h-10"
                 value={collectAmount}
                 onChange={(e) => setCollectAmount(e.target.value)}
               />
@@ -505,7 +508,7 @@ export function AgentCollections() {
 
       {/* Absent Dialog */}
       <Dialog open={absentDialog.open} onOpenChange={(open) => setAbsentDialog((p) => ({ ...p, open }))}>
-        <DialogContent>
+        <DialogContent className="mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle>Mark as Absent</DialogTitle>
             <DialogDescription>
@@ -524,6 +527,7 @@ export function AgentCollections() {
                 value={absentNotes}
                 onChange={(e) => setAbsentNotes(e.target.value)}
                 rows={3}
+                className="h-12 lg:h-auto"
               />
             </div>
           </div>

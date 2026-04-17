@@ -34,7 +34,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="top-center" toastOptions={{ className: "touch-target" }} />
         </ThemeProvider>
       </body>
     </html>

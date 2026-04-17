@@ -87,7 +87,7 @@ export function AdminLoans() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {[
           { label: 'Pending Approval', value: pendingCount, icon: Clock, color: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30' },
           { label: 'Active Loans', value: activeCount, icon: Landmark, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
@@ -113,7 +113,7 @@ export function AdminLoans() {
       {/* Filters */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 lg:p-4">
             <div className="flex flex-col gap-3 sm:flex-row">
               <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setPage(1); }}>
                 <SelectTrigger className="w-full sm:w-48">
@@ -154,7 +154,7 @@ export function AdminLoans() {
         <Card>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden lg:block overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto overscroll-x-contain">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -265,17 +265,17 @@ export function AdminLoans() {
                   <div className="flex gap-2">
                     {(loan.status === 'pending' || loan.status === 'under_review') && (
                       <>
-                        <Button size="sm" className="flex-1 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                        <Button size="sm" className="flex-1 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] lg:min-h-0"
                           onClick={() => setApproveDialog(loan)}>
                           <CheckCircle className="mr-1 h-3 w-3" /> Approve
                         </Button>
-                        <Button size="sm" variant="destructive" className="flex-1 h-8 text-xs"
+                        <Button size="sm" variant="destructive" className="flex-1 h-8 text-xs min-h-[44px] lg:min-h-0"
                           onClick={() => setRejectDialog(loan)}>
                           <XCircle className="mr-1 h-3 w-3" /> Reject
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setDetailLoan(loan)}>
+                    <Button size="sm" variant="outline" className="h-8 text-xs min-h-[44px] lg:min-h-0" onClick={() => setDetailLoan(loan)}>
                       <Eye className="mr-1 h-3 w-3" /> Details
                     </Button>
                   </div>
@@ -288,15 +288,15 @@ export function AdminLoans() {
               <div className="flex items-center justify-between border-t px-4 py-3">
                 <p className="text-xs text-muted-foreground">Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filteredLoans.length)} of {filteredLoans.length}</p>
                 <div className="flex gap-1">
-                  <Button variant="outline" size="icon" className="h-7 w-7" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                  <Button variant="outline" size="icon" className="h-9 w-9 lg:h-7 lg:w-7" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   {Array.from({ length: totalPages }, (_, i) => (
-                    <Button key={i} variant={page === i + 1 ? 'default' : 'outline'} size="icon" className="h-7 w-7 text-xs" onClick={() => setPage(i + 1)}>
+                    <Button key={i} variant={page === i + 1 ? 'default' : 'outline'} size="icon" className="h-9 w-9 lg:h-7 lg:w-7 text-xs" onClick={() => setPage(i + 1)}>
                       {i + 1}
                     </Button>
                   ))}
-                  <Button variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                  <Button variant="outline" size="icon" className="h-9 w-9 lg:h-7 lg:w-7" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -308,7 +308,7 @@ export function AdminLoans() {
 
       {/* Approve Dialog */}
       <Dialog open={!!approveDialog} onOpenChange={() => setApproveDialog(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-600">
               <CheckCircle className="h-5 w-5" /> Approve Loan
@@ -340,7 +340,7 @@ export function AdminLoans() {
 
       {/* Reject Dialog */}
       <Dialog open={!!rejectDialog} onOpenChange={() => { setRejectDialog(null); setRejectReason(''); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <XCircle className="h-5 w-5" /> Reject Loan
@@ -370,7 +370,7 @@ export function AdminLoans() {
 
       {/* Loan Details Dialog */}
       <Dialog open={!!detailLoan} onOpenChange={() => setDetailLoan(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle>Loan Details</DialogTitle>
             <DialogDescription>Complete loan information and payment history</DialogDescription>

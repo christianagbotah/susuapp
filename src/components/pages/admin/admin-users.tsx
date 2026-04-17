@@ -95,7 +95,7 @@ export function AdminUsers() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {[
           { label: 'Total Users', value: allUsers.length, icon: Users, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
           { label: 'Full KYC', value: fullKyc, icon: ShieldCheck, color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
@@ -184,7 +184,7 @@ export function AdminUsers() {
         <Card>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto overscroll-x-contain">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -274,9 +274,9 @@ export function AdminUsers() {
                       <span className="text-xs text-muted-foreground">{formatDate(user.memberSince)}</span>
                     </div>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => setSelectedUser(user)}><Eye className="mr-1 h-3 w-3" /> View</Button>
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setEditUser(user); setNewRole(user.role); setEditRoleOpen(true); }}><Pencil className="mr-1 h-3 w-3" /> Role</Button>
-                      <Button size="sm" variant="outline" className={`text-xs ${suspended ? 'text-emerald-600' : 'text-orange-500'}`} onClick={() => handleToggleSuspend(user)}>
+                      <Button size="sm" variant="outline" className="text-xs min-h-[44px]" onClick={() => setSelectedUser(user)}><Eye className="mr-1 h-3 w-3" /> View</Button>
+                      <Button size="sm" variant="outline" className="text-xs min-h-[44px]" onClick={() => { setEditUser(user); setNewRole(user.role); setEditRoleOpen(true); }}><Pencil className="mr-1 h-3 w-3" /> Role</Button>
+                      <Button size="sm" variant="outline" className={`text-xs min-h-[44px] ${suspended ? 'text-emerald-600' : 'text-orange-500'}`} onClick={() => handleToggleSuspend(user)}>
                         {suspended ? <><CheckCircle2 className="mr-1 h-3 w-3" /> Activate</> : <><Ban className="mr-1 h-3 w-3" /> Suspend</>}
                       </Button>
                     </div>
@@ -290,15 +290,15 @@ export function AdminUsers() {
               <div className="flex items-center justify-between border-t px-4 py-3">
                 <p className="text-xs text-muted-foreground">Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filteredUsers.length)} of {filteredUsers.length}</p>
                 <div className="flex gap-1">
-                  <Button variant="outline" size="icon" className="h-7 w-7" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                  <Button variant="outline" size="icon" className="h-9 w-9 lg:h-7 lg:w-7" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   {Array.from({ length: totalPages }, (_, i) => (
-                    <Button key={i} variant={page === i + 1 ? 'default' : 'outline'} size="icon" className="h-7 w-7 text-xs" onClick={() => setPage(i + 1)}>
+                    <Button key={i} variant={page === i + 1 ? 'default' : 'outline'} size="icon" className="h-9 w-9 lg:h-7 lg:w-7 text-xs" onClick={() => setPage(i + 1)}>
                       {i + 1}
                     </Button>
                   ))}
-                  <Button variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                  <Button variant="outline" size="icon" className="h-9 w-9 lg:h-7 lg:w-7" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -310,7 +310,7 @@ export function AdminUsers() {
 
       {/* User Detail Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle>User Profile</DialogTitle>
             <DialogDescription>Full user details</DialogDescription>
@@ -344,7 +344,7 @@ export function AdminUsers() {
 
       {/* Edit Role Dialog */}
       <Dialog open={editRoleOpen} onOpenChange={() => setEditRoleOpen(false)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle>Edit User Role</DialogTitle>
             <DialogDescription>Change the role for {editUser?.name}</DialogDescription>

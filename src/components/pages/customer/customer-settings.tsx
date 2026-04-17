@@ -195,7 +195,7 @@ export function CustomerSettings() {
               {/* Avatar */}
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <Avatar className="h-20 w-20">
+                  <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                       {getInitials(user.name)}
                     </AvatarFallback>
@@ -229,6 +229,7 @@ export function CustomerSettings() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your full name"
+                    className="h-12"
                   />
                 </div>
                 <div className="space-y-2">
@@ -239,6 +240,7 @@ export function CustomerSettings() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
+                    className="h-12"
                   />
                 </div>
                 <div className="space-y-2">
@@ -250,7 +252,7 @@ export function CustomerSettings() {
                       value={phone.replace('+233', '').replace(/^0/, '')}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="24 XXX XXXX"
-                      className="flex-1"
+                      className="flex-1 h-12"
                     />
                   </div>
                 </div>
@@ -261,6 +263,7 @@ export function CustomerSettings() {
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Enter your address or location"
+                    className="h-12"
                   />
                 </div>
               </div>
@@ -305,7 +308,7 @@ export function CustomerSettings() {
               {/* Progress steps */}
               <div className="space-y-3">
                 <Progress value={(kycProgress / kycSteps.length) * 100} className="h-2" />
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-3 overflow-x-auto overscroll-x-contain">
                   {kycSteps.map((step, i) => (
                     <div
                       key={i}
@@ -444,6 +447,7 @@ export function CustomerSettings() {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Enter current password"
+                    className="h-12"
                   />
                   <Button
                     type="button"
@@ -469,6 +473,7 @@ export function CustomerSettings() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
+                    className="h-12"
                   />
                   <Button
                     type="button"
@@ -494,6 +499,7 @@ export function CustomerSettings() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
+                    className="h-12"
                   />
                   <Button
                     type="button"
@@ -552,6 +558,7 @@ export function CustomerSettings() {
                       }
                     );
                   }}
+                  className="scale-110"
                 />
               </div>
 
@@ -581,6 +588,7 @@ export function CustomerSettings() {
                       }
                     );
                   }}
+                  className="scale-110"
                 />
               </div>
             </CardContent>

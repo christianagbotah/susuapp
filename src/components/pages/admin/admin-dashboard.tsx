@@ -64,7 +64,7 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* System Overview Banner */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-6 text-white">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-4 lg:p-6 text-white">
         <div className="relative z-10">
           <h1 className="text-2xl font-bold sm:text-3xl">SusuPay Admin Console</h1>
           <p className="mt-1 text-emerald-100">
@@ -79,18 +79,18 @@ export function AdminDashboard() {
       </motion.div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {statCards.map((s, i) => (
           <motion.div key={s.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
+            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+              <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center gap-2">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
+                  <div className={`flex h-8 w-8 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
                     <s.icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-xs text-muted-foreground">{s.label}</p>
-                    <p className="text-sm font-semibold leading-tight">{s.value}</p>
+                    <p className="truncate text-[10px] lg:text-xs text-muted-foreground">{s.label}</p>
+                    <p className="text-xs lg:text-sm font-semibold leading-tight">{s.value}</p>
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">{s.change}</p>
@@ -142,26 +142,26 @@ export function AdminDashboard() {
           <Card className="h-full">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold">Recent Loan Applications</CardTitle>
+                <CardTitle className="text-sm lg:text-base font-semibold">Recent Loan Applications</CardTitle>
                 <Badge variant="secondary" className="text-xs">{pendingLoans.length} pending</Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 max-h-80 overflow-y-auto">
+            <CardContent className="space-y-3 max-h-80 overflow-y-auto overscroll-contain">
               {pendingLoans.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No pending applications</p>
               ) : (
                 pendingLoans.map(loan => (
-                  <div key={loan.id} className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                  <div key={loan.id} className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{loan.applicantName}</p>
                       <p className="text-xs text-muted-foreground">{formatGHS(loan.amount)} &middot; {loan.type} &middot; {formatDate(loan.startDate || loan.id.slice(-4))}</p>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                      <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] lg:min-h-0"
                         onClick={() => handleApprove(loan.id)}>
                         <CheckCircle className="mr-1 h-3 w-3" /> Approve
                       </Button>
-                      <Button size="sm" variant="destructive" className="h-7 px-2 text-xs"
+                      <Button size="sm" variant="destructive" className="h-7 px-2 text-xs min-h-[44px] lg:min-h-0"
                         onClick={() => handleReject(loan.id)}>
                         <XCircle className="mr-1 h-3 w-3" /> Reject
                       </Button>
@@ -177,11 +177,11 @@ export function AdminDashboard() {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
           <Card className="h-full">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Branch Performance</CardTitle>
+              <CardTitle className="text-sm lg:text-base font-semibold">Branch Performance</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 max-h-80 overflow-y-auto">
+            <CardContent className="space-y-3 max-h-80 overflow-y-auto overscroll-contain">
               {topBranches.map((branch, idx) => (
-                <div key={branch.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                <div key={branch.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-xs font-bold text-emerald-700">
                     {idx + 1}
                   </div>
@@ -210,7 +210,7 @@ export function AdminDashboard() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold">Top Agents by Collections</CardTitle>
+              <CardTitle className="text-sm lg:text-base font-semibold">Top Agents by Collections</CardTitle>
               <Button variant="ghost" size="sm" className="text-xs" onClick={() => setActivePage('agents')}>
                 View All <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
@@ -219,7 +219,7 @@ export function AdminDashboard() {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {topAgents.map((agent, idx) => (
-                <div key={agent.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                <div key={agent.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation">
                   <div className="relative">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 text-xs font-semibold">
@@ -249,12 +249,12 @@ export function AdminDashboard() {
             <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="flex gap-2 overflow-x-auto overscroll-x-contain">
               {quickActions.map(action => (
                 <Button
                   key={action.label}
                   variant="outline"
-                  className="h-auto flex-col gap-2 py-4 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
+                  className="h-auto flex-col gap-2 py-4 min-h-[44px] shrink-0 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors touch-manipulation"
                   onClick={() => setActivePage(action.page)}
                 >
                   <action.icon className="h-5 w-5 text-emerald-600" />

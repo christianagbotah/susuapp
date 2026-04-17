@@ -118,7 +118,7 @@ export function AgentCommissions() {
       </motion.div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3 lg:gap-4 sm:grid-cols-3">
         {summaryCards.map((stat, i) => (
           <motion.div
             key={stat.title}
@@ -126,16 +126,16 @@ export function AgentCommissions() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
+            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="space-y-0.5 lg:space-y-1 min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground">{stat.title}</p>
+                    <p className="text-xl font-bold lg:text-2xl">{stat.value}</p>
+                    <p className="text-[10px] lg:text-xs text-muted-foreground">{stat.subtitle}</p>
                   </div>
-                  <div className={`rounded-lg p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  <div className={`rounded-lg p-2 lg:p-3 ${stat.bg}`}>
+                    <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
                   </div>
                 </div>
               </CardContent>
@@ -150,7 +150,7 @@ export function AgentCommissions() {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle className="text-base">Commission History</CardTitle>
+                <CardTitle className="text-sm lg:text-base">Commission History</CardTitle>
                 <div className="flex flex-wrap gap-2">
                   {/* Status filter */}
                   <div className="flex gap-1">
@@ -159,6 +159,7 @@ export function AgentCommissions() {
                         key={s}
                         size="sm"
                         variant={statusFilter === s ? 'default' : 'outline'}
+                        className="min-h-[44px] lg:min-h-0 shrink-0"
                         onClick={() => setStatusFilter(s)}
                       >
                         {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
@@ -170,14 +171,14 @@ export function AgentCommissions() {
             </CardHeader>
             <CardContent className="p-0">
               {/* Type filter */}
-              <div className="flex flex-wrap gap-1.5 border-b px-4 py-2">
+              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain border-b px-4 py-2">
                 <span className="text-xs text-muted-foreground flex items-center mr-1">Type:</span>
                 {['all', 'susu_collection', 'loan_referral', 'new_customer', 'milestone_bonus'].map((t) => (
                   <Button
                     key={t}
                     size="sm"
                     variant={typeFilter === t ? 'default' : 'ghost'}
-                    className="h-7 text-xs"
+                    className="h-7 text-xs shrink-0"
                     onClick={() => setTypeFilter(t)}
                   >
                     {t === 'all' ? 'All' : typeConfig[t]?.label ?? t}
@@ -237,7 +238,7 @@ export function AgentCommissions() {
               </div>
 
               {/* Mobile cards */}
-              <div className="space-y-2 p-4 md:hidden">
+              <div className="space-y-2 p-3 lg:p-4 md:hidden">
                 {filteredCommissions.length === 0 ? (
                   <div className="py-8 text-center text-muted-foreground">
                     <p className="font-medium">No commissions found</p>
@@ -247,7 +248,7 @@ export function AgentCommissions() {
                   filteredCommissions.map((commission) => {
                     const tc = typeConfig[commission.type];
                     return (
-                      <div key={commission.id} className="rounded-lg border p-3 space-y-2">
+                      <div key={commission.id} className="rounded-lg border p-3 space-y-2 touch-manipulation">
                         <div className="flex items-center justify-between">
                           <Badge className={`text-[10px] ${tc?.color ?? ''}`}>
                             {tc?.label ?? commission.type}

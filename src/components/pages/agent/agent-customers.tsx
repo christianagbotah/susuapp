@@ -124,7 +124,7 @@ export function AgentCustomers() {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3 lg:gap-4 sm:grid-cols-3">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.title}
@@ -132,15 +132,15 @@ export function AgentCustomers() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.1 }}
           >
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
+            <Card className="touch-manipulation">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="space-y-0.5 lg:space-y-1 min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-xl font-bold lg:text-2xl">{stat.value}</p>
                   </div>
-                  <div className={`rounded-lg p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  <div className={`rounded-lg p-2 lg:p-3 ${stat.bg}`}>
+                    <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
                   </div>
                 </div>
               </CardContent>
@@ -156,7 +156,7 @@ export function AgentCustomers() {
         transition={{ duration: 0.35, delay: 0.2 }}
       >
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 lg:p-4">
             <div className="flex flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -164,15 +164,16 @@ export function AgentCustomers() {
                   placeholder="Search by name or phone..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-11 lg:h-10"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 overflow-x-auto overscroll-x-contain">
                 {(['all', 'full', 'basic', 'none'] as const).map((level) => (
                   <Button
                     key={level}
                     size="sm"
                     variant={kycFilter === level ? 'default' : 'outline'}
+                    className="min-h-[44px] shrink-0"
                     onClick={() => setKycFilter(level)}
                   >
                     {level === 'all' ? 'All' : level === 'full' ? 'Full KYC' : level === 'basic' ? 'Basic' : 'No KYC'}
@@ -282,8 +283,8 @@ export function AgentCustomers() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: index * 0.05 }}
               >
-                <Card className="hover:shadow-sm transition-shadow">
-                  <CardContent className="p-4">
+                <Card className="hover:shadow-sm transition-shadow touch-manipulation">
+                  <CardContent className="p-3 lg:p-4">
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -316,7 +317,7 @@ export function AgentCustomers() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="flex-1"
+                            className="flex-1 min-h-[44px] lg:min-h-0"
                             onClick={() => setSelectedCustomer(customer)}
                           >
                             <Eye className="mr-1 h-3.5 w-3.5" />
@@ -325,6 +326,7 @@ export function AgentCustomers() {
                           <Button
                             size="sm"
                             variant="outline"
+                            className="min-h-[44px] lg:min-h-0"
                             onClick={() => handleCall(customer)}
                           >
                             <Phone className="h-3.5 w-3.5" />
@@ -332,6 +334,7 @@ export function AgentCustomers() {
                           <Button
                             size="sm"
                             variant="outline"
+                            className="min-h-[44px] lg:min-h-0"
                             onClick={() => handleSendReminder(customer)}
                           >
                             <Bell className="h-3.5 w-3.5" />
@@ -349,7 +352,7 @@ export function AgentCustomers() {
 
       {/* Customer Detail Dialog */}
       <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md mx-4 sm:mx-0">
           {selectedCustomer && (
             <>
               <DialogHeader>
@@ -417,7 +420,7 @@ export function AgentCustomers() {
                 {/* Recent Transactions */}
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Recent Transactions</p>
-                  <div className="max-h-48 space-y-1.5 overflow-y-auto">
+                  <div className="max-h-48 space-y-1.5 overflow-y-auto overscroll-contain">
                     {mockTransactions.map((tx) => (
                       <div
                         key={tx.id}

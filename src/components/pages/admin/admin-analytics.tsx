@@ -56,7 +56,7 @@ export function AdminAnalytics() {
           <p className="text-sm text-muted-foreground">Platform performance overview</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto overscroll-x-contain">
             {dateRanges.map(range => (
               <Button key={range} size="sm" variant={selectedRange === range ? 'default' : 'outline'}
                 className={`text-xs ${selectedRange === range ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
@@ -65,11 +65,11 @@ export function AdminAnalytics() {
               </Button>
             ))}
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="text-xs" onClick={handleExportPDF}>
+          <div className="flex gap-2 overflow-x-auto overscroll-x-contain">
+            <Button size="sm" variant="outline" className="text-xs min-h-[44px] shrink-0" onClick={handleExportPDF}>
               <FileText className="mr-1 h-3 w-3" /> PDF Report
             </Button>
-            <Button size="sm" variant="outline" className="text-xs" onClick={handleExportExcel}>
+            <Button size="sm" variant="outline" className="text-xs min-h-[44px] shrink-0" onClick={handleExportExcel}>
               <Download className="mr-1 h-3 w-3" /> Excel Export
             </Button>
           </div>
@@ -77,7 +77,7 @@ export function AdminAnalytics() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {keyMetrics.map((m, i) => (
           <motion.div key={m.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
             <Card>
@@ -250,7 +250,7 @@ export function AdminAnalytics() {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {branches.map(branch => (
-                <div key={branch.id} className="rounded-lg border p-4 hover:bg-muted/50 transition-colors">
+                <div key={branch.id} className="rounded-lg border p-3 lg:p-4 hover:bg-muted/50 transition-colors touch-manipulation">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold">{branch.name}</p>
                     <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
