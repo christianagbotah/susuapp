@@ -129,10 +129,10 @@ const customerNavItems: NavItem[] = [
   { id: 'susu', label: 'Susu', icon: PiggyBank },
   { id: 'loans', label: 'Loans', icon: Landmark },
   { id: 'wallet', label: 'Wallet', icon: Wallet },
-  { id: 'airtime', label: 'Airtime', icon: Smartphone },
-  { id: 'bills', label: 'Bills', icon: Zap },
   { id: 'transfers', label: 'Transfer', icon: SendHorizontal },
   { id: 'budgeting', label: 'Budget', icon: PieChart },
+  { id: 'airtime', label: 'Airtime', icon: Smartphone },
+  { id: 'bills', label: 'Bills', icon: Zap },
   { id: 'referrals', label: 'Refer', icon: UserPlus },
   { id: 'transactions', label: 'History', icon: ArrowLeftRight },
   { id: 'settings', label: 'Settings', icon: Settings },
@@ -186,7 +186,7 @@ const portalRoles: Record<string, string> = {
 
 // Bottom tabs: first N items shown in bottom bar, rest in "More" drawer
 function getBottomTabs(navItems: NavItem[], portal: string): BottomTabItem[] {
-  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 5 : 5;
+  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 6 : 5;
   return navItems.slice(0, maxTabs).map(item => ({
     id: item.id,
     label: item.label,
@@ -195,7 +195,7 @@ function getBottomTabs(navItems: NavItem[], portal: string): BottomTabItem[] {
 }
 
 function getDrawerOnlyItems(navItems: NavItem[], portal: string): NavItem[] {
-  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 5 : 5;
+  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 6 : 5;
   return navItems.slice(maxTabs);
 }
 
