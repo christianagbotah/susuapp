@@ -133,6 +133,25 @@
 **Total files modified: 28 page files + 4 core files = 32 files**
 **Build: zero errors, zero warnings**
 
+### 6. Session 3 - Company settings, payment/SMS providers, dialog fix
+
+**Company Details & Provider Configuration (admin settings):**
+- Added `CompanyDetails`, `PaymentGatewayConfig`, `SmsProviderConfig`, `OtpSettings` types
+- Added `CompanySettings` interface in `src/types/index.ts`
+- Added `useConfigStore` in `src/store/useStore.ts` with defaults (iSusuPro, GHS, Accra/Greater Accra)
+- Rewrote `admin/settings/page.tsx` with 5 tabs: Company, Payments, SMS & OTP, Profile, Security
+- **Payments tab**: Hubtel and Paystack cards with API credentials, webhooks, activation toggle, fees
+- **SMS & OTP tab**: Hubtel SMS and Arkesel cards with API keys, sender IDs, OTP settings, test button
+- **Company tab**: Business info, contact, address (16 Ghana regions), transaction limits, branding
+
+**Dialog fix (admin susu groups):**
+- Fixed `admin-susu-groups.tsx` where "View Details" and "View Members" opened the same dialog
+- Root cause: shared `onOpenChange={closeDialog}` handler reset `selectedGroup=null` when switching
+- Fix: independent `detailsOpen`/`membersOpen` state + separate close handlers
+- Also fixed "View All Members" button inside details dialog (removed setTimeout hack)
+
+**Commits: `0f76b2c` (settings), `72e5091` (dialog fix)**
+
 ### Remaining Enhancement Opportunities
 - Backend API integration (currently mock data via Zustand)
 - Authentication (currently simulated login)
