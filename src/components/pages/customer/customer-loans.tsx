@@ -682,7 +682,7 @@ export function CustomerLoans() {
 
                     {/* Amount */}
                     <div className="space-y-2">
-                      <Label htmlFor="apply-amount">Loan Amount (GHS) *</Label>
+                      <Label htmlFor="apply-amount">Loan Amount (₵) *</Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
                           ₵
@@ -851,7 +851,7 @@ export function CustomerLoans() {
                     <div className="space-y-2">
                       <Label htmlFor="calc-amount" className="flex items-center gap-1.5">
                         <DollarSign className="h-3.5 w-3.5 text-slate-400" />
-                        Loan Amount (GHS)
+                        Loan Amount (₵)
                       </Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">

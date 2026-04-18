@@ -70,6 +70,7 @@ import { AgentDashboard } from '@/components/pages/agent/agent-dashboard';
 import { AgentCollections } from '@/components/pages/agent/agent-collections';
 import { AgentCustomers } from '@/components/pages/agent/agent-customers';
 import { AgentCommissions } from '@/components/pages/agent/agent-commissions';
+import { AgentSettings } from '@/components/pages/agent/agent-settings';
 import { AdminDashboard } from '@/components/pages/admin/admin-dashboard';
 import { AdminUsers } from '@/components/pages/admin/admin-users';
 import { AdminLoans } from '@/components/pages/admin/admin-loans';
@@ -77,11 +78,13 @@ import { AdminAgents } from '@/components/pages/admin/admin-agents';
 import { AdminSusuGroups } from '@/components/pages/admin/admin-susu-groups';
 import { AdminAnalytics } from '@/components/pages/admin/admin-analytics';
 import { AdminCompliance } from '@/components/pages/admin/admin-compliance';
+import { AdminSettings } from '@/components/pages/admin/admin-settings';
 import { TreasurerDashboard } from '@/components/pages/treasurer/treasurer-dashboard';
 import { TreasurerGroups } from '@/components/pages/treasurer/treasurer-groups';
 import { TreasurerPayouts } from '@/components/pages/treasurer/treasurer-payouts';
 import { TreasurerMembers } from '@/components/pages/treasurer/treasurer-members';
 import { TreasurerReports } from '@/components/pages/treasurer/treasurer-reports';
+import { TreasurerSettings } from '@/components/pages/treasurer/treasurer-settings';
 import { NotificationPanel } from '@/components/shared/notification-panel';
 
 import type { LucideIcon } from 'lucide-react';
@@ -388,11 +391,20 @@ export function AppLayout() {
   // Bottom tabs (subset of nav for mobile tab bar)
   const bottomTabs = getBottomTabs(navItems, currentPortal);
 
-  // Notification count
+  // Notification count — agent/admin/treasurer mock data mirrors notification-panel.tsx
   const notificationCount = (() => {
     switch (currentPortal) {
       case 'customer':
         return customerStore.notifications.filter(n => !n.read).length;
+      case 'agent':
+        // Matches agentNotifications unread count in notification-panel.tsx
+        return 4; // n1,n2,n3,n5 are unread
+      case 'admin':
+        // Matches adminNotifications unread count in notification-panel.tsx
+        return 5; // n1,n2,n3,n5,n7 are unread
+      case 'treasurer':
+        // Matches treasurerNotifications unread count in notification-panel.tsx
+        return 4; // n1,n2,n3,n5 are unread
       default: return 0;
     }
   })();
@@ -429,7 +441,7 @@ export function AppLayout() {
           case 'collections': return <AgentCollections />;
           case 'customers': return <AgentCustomers />;
           case 'commissions': return <AgentCommissions />;
-          case 'settings': return <CustomerSettings />;
+          case 'settings': return <AgentSettings />;
           default: return <AgentDashboard />;
         }
       case 'admin':
@@ -441,7 +453,7 @@ export function AppLayout() {
           case 'susu-groups': return <AdminSusuGroups />;
           case 'analytics': return <AdminAnalytics />;
           case 'compliance': return <AdminCompliance />;
-          case 'settings': return <CustomerSettings />;
+          case 'settings': return <AdminSettings />;
           default: return <AdminDashboard />;
         }
       case 'treasurer':
@@ -451,7 +463,7 @@ export function AppLayout() {
           case 'payouts': return <TreasurerPayouts />;
           case 'members': return <TreasurerMembers />;
           case 'reports': return <TreasurerReports />;
-          case 'settings': return <CustomerSettings />;
+          case 'settings': return <TreasurerSettings />;
           default: return <TreasurerDashboard />;
         }
       default: return <LoginPage />;

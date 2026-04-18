@@ -27,7 +27,7 @@ export const users: User[] = [
   { id: 'usr-006', name: 'Emmanuel Osei', email: 'emma.osei@gmail.com', phone: '0265566778', role: 'agent', agentCode: 'AGT-001', kycLevel: 'full', memberSince: '2023-08-15', location: 'Accra, Greater Accra', branch: 'Accra Central' },
   { id: 'usr-007', name: 'Grace Owusu', email: 'grace.owusu@gmail.com', phone: '0203344556', role: 'agent', agentCode: 'AGT-002', kycLevel: 'full', memberSince: '2024-02-01', location: 'Kumasi, Ashanti', branch: 'Kumasi Adum' },
   { id: 'usr-008', name: 'Patricia Ampah', email: 'pat.ampah@gmail.com', phone: '0246677889', role: 'treasurer', kycLevel: 'full', memberSince: '2023-06-10', location: 'Accra, Greater Accra', branch: 'Accra Central' },
-  { id: 'usr-009', name: 'Daniel Tetteh', email: 'dan.tetteh@susupay.com', phone: '0278899001', role: 'admin', kycLevel: 'full', memberSince: '2023-01-01', location: 'Accra, Greater Accra', branch: 'Head Office' },
+  { id: 'usr-009', name: 'Daniel Tetteh', email: 'dan.tetteh@isusupro.com', phone: '0278899001', role: 'admin', kycLevel: 'full', memberSince: '2023-01-01', location: 'Accra, Greater Accra', branch: 'Head Office' },
   { id: 'usr-010', name: 'Abena Frimpong', email: 'abena.frimpong@gmail.com', phone: '0502233445', role: 'customer', kycLevel: 'basic', memberSince: '2024-09-12', location: 'Sunyani, Bono' },
 ];
 

@@ -445,7 +445,7 @@ export function CustomerSusu() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="contribute-amount">Amount (GHS)</Label>
+                    <Label htmlFor="contribute-amount">Amount (₵)</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
                         ₵
@@ -725,7 +725,7 @@ export function CustomerSusu() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="goal-target">Target Amount (GHS) *</Label>
+                        <Label htmlFor="goal-target">Target Amount (₵) *</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">₵</span>
                           <Input
@@ -750,7 +750,7 @@ export function CustomerSusu() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="goal-contribution">Contribution Amount (GHS) *</Label>
+                        <Label htmlFor="goal-contribution">Contribution Amount (₵) *</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">₵</span>
                           <Input
@@ -962,7 +962,7 @@ export function CustomerSusu() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="add-funds-amount">Amount (GHS)</Label>
+              <Label htmlFor="add-funds-amount">Amount (₵)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
                   ₵
