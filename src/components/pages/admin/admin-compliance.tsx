@@ -78,7 +78,7 @@ export function AdminCompliance() {
           { label: 'Resolved', value: resolved, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
         ].map((s, i) => (
           <motion.div key={s.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
-            <Card>
+            <Card className="mobile-card">
               <CardContent className="flex items-center gap-3 p-4">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
                   <s.icon className="h-5 w-5" />
@@ -100,7 +100,7 @@ export function AdminCompliance() {
             <div className="space-y-3">
               {criticalAlerts.map(report => (
                 <motion.div key={report.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                  className="flex items-start gap-3 rounded-lg border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/10 p-3 lg:p-4 touch-manipulation">
+                  className="mobile-card flex items-start gap-3 rounded-lg border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/10 p-3 lg:p-4 touch-manipulation">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
                     <AlertTriangle className="h-5 w-5 text-red-600" />
                   </div>
@@ -120,7 +120,7 @@ export function AdminCompliance() {
               ))}
               {highAlerts.map(report => (
                 <motion.div key={report.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-                  className="flex items-start gap-3 rounded-lg border-2 border-orange-300 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10 p-3 lg:p-4 touch-manipulation">
+                  className="mobile-card flex items-start gap-3 rounded-lg border-2 border-orange-300 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10 p-3 lg:p-4 touch-manipulation">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30">
                     <ShieldAlert className="h-5 w-5 text-orange-600" />
                   </div>
@@ -181,7 +181,7 @@ export function AdminCompliance() {
           </CardHeader>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto overscroll-x-contain">
+            <div className="hidden md:block overflow-x-auto overscroll-x-contain scrollbar-hide">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -241,7 +241,7 @@ export function AdminCompliance() {
             {/* Mobile Cards */}
             <div className="md:hidden divide-y">
               {reports.map(report => (
-                <div key={report.id} className="p-4 space-y-2 touch-manipulation">
+                <div key={report.id} className="mobile-card p-4 space-y-2 touch-manipulation">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-semibold text-sm">{report.title}</p>

@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, PiggyBank, Gift, Landmark, CreditCard, BadgeDollarSign, Receipt, Search, Download, Filter, Calendar } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, PiggyBank, Gift, Landmark, CreditCard, BadgeDollarSign, Receipt, Download, Filter, Calendar } from 'lucide-react';
+import { MobileSearchBar } from '@/components/shared/mobile-components';
 import { toast } from 'sonner';
 
 const PAGE_SIZE = 15;
@@ -109,19 +110,33 @@ export function CustomerTransactions() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search transactions..."
+            <div className="flex-1 sm:flex-initial">
+              <div className="hidden sm:block relative flex-1">
+                <Input
+                  placeholder="Search transactions..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-9"
+                />
+              </div>
+              <MobileSearchBar
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+                onChange={(val) => {
+                  setSearch(val);
                   setCurrentPage(1);
                 }}
-                className="pl-9"
+                placeholder="Search transactions..."
+                onCancel={() => {
+                  setSearch('');
+                  setCurrentPage(1);
+                }}
+                className="sm:hidden"
               />
             </div>
-            <div className="flex gap-2 overflow-x-auto overscroll-x-contain flex-nowrap">
+            <div className="flex gap-2 overflow-x-auto overscroll-x-contain flex-nowrap scrollbar-hide">
               <Select
                 value={typeFilter}
                 onValueChange={(val) => {
@@ -322,8 +337,8 @@ export function CustomerTransactions() {
             const isCredit = creditTypes.includes(txn.type);
 
             return (
-              <Card key={txn.id}>
-                <CardContent className="p-4">
+              <Card key={txn.id} className="mobile-card">
+                <CardContent className="p-4 mobile-list-item">
                   <div className="flex items-start gap-3 min-h-[60px]">
                     <span
                       className={`mt-0.5 inline-flex items-center justify-center rounded-lg p-2 ${typeInfo.color}`}

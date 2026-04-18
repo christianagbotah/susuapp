@@ -179,7 +179,7 @@ export function TreasurerMembers() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
               <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -210,7 +210,7 @@ export function TreasurerMembers() {
                   className="pl-9 h-12 lg:h-10"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 overflow-x-auto overscroll-x-contain scrollbar-hide">
                 <Select value={groupFilter} onValueChange={setGroupFilter}>
                   <SelectTrigger className="w-[180px] h-12 lg:h-10">
                     <Filter className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
@@ -434,7 +434,7 @@ export function TreasurerMembers() {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  className="flex-1 min-h-[44px] touch-manipulation"
+                  className="mobile-card flex-1 min-h-[44px] touch-manipulation"
                   onClick={() => handleSendReminder(selectedMember.name)}
                 >
                   <Bell className="mr-1.5 h-4 w-4" />

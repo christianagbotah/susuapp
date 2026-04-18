@@ -95,7 +95,7 @@ export function AdminLoans() {
           { label: 'Defaulted', value: defaultedCount, icon: AlertTriangle, color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card>
+            <Card className="mobile-card">
               <CardContent className="flex items-center gap-3 p-4">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
                   <s.icon className="h-5 w-5" />
@@ -154,7 +154,7 @@ export function AdminLoans() {
         <Card>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden lg:block overflow-x-auto overscroll-x-contain">
+            <div className="hidden lg:block overflow-x-auto overscroll-x-contain scrollbar-hide">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -233,7 +233,7 @@ export function AdminLoans() {
             {/* Mobile Cards */}
             <div className="lg:hidden divide-y">
               {paginatedLoans.map(loan => (
-                <div key={loan.id} className="p-4 space-y-3">
+                <div key={loan.id} className="mobile-card p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-9 w-9">

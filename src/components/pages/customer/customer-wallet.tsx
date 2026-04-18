@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Wallet, ArrowDownLeft, ArrowUpRight, Plus, Smartphone, Building2, QrCode, Copy, Check, Shield, Info, CreditCard, Banknote, TrendingUp } from 'lucide-react';
+import { MobileFabWithLabel } from '@/components/shared/mobile-components';
 
 // ---- Animation variants ----
 const containerVariants = {
@@ -278,7 +279,7 @@ export function CustomerWallet() {
                     whileHover={{ y: -3, scale: 1.01 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                   >
-                    <Card className="overflow-hidden border-slate-200/80 shadow-sm transition-shadow hover:shadow-md">
+                    <Card className="overflow-hidden border-slate-200/80 shadow-sm transition-shadow hover:shadow-md mobile-card">
                       {/* Colored top strip */}
                       <div className={`h-2 bg-gradient-to-r ${getWalletTypeBg(wallet.type)}`} />
                       <CardContent className="p-5">
@@ -492,7 +493,7 @@ export function CustomerWallet() {
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                               onClick={() => setDepositProviderId(provider.id)}
-                              className={`relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 lg:p-4 transition-all touch-manipulation ${
+                              className={`relative mobile-card flex flex-col items-center gap-2 rounded-xl border-2 p-3 lg:p-4 transition-all touch-manipulation ${
                                 isSelected
                                   ? 'border-transparent shadow-md'
                                   : 'border-slate-200 hover:border-slate-300'
@@ -1033,6 +1034,17 @@ export function CustomerWallet() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Mobile FAB - Quick Deposit */}
+      <MobileFabWithLabel
+        icon={ArrowDownLeft}
+        label="Quick Deposit"
+        onClick={() => {
+          // Switch to deposit tab by clicking the trigger
+          const depositTrigger = document.querySelector('[value="deposit"]') as HTMLElement;
+          depositTrigger?.click();
+        }}
+      />
 
       {/* ==============================
           Confirmation Dialog

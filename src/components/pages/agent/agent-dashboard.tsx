@@ -145,7 +145,7 @@ export function AgentDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
               <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5 lg:space-y-1 min-w-0">
@@ -201,7 +201,7 @@ export function AgentDashboard() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: i * 0.1 }}
                   >
-                    <Card className="hover:shadow-md transition-shadow touch-manipulation">
+                    <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
                       <CardContent className="p-3 lg:p-4">
                         <div className="flex flex-col gap-3 lg:gap-4">
                           {/* Header */}
@@ -313,7 +313,7 @@ export function AgentDashboard() {
                   {commissions.slice(0, 4).map((c) => (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between rounded-lg border p-2.5 text-sm"
+                      className="mobile-list-item flex items-center justify-between rounded-lg border p-2.5 text-sm"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">{c.description}</p>
@@ -457,7 +457,7 @@ export function AgentDashboard() {
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {completedRoutes.map((route) => (
-              <Card key={route.id} className="touch-manipulation">
+              <Card key={route.id} className="mobile-card touch-manipulation">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between">
                     <div>

@@ -126,7 +126,7 @@ export function AgentCommissions() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
               <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5 lg:space-y-1 min-w-0">
@@ -171,7 +171,7 @@ export function AgentCommissions() {
             </CardHeader>
             <CardContent className="p-0">
               {/* Type filter */}
-              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain border-b px-4 py-2">
+              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain scrollbar-hide border-b px-4 py-2">
                 <span className="text-xs text-muted-foreground flex items-center mr-1">Type:</span>
                 {['all', 'susu_collection', 'loan_referral', 'new_customer', 'milestone_bonus'].map((t) => (
                   <Button
@@ -248,7 +248,7 @@ export function AgentCommissions() {
                   filteredCommissions.map((commission) => {
                     const tc = typeConfig[commission.type];
                     return (
-                      <div key={commission.id} className="rounded-lg border p-3 space-y-2 touch-manipulation">
+                      <div key={commission.id} className="mobile-card rounded-lg border p-3 space-y-2 touch-manipulation">
                         <div className="flex items-center justify-between">
                           <Badge className={`text-[10px] ${tc?.color ?? ''}`}>
                             {tc?.label ?? commission.type}

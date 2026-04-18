@@ -33,7 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  BottomTabBar, MobileDrawer, MobilePageHeader,
+  BottomTabBar, MobileDrawer, MobilePageHeader, ActionSheet,
   type BottomTabItem,
 } from '@/components/shared/mobile-components';
 
@@ -64,6 +64,7 @@ import {
   MoreHorizontal,
   SendHorizontal,
   UserPlus,
+  ChevronRight,
 } from 'lucide-react';
 
 // Page component imports
@@ -171,7 +172,7 @@ function getBottomTabs(navItems: NavItem[], portal: string): BottomTabItem[] {
 }
 
 function getDrawerOnlyItems(navItems: NavItem[], portal: string): NavItem[] {
-  const maxTabs = portal === 'admin' ? 4 : 5;
+  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 5 : 5;
   return navItems.slice(maxTabs);
 }
 
@@ -379,6 +380,9 @@ export function AppLayout() {
   // Logout confirmation dialog state
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
+  // More menu (action sheet for overflow nav items)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+
   // Notification panel state (must be before any conditional return - Rules of Hooks)
   const [notificationOpen, setNotificationOpen] = useState(false);
 
@@ -565,7 +569,7 @@ export function AppLayout() {
         </header>
 
         {/* ---- Mobile Header (below lg) ---- */}
-        <div className="lg:hidden safe-area-top sticky top-0 z-30 bg-background/95 backdrop-blur-lg border-b border-border/50 shrink-0">
+        <div className="lg:hidden safe-area-top sticky top-0 z-30 bg-background/95 backdrop-blur-lg border-b border-border/50 shrink-0 mobile-header-shadow relative">
           <div className="flex items-center h-12 px-3 gap-2">
             {/* Drawer toggle */}
             <button
@@ -638,8 +642,26 @@ export function AppLayout() {
           items={bottomTabs}
           activeId={activePage}
           onTabChange={handleNavigate}
+          extraItem={
+            getDrawerOnlyItems(navItems, currentPortal).length > 0
+              ? { id: '__more__', label: 'More', icon: MoreHorizontal, badge: undefined }
+              : undefined
+          }
+          onExtraTabClick={getDrawerOnlyItems(navItems, currentPortal).length > 0 ? () => setMoreMenuOpen(true) : undefined}
         />
       )}
+
+      {/* ============ More Menu Action Sheet ============ */}
+      <ActionSheet
+        open={moreMenuOpen}
+        onClose={() => setMoreMenuOpen(false)}
+        title="More Options"
+        items={getDrawerOnlyItems(navItems, currentPortal).map(item => ({
+          label: item.label,
+          icon: item.icon as LucideIcon,
+          onClick: () => handleNavigate(item.id),
+        }))}
+      />
 
       {/* ============ Notification Panel ============ */}
       <NotificationPanel
@@ -653,6 +675,8 @@ export function AppLayout() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       >
+        {/* Swipe-back gesture hint */}
+        <div className="drawer-edge-indicator" />
         <MobileDrawerContent
           portal={currentPortal}
           activePage={activePage}

@@ -255,3 +255,163 @@
   transform: translateY(0);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
+
+/* ============================================================
+   MOBILE-NATIVE CSS PATTERNS
+   ============================================================ */
+
+/* ---- Swipeable Row ---- */
+.swipeable-row {
+  touch-action: pan-y;
+}
+.swipeable-row > .relative {
+  will-change: transform;
+}
+
+/* ---- Haptic Feedback ---- */
+.haptic-feedback {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.haptic-feedback:active {
+  transform: scale(0.92);
+  opacity: 0.7;
+}
+
+/* ---- Native Modal Overlay ---- */
+.native-modal-overlay {
+  backdrop-filter: blur(8px) saturate(1.2);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  background-color: oklch(0 0 0 / 0.5);
+  animation: overlayFadeIn 0.2s ease-out;
+}
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---- Mobile Card with Press State ---- */
+.mobile-card {
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-card:active {
+  transform: scale(0.98);
+  opacity: 0.85;
+  box-shadow: none;
+}
+
+/* ---- Mobile List Item (edge-to-edge feel) ---- */
+.mobile-list-item {
+  padding-left: max(env(safe-area-inset-left, 16px), 16px);
+  padding-right: max(env(safe-area-inset-right, 16px), 16px);
+  min-height: 44px;
+  transition: background-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-list-item:active {
+  background-color: oklch(0.92 0.01 155);
+}
+.dark .mobile-list-item:active {
+  background-color: oklch(0.25 0.015 155);
+}
+
+/* ---- Sticky Mobile Header ---- */
+.sticky-mobile-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background-color: oklch(0.985 0.002 155 / 0.92);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-bottom: 1px solid oklch(0.91 0.01 155 / 0.5);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.dark .sticky-mobile-header {
+  background-color: oklch(0.13 0.015 155 / 0.92);
+  border-bottom: 1px solid oklch(0.25 0.02 155 / 0.5);
+}
+
+/* ---- Mobile Gradient Header Shadow ---- */
+.mobile-header-shadow::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(
+    to bottom,
+    oklch(0.7 0.02 155 / 0.08),
+    transparent
+  );
+  pointer-events: none;
+}
+.dark .mobile-header-shadow::after {
+  background: linear-gradient(
+    to bottom,
+    oklch(0 0 0 / 0.2),
+    transparent
+  );
+}
+
+/* ---- Input/Textarea/Select Mobile Styles ---- */
+input, textarea, select {
+  font-size: max(16px, 1rem);
+  -webkit-appearance: none;
+  appearance: none;
+}
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="tel"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* ---- Scrollbar Hide Utility ---- */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---- Swipe-back drawer indicator ---- */
+.drawer-edge-indicator {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 48px;
+  border-radius: 2px 0 0 2px;
+  background-color: oklch(0.5 0.02 155 / 0.3);
+  animation: edgeIndicatorPulse 2s ease-in-out infinite;
+}
+@keyframes edgeIndicatorPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+.dark .drawer-edge-indicator {
+  background-color: oklch(0.6 0.02 155 / 0.3);
+}
+
+/* ---- Ghana flag accent line ---- */
+.ghana-accent {
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    #CE1126 0%, #CE1126 33.33%,
+    #FCD116 33.33%, #FCD116 66.66%,
+    #006B3F 66.66%, #006B3F 100%
+  );
+}

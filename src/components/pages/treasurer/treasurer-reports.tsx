@@ -191,7 +191,7 @@ export function TreasurerReports() {
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Report Period:</span>
               </div>
-              <div className="flex flex-wrap items-center gap-2 overscroll-x-contain">
+              <div className="flex flex-wrap items-center gap-2 overscroll-x-contain scrollbar-hide">
                 {([
                   { label: 'This Week', value: 'this_week' as DateRange },
                   { label: 'This Month', value: 'this_month' as DateRange },
@@ -484,7 +484,7 @@ export function TreasurerReports() {
                 <p className="text-sm font-medium">Export Reports</p>
                 <p className="text-xs text-muted-foreground">Generate and download reports for {dateRangeLabel}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 overflow-x-auto overscroll-x-contain scrollbar-hide">
                 <Button variant="outline" className="gap-2 min-h-[44px] touch-manipulation" onClick={handleExportPDF}>
                   <FileText className="h-4 w-4 text-red-500" />
                   PDF Report

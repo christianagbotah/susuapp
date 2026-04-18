@@ -139,7 +139,7 @@ export function TreasurerPayouts() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
               <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -161,7 +161,7 @@ export function TreasurerPayouts() {
         <Card>
           <CardContent className="p-3 lg:p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2 overscroll-x-contain">
+              <div className="flex gap-2 overflow-x-auto overscroll-x-contain scrollbar-hide">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 {filterButtons.map(btn => (
                   <Button

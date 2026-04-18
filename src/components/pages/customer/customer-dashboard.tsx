@@ -197,7 +197,7 @@ export function CustomerDashboard() {
           ============================== */}
       <motion.div variants={itemVariants}>
         <Card className="overflow-hidden border-0 shadow-lg shadow-emerald-900/10">
-          <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-4 lg:px-8 lg:py-8">
+          <div className="relative safe-area-top bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-4 lg:px-8 lg:py-8">
             {/* Decorative circles */}
             <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/10" />
             <div className="pointer-events-none absolute -bottom-16 -left-8 h-40 w-40 rounded-full bg-white/5" />
@@ -385,7 +385,7 @@ export function CustomerDashboard() {
                 whileTap={{ scale: 0.97 }}
               >
                 <Card
-                  className="group min-w-[120px] shrink-0 cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md lg:min-w-0 touch-manipulation"
+                  className="group min-w-[120px] shrink-0 cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md lg:min-w-0 touch-manipulation mobile-card"
                   onClick={() => setActivePage(action.page)}
                 >
                   <CardContent className="flex flex-col items-center justify-between gap-3 p-4 text-center min-h-[120px]">
@@ -516,7 +516,7 @@ export function CustomerDashboard() {
                     <motion.div
                       key={group.id}
                       whileHover={{ x: 2 }}
-                      className="group flex cursor-pointer items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 transition-colors hover:border-emerald-200 hover:bg-emerald-50/40"
+                      className="group flex cursor-pointer items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 transition-colors hover:border-emerald-200 hover:bg-emerald-50/40 mobile-card"
                     >
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
                         <Users className="h-5 w-5 text-emerald-600" />
@@ -681,7 +681,7 @@ export function CustomerDashboard() {
                       return (
                         <div
                           key={txn.id}
-                          className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3 touch-manipulation"
+                          className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3 touch-manipulation mobile-list-item"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-xs font-medium text-slate-800">

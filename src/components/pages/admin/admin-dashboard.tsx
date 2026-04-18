@@ -82,7 +82,7 @@ export function AdminDashboard() {
       <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {statCards.map((s, i) => (
           <motion.div key={s.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
-            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
               <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center gap-2">
                   <div className={`flex h-8 w-8 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
@@ -151,7 +151,7 @@ export function AdminDashboard() {
                 <p className="text-sm text-muted-foreground text-center py-8">No pending applications</p>
               ) : (
                 pendingLoans.map(loan => (
-                  <div key={loan.id} className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation">
+                  <div key={loan.id} className="mobile-list-item flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{loan.applicantName}</p>
                       <p className="text-xs text-muted-foreground">{formatGHS(loan.amount)} &middot; {loan.type} &middot; {formatDate(loan.startDate || loan.id.slice(-4))}</p>
@@ -181,7 +181,7 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-3 max-h-80 overflow-y-auto overscroll-contain">
               {topBranches.map((branch, idx) => (
-                <div key={branch.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation">
+                <div key={branch.id} className="mobile-list-item flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-xs font-bold text-emerald-700">
                     {idx + 1}
                   </div>
@@ -265,7 +265,7 @@ export function AdminDashboard() {
               ].map((activity, idx) => (
                 <div
                   key={idx}
-                  className="flex items-start gap-3 rounded-lg p-3 hover:bg-muted/50 transition-colors touch-manipulation"
+                  className="mobile-list-item flex items-start gap-3 rounded-lg p-3 hover:bg-muted/50 transition-colors touch-manipulation"
                 >
                   <div
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${

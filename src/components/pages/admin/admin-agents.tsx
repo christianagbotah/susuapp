@@ -76,7 +76,7 @@ export function AdminAgents() {
           { label: 'Total Collections', value: formatGHS(totalCollections), icon: DollarSign, color: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30' },
         ].map((s, i) => (
           <motion.div key={s.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
-            <Card>
+            <Card className="mobile-card">
               <CardContent className="flex items-center gap-3 p-3 lg:p-4">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
                   <s.icon className="h-5 w-5" />
@@ -107,7 +107,7 @@ export function AdminAgents() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 + idx * 0.1 }}
-                  className={`relative rounded-lg border p-3 lg:p-4 touch-manipulation ${idx === 0 ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
+                  className={`mobile-card relative rounded-lg border p-3 lg:p-4 touch-manipulation ${idx === 0 ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
                 >
                   {idx === 0 && (
                     <div className="absolute -top-3 left-4 rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
@@ -160,7 +160,7 @@ export function AdminAgents() {
           </CardHeader>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto overscroll-x-contain">
+            <div className="hidden md:block overflow-x-auto overscroll-x-contain scrollbar-hide">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -221,7 +221,7 @@ export function AdminAgents() {
             {/* Mobile Cards */}
             <div className="md:hidden divide-y">
               {allAgents.map(agent => (
-                <div key={agent.id} className="p-4 space-y-3 touch-manipulation">
+                <div key={agent.id} className="mobile-list-item p-4 space-y-3 touch-manipulation">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">

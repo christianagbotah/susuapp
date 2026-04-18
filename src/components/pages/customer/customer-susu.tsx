@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { PiggyBank, Users, Target, Plus, Clock, CheckCircle, AlertCircle, Calendar, ArrowRight, DollarSign, Gift, Sparkles, ChevronRight } from 'lucide-react';
+import { QuickActionsGrid } from '@/components/shared/mobile-components';
 
 // ---- Animation variants ----
 const containerVariants = {
@@ -243,7 +244,40 @@ export function CustomerSusu() {
               ========================================== */}
           <TabsContent value="my-susu" className="space-y-6">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Mobile: QuickActionsGrid for tap-friendly summary actions */}
+            <div className="sm:hidden">
+              <QuickActionsGrid
+                columns={3}
+                items={[
+                  {
+                    id: 'balance',
+                    label: `${formatGHS(susuWallet?.balance ?? 0)}`,
+                    icon: PiggyBank,
+                    color: 'text-white',
+                    bgColor: 'bg-emerald-500',
+                    onClick: () => {},
+                  },
+                  {
+                    id: 'groups',
+                    label: `${activeGroups.length} Active`,
+                    icon: Users,
+                    color: 'text-blue-600',
+                    bgColor: 'bg-blue-100',
+                    onClick: () => {},
+                  },
+                  {
+                    id: 'payout',
+                    label: nextPayout ? formatGHS(nextPayout.amount) : 'N/A',
+                    icon: Gift,
+                    color: 'text-amber-600',
+                    bgColor: 'bg-amber-100',
+                    onClick: () => {},
+                  },
+                ]}
+              />
+            </div>
+            {/* Desktop: Original grid */}
+            <div className="hidden grid-cols-1 gap-4 sm:grid-cols-3 sm:grid">
               <motion.div
                 variants={itemVariants}
                 whileHover={{ y: -2 }}
@@ -331,7 +365,7 @@ export function CustomerSusu() {
                       whileHover={{ y: -3, scale: 1.01 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+                      <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md mobile-card">
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
@@ -559,7 +593,7 @@ export function CustomerSusu() {
                       transition={{ duration: 0.2 }}
                     >
                       <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-3 mobile-list-item">
                           <div className="flex items-start gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100">
                               <Users className="h-5 w-5 text-violet-600" />

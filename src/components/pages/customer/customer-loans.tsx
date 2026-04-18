@@ -18,7 +18,8 @@ import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info } from 'lucide-react';
+import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info, CreditCard } from 'lucide-react';
+import { SwipeableRow, FAB } from '@/components/shared/mobile-components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import type { LoanProduct } from '@/lib/types';
 
@@ -337,7 +338,7 @@ export function CustomerLoans() {
               <motion.div variants={itemVariants}>
                 <Card className="border-slate-200/80 bg-white shadow-sm">
                   <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto scrollbar-hide">
                       <Table>
                         <TableHeader>
                           <TableRow className="border-slate-100 hover:bg-transparent">
@@ -553,6 +554,77 @@ export function CustomerLoans() {
                 </Card>
               </motion.div>
             )}
+
+            {/* Mobile: Swipeable Loan Cards (hidden on desktop) */}
+            <div className="space-y-3 lg:hidden">
+              {myLoans.map((loan) => {
+                const progressPercent =
+                  loan.amount > 0
+                    ? Math.round(((loan.amount - loan.remainingBalance) / loan.amount) * 100)
+                    : 0;
+                return (
+                  <SwipeableRow
+                    key={loan.id}
+                    rightActions={[
+                      {
+                        label: 'Pay',
+                        icon: CreditCard,
+                        bg: 'bg-emerald-500',
+                        onClick: () => toast.info('Navigate to payment for this loan'),
+                      },
+                      {
+                        label: 'Details',
+                        icon: FileText,
+                        bg: 'bg-blue-500',
+                        onClick: () => toggleExpand(loan.id),
+                      },
+                    ]}
+                  >
+                    <div className="mobile-list-item flex items-center gap-3 bg-background p-4 rounded-none">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100">
+                        {getStatusIcon(loan.status)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-slate-800 truncate">
+                            {loan.type.replace('-', ' ')}
+                          </span>
+                          <span className="text-sm font-bold text-slate-900 whitespace-nowrap">
+                            {formatGHS(loan.amount)}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                          <span>{loan.interestRate}%</span>
+                          <span>·</span>
+                          <span>{formatDuration(loan.term)}</span>
+                          <span>·</span>
+                          <Badge className={`${getStatusColor(loan.status)} text-[10px] font-medium capitalize px-1.5 py-0`}>
+                            {loan.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        {loan.status === 'active' && (
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-500">Progress</span>
+                              <span className="font-semibold text-emerald-600">{progressPercent}%</span>
+                            </div>
+                            <Progress value={progressPercent} className="h-1.5 bg-slate-100" />
+                          </div>
+                        )}
+                      </div>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
+                    </div>
+                  </SwipeableRow>
+                );
+              })}
+            </div>
+
+            {/* FAB: Quick Pay */}
+            <FAB
+              icon={CreditCard}
+              onClick={() => toast.info('Quick payment for active loans')}
+              label="Quick Pay"
+            />
           </TabsContent>
 
           {/* ==========================================
@@ -578,7 +650,7 @@ export function CustomerLoans() {
                     whileHover={{ y: -3, scale: 1.01 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+                    <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md mobile-card">
                       <CardHeader className="pb-3">
                         <div className="flex items-start gap-3">
                           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl">

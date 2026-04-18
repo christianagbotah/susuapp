@@ -132,7 +132,7 @@ export function AgentCustomers() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.1 }}
           >
-            <Card className="touch-manipulation">
+            <Card className="mobile-card touch-manipulation">
               <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5 lg:space-y-1 min-w-0">
@@ -167,7 +167,7 @@ export function AgentCustomers() {
                   className="pl-9 h-11 lg:h-10"
                 />
               </div>
-              <div className="flex gap-2 overflow-x-auto overscroll-x-contain">
+              <div className="flex gap-2 overflow-x-auto overscroll-x-contain scrollbar-hide">
                 {(['all', 'full', 'basic', 'none'] as const).map((level) => (
                   <Button
                     key={level}
@@ -283,7 +283,7 @@ export function AgentCustomers() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: index * 0.05 }}
               >
-                <Card className="hover:shadow-sm transition-shadow touch-manipulation">
+                <Card className="mobile-card hover:shadow-sm transition-shadow touch-manipulation">
                   <CardContent className="p-3 lg:p-4">
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10">
@@ -403,7 +403,7 @@ export function AgentCustomers() {
                     {mockSusuGroups.map((group) => (
                       <div
                         key={group.name}
-                        className="flex items-center justify-between rounded-md border p-2.5 text-sm"
+                        className="mobile-list-item flex items-center justify-between rounded-md border p-2.5 text-sm"
                       >
                         <div>
                           <p className="font-medium">{group.name}</p>
@@ -424,7 +424,7 @@ export function AgentCustomers() {
                     {mockTransactions.map((tx) => (
                       <div
                         key={tx.id}
-                        className="flex items-center justify-between rounded-md border p-2.5 text-sm"
+                        className="mobile-list-item flex items-center justify-between rounded-md border p-2.5 text-sm"
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium">{tx.desc}</p>

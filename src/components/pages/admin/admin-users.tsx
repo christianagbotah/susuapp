@@ -103,7 +103,7 @@ export function AdminUsers() {
           { label: 'No KYC', value: noKyc, icon: ShieldX, color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card>
+            <Card className="mobile-card">
               <CardContent className="flex items-center gap-3 p-4">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
                   <s.icon className="h-5 w-5" />
@@ -184,7 +184,7 @@ export function AdminUsers() {
         <Card>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto overscroll-x-contain">
+            <div className="hidden md:block overflow-x-auto overscroll-x-contain scrollbar-hide">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -255,7 +255,7 @@ export function AdminUsers() {
               {paginatedUsers.map(user => {
                 const suspended = suspendedUsers.has(user.id);
                 return (
-                  <div key={user.id} className="p-4 space-y-3">
+                  <div key={user.id} className="mobile-list-item p-4 space-y-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarFallback className="text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">

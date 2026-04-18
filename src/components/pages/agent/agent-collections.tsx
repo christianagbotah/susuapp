@@ -182,7 +182,7 @@ export function AgentCollections() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: index * 0.1 }}
                 >
-                  <Card className="overflow-hidden">
+                  <Card className="mobile-card overflow-hidden">
                     {/* Route Header */}
                     <button
                       type="button"
@@ -329,7 +329,7 @@ export function AgentCollections() {
                               {route.customers.map((customer) => (
                                 <div
                                   key={customer.id}
-                                  className="flex items-start gap-3 rounded-lg border p-3 touch-manipulation"
+                                  className="mobile-list-item flex items-start gap-3 rounded-lg border p-3 touch-manipulation"
                                 >
                                   <div className="mt-0.5">{getCustomerStatusIcon(customer.status)}</div>
                                   <div className="min-w-0 flex-1 space-y-1.5">
@@ -358,7 +358,7 @@ export function AgentCollections() {
                                       <div className="flex gap-2 pt-1">
                                         <Button
                                           size="sm"
-                                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 min-h-[44px] lg:min-h-0"
+                                          className="haptic-feedback flex-1 bg-emerald-600 hover:bg-emerald-700 min-h-[44px] lg:min-h-0"
                                           onClick={() => openCollectDialog(route.id, customer)}
                                         >
                                           <DollarSign className="mr-1 h-3.5 w-3.5" />
@@ -367,7 +367,7 @@ export function AgentCollections() {
                                         <Button
                                           size="sm"
                                           variant="outline"
-                                          className="min-h-[44px] lg:min-h-0"
+                                          className="haptic-feedback min-h-[44px] lg:min-h-0"
                                           onClick={() => openAbsentDialog(route.id, customer)}
                                         >
                                           <UserX className="mr-1 h-3.5 w-3.5" />
@@ -422,7 +422,7 @@ export function AgentCollections() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.08 }}
               >
-                <Card>
+                <Card className="mobile-card">
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-1">

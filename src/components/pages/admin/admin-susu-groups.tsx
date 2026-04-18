@@ -50,7 +50,7 @@ export function AdminSusuGroups() {
           { label: 'Total Pool Value', value: formatGHS(totalPoolValue), icon: PiggyBank, color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30' },
         ].map((s, i) => (
           <motion.div key={s.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
-            <Card>
+            <Card className="mobile-card">
               <CardContent className="flex items-center gap-3 p-4">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
                   <s.icon className="h-5 w-5" />
@@ -73,7 +73,7 @@ export function AdminSusuGroups() {
           </CardHeader>
           <CardContent className="p-0">
             {/* Desktop Table */}
-            <div className="hidden xl:block overflow-x-auto overscroll-x-contain">
+            <div className="hidden xl:block overflow-x-auto overscroll-x-contain scrollbar-hide">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -137,7 +137,7 @@ export function AdminSusuGroups() {
             {/* Mobile / Tablet Cards */}
             <div className="xl:hidden divide-y">
               {allSusuGroups.map(group => (
-                <div key={group.id} className="p-4 space-y-3 touch-manipulation">
+                <div key={group.id} className="mobile-card p-4 space-y-3 touch-manipulation">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-semibold text-sm">{group.name}</p>

@@ -576,7 +576,7 @@ export function TreasurerSettings() {
                 .map((session) => (
                   <div
                     key={session.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
+                    className="mobile-list-item flex items-center justify-between rounded-lg border p-4"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <Smartphone className="h-5 w-5 text-muted-foreground shrink-0" />

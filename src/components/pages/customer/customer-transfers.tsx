@@ -491,7 +491,7 @@ export function CustomerTransfers() {
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setSendProviderId(provider.id)}
-                                className={`relative flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 transition-all touch-manipulation min-h-[44px] lg:min-h-0 ${
+                                className={`relative mobile-card haptic-feedback flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 transition-all touch-manipulation min-h-[44px] lg:min-h-0 ${
                                   isSelected
                                     ? 'border-transparent shadow-md'
                                     : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
@@ -872,8 +872,8 @@ export function CustomerTransfers() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                   >
-                    <Card className="border-slate-200/80 dark:border-slate-700/50 shadow-sm">
-                      <CardContent className="p-4">
+                    <Card className="border-slate-200/80 dark:border-slate-700/50 shadow-sm mobile-card">
+                      <CardContent className="p-4 mobile-list-item">
                         <div className="flex items-start gap-3 min-h-[60px]">
                           <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
                             transfer.status === 'completed'

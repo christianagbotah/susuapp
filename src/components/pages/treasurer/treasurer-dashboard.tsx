@@ -124,7 +124,7 @@ export function TreasurerDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="hover:shadow-md transition-shadow touch-manipulation">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
               <CardContent className="p-3 lg:p-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
@@ -312,7 +312,7 @@ export function TreasurerDashboard() {
               ) : (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto overscroll-contain">
                   {pendingPayouts.map((payout) => (
-                    <div key={payout.id} className="rounded-lg border p-3 space-y-2 touch-manipulation">
+                    <div key={payout.id} className="mobile-card rounded-lg border p-3 space-y-2 touch-manipulation">
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{payout.memberName}</p>
