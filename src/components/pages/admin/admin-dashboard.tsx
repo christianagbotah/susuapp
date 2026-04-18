@@ -66,7 +66,7 @@ export function AdminDashboard() {
       {/* System Overview Banner */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-4 lg:p-6 text-white">
         <div className="relative z-10">
-          <h1 className="text-2xl font-bold sm:text-3xl">SusuPay Admin Console</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">iSusuPro Admin Console</h1>
           <p className="mt-1 text-emerald-100">
             Total platform users: <span className="font-semibold text-white">{stats.totalUsers.toLocaleString()}</span>
             <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-500/30 px-2 py-0.5 text-xs font-medium text-white">

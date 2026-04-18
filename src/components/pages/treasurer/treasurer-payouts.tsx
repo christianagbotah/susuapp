@@ -53,7 +53,7 @@ const dailyPayoutData = [
 ];
 
 const chartConfig = {
-  amount: { label: 'Payout Amount (GH₵)', color: 'hsl(var(--chart-1))' },
+  amount: { label: 'Payout Amount (₵)', color: 'hsl(var(--chart-1))' },
   count: { label: 'Payout Count', color: 'hsl(var(--chart-2))' },
 };
 
@@ -407,7 +407,7 @@ export function TreasurerPayouts() {
             <div className="space-y-4">
               <div className="rounded-lg border-2 border-emerald-200 dark:border-emerald-800 p-4 space-y-3 bg-emerald-50/50 dark:bg-emerald-900/10">
                 <div className="text-center space-y-1 pb-3 border-b border-emerald-200 dark:border-emerald-700">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">SusuPay Ghana</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">iSusuPro Ghana</p>
                   <p className="font-bold text-lg">Payment Receipt</p>
                   <Badge className="bg-emerald-600 text-white">Completed</Badge>
                 </div>

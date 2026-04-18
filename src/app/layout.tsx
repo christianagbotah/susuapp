@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SusuPay Ghana - Micro Finance & Susu Platform",
+  title: "iSusuPro Ghana - Micro Finance & Susu Platform",
   description: "Enterprise-grade micro finance and susu savings platform tailored for Ghana. Manage susu contributions, loans, mobile money, and more.",
-  keywords: ["SusuPay", "Ghana", "Micro Finance", "Susu", "Mobile Money", "Fintech"],
-  authors: [{ name: "SusuPay Ghana" }],
+  keywords: ["iSusuPro", "Ghana", "Micro Finance", "Susu", "Mobile Money", "Fintech"],
+  authors: [{ name: "iSusuPro Ghana" }],
   icons: {
     icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>",
   },

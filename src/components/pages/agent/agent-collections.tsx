@@ -475,7 +475,7 @@ export function AgentCollections() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="collect-amount">Amount Collected (GH₵)</Label>
+              <Label htmlFor="collect-amount">Amount Collected (₵)</Label>
               <Input
                 id="collect-amount"
                 type="number"

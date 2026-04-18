@@ -72,7 +72,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 // ============================================================
 export function CustomerDashboard() {
   const {
-    user, wallets, susuGroups: mySusuGroups, myLoans, transactions, savingsGoals, susuPayouts, notifications,
+    user, wallets, susuGroups: mySusuGroups, myLoans, transactions, savingsGoals, susuPayouts, notifications, setActivePage,
   } = useCustomerStore();
 
   // ---- Computed stats ----
@@ -130,10 +130,10 @@ export function CustomerDashboard() {
 
   // Quick actions
   const quickActions = [
-    { label: 'Start Susu', icon: PiggyBank, color: 'text-emerald-600', bg: 'bg-emerald-50 hover:bg-emerald-100' },
-    { label: 'Apply for Loan', icon: Landmark, color: 'text-amber-600', bg: 'bg-amber-50 hover:bg-amber-100' },
-    { label: 'Deposit Money', icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50 hover:bg-blue-100' },
-    { label: 'View Statements', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-50 hover:bg-purple-100' },
+    { label: 'Start Susu', icon: PiggyBank, color: 'text-emerald-600', bg: 'bg-emerald-50 hover:bg-emerald-100', page: 'susu' },
+    { label: 'Apply for Loan', icon: Landmark, color: 'text-amber-600', bg: 'bg-amber-50 hover:bg-amber-100', page: 'loans' },
+    { label: 'Deposit Money', icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50 hover:bg-blue-100', page: 'wallet' },
+    { label: 'View Statements', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-50 hover:bg-purple-100', page: 'transactions' },
   ];
 
   // Recent transactions (last 5)
@@ -242,8 +242,8 @@ export function CustomerDashboard() {
           const Icon = stat.icon;
           return (
             <motion.div key={stat.title} variants={itemVariants}>
-              <Card className="border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md touch-manipulation">
-                <CardContent className="flex flex-col items-center gap-2 p-3 lg:flex-row lg:items-start lg:gap-4 lg:p-5">
+              <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md touch-manipulation">
+                <CardContent className="flex flex-col items-center gap-2 p-3 lg:flex-row lg:items-start lg:gap-4 lg:p-5 h-full justify-between">
                   <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${stat.iconBg}`}>
                     <Icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
@@ -290,8 +290,11 @@ export function CustomerDashboard() {
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
               >
-                <Card className="group min-w-[120px] shrink-0 cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md lg:min-w-0 touch-manipulation">
-                  <CardContent className="flex flex-col items-center gap-3 p-4 text-center">
+                <Card
+                  className="group min-w-[120px] shrink-0 cursor-pointer border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md lg:min-w-0 touch-manipulation"
+                  onClick={() => setActivePage(action.page)}
+                >
+                  <CardContent className="flex flex-col items-center justify-between gap-3 p-4 text-center min-h-[120px]">
                     <div
                       className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-colors ${action.bg}`}
                     >
@@ -407,6 +410,7 @@ export function CustomerDashboard() {
                       variant="ghost"
                       size="sm"
                       className="gap-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                      onClick={() => setActivePage('susu')}
                     >
                       View All
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -519,6 +523,7 @@ export function CustomerDashboard() {
                       variant="ghost"
                       size="sm"
                       className="gap-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                      onClick={() => setActivePage('transactions')}
                     >
                       View All
                       <ChevronRight className="h-3.5 w-3.5" />

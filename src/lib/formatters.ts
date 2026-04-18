@@ -1,9 +1,9 @@
 // ============================================
-// SusuPay Ghana - Utility Formatters
+// iSusuPro Ghana - Utility Formatters
 // ============================================
 
 export function formatGHS(amount: number): string {
-  return `GH₵ ${amount.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₵${amount.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function formatUSD(amount: number): string {
@@ -49,7 +49,7 @@ export function getInitials(name: string): string {
 }
 
 export function generateReference(): string {
-  const prefix = 'SP';
+  const prefix = 'ISP';
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `${prefix}${timestamp}${random}`;

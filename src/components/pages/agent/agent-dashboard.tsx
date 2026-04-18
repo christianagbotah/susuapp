@@ -26,7 +26,7 @@ const weeklyChartData = [
 ];
 
 const chartConfig = {
-  amount: { label: 'Collections (GH₵)', color: 'hsl(var(--chart-1))' },
+  amount: { label: 'Collections (₵)', color: 'hsl(var(--chart-1))' },
 };
 
 const fadeIn = {

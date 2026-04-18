@@ -1,5 +1,5 @@
 // ============================================
-// SusuPay Ghana - Comprehensive Mock Data
+// iSusuPro Ghana - Comprehensive Mock Data
 // ============================================
 import type {
   User, SusuGroup, SusuContribution, SusuPayout, SavingsGoal,
@@ -225,24 +225,24 @@ export const complianceReports: ComplianceReport[] = [
 
 // ---- Notifications ----
 export const notifications: Notification[] = [
-  { id: 'ntf-001', title: 'Susu Payout Tomorrow', message: 'You will receive GH₵ 10,000.00 from Makola Market Women susu group tomorrow. Ensure your MoMo number is active.', type: 'info', date: '2026-04-18T08:00:00', read: false, category: 'susu' },
-  { id: 'ntf-002', title: 'Loan Payment Due', message: 'Your monthly loan payment of GH₵ 1,350.00 is due on May 1, 2026. Please ensure sufficient balance.', type: 'warning', date: '2026-04-17T10:00:00', read: false, category: 'loan' },
-  { id: 'ntf-003', title: 'Contribution Collected', message: 'Your daily contribution of GH₵ 500.00 has been collected by Emmanuel Osei.', type: 'success', date: '2026-04-18T09:35:00', read: true, category: 'susu' },
+  { id: 'ntf-001', title: 'Susu Payout Tomorrow', message: 'You will receive ₵10,000.00 from Makola Market Women susu group tomorrow. Ensure your MoMo number is active.', type: 'info', date: '2026-04-18T08:00:00', read: false, category: 'susu' },
+  { id: 'ntf-002', title: 'Loan Payment Due', message: 'Your monthly loan payment of ₵1,350.00 is due on May 1, 2026. Please ensure sufficient balance.', type: 'warning', date: '2026-04-17T10:00:00', read: false, category: 'loan' },
+  { id: 'ntf-003', title: 'Contribution Collected', message: 'Your daily contribution of ₵500.00 has been collected by Emmanuel Osei.', type: 'success', date: '2026-04-18T09:35:00', read: true, category: 'susu' },
   { id: 'ntf-004', title: 'KYC Reminder', message: 'Complete your full KYC verification to unlock higher transaction limits and loan access.', type: 'info', date: '2026-04-16T12:00:00', read: true, category: 'account' },
   { id: 'ntf-005', title: 'New Susu Group Available', message: 'Join "Accra Digital Entrepreneurs" - a new monthly susu group with 6 members. Only 9 spots left!', type: 'info', date: '2026-04-15T14:00:00', read: true, category: 'susu' },
-  { id: 'ntf-006', title: 'Deposit Successful', message: 'Your deposit of GH₵ 2,000.00 via MTN MoMo has been processed successfully.', type: 'success', date: '2026-04-16T11:05:00', read: true, category: 'wallet' },
+  { id: 'ntf-006', title: 'Deposit Successful', message: 'Your deposit of ₵2,000.00 via MTN MoMo has been processed successfully.', type: 'success', date: '2026-04-16T11:05:00', read: true, category: 'wallet' },
   { id: 'ntf-007', title: 'Savings Goal Progress', message: 'Your Shop Rent Fund is 69% complete. Keep contributing to reach your goal!', type: 'success', date: '2026-04-14T09:00:00', read: true, category: 'savings' },
 ];
 
 // ---- Activity Log ----
 export const activityLogs: ActivityLog[] = [
-  { id: 'al-001', userId: 'usr-001', userName: 'Ama Mensah', action: 'Contribution Made', details: 'Paid GH₵ 500.00 to Makola Market Women susu group', date: '2026-04-18T09:30:00', category: 'Susu' },
-  { id: 'al-002', userId: 'usr-006', userName: 'Emmanuel Osei', action: 'Collection Completed', details: 'Collected GH₵ 2,000.00 from 4 customers on Makola route', date: '2026-04-18T09:45:00', category: 'Collection' },
-  { id: 'al-003', userId: 'usr-001', userName: 'Ama Mensah', action: 'Loan Repayment', details: 'Paid GH₵ 1,350.00 for Business Loan (LN-001)', date: '2026-04-17T14:20:00', category: 'Loan' },
-  { id: 'al-004', userId: 'usr-001', userName: 'Ama Mensah', action: 'Deposit', details: 'Deposited GH₵ 2,000.00 via MTN MoMo', date: '2026-04-16T11:00:00', category: 'Wallet' },
-  { id: 'al-005', userId: 'usr-008', userName: 'Patricia Ampah', action: 'Payout Processed', details: 'Processed GH₵ 10,000.00 payout to Efua Darko', date: '2026-04-15T16:50:00', category: 'Susu' },
-  { id: 'al-006', userId: 'usr-009', userName: 'Daniel Tetteh', action: 'Loan Approved', details: 'Approved GH₵ 25,000.00 business loan for Efua Darko', date: '2026-04-10T10:30:00', category: 'Loan' },
-  { id: 'al-007', userId: 'usr-001', userName: 'Ama Mensah', action: 'Goal Created', details: 'Created savings goal "Shop Rent Fund" - GH₵ 18,000.00', date: '2026-04-08T08:00:00', category: 'Savings' },
+  { id: 'al-001', userId: 'usr-001', userName: 'Ama Mensah', action: 'Contribution Made', details: 'Paid ₵500.00 to Makola Market Women susu group', date: '2026-04-18T09:30:00', category: 'Susu' },
+  { id: 'al-002', userId: 'usr-006', userName: 'Emmanuel Osei', action: 'Collection Completed', details: 'Collected ₵2,000.00 from 4 customers on Makola route', date: '2026-04-18T09:45:00', category: 'Collection' },
+  { id: 'al-003', userId: 'usr-001', userName: 'Ama Mensah', action: 'Loan Repayment', details: 'Paid ₵1,350.00 for Business Loan (LN-001)', date: '2026-04-17T14:20:00', category: 'Loan' },
+  { id: 'al-004', userId: 'usr-001', userName: 'Ama Mensah', action: 'Deposit', details: 'Deposited ₵2,000.00 via MTN MoMo', date: '2026-04-16T11:00:00', category: 'Wallet' },
+  { id: 'al-005', userId: 'usr-008', userName: 'Patricia Ampah', action: 'Payout Processed', details: 'Processed ₵10,000.00 payout to Efua Darko', date: '2026-04-15T16:50:00', category: 'Susu' },
+  { id: 'al-006', userId: 'usr-009', userName: 'Daniel Tetteh', action: 'Loan Approved', details: 'Approved ₵25,000.00 business loan for Efua Darko', date: '2026-04-10T10:30:00', category: 'Loan' },
+  { id: 'al-007', userId: 'usr-001', userName: 'Ama Mensah', action: 'Goal Created', details: 'Created savings goal "Shop Rent Fund" - ₵18,000.00', date: '2026-04-08T08:00:00', category: 'Savings' },
 ];
 
 // ---- Monthly Revenue Data (for charts) ----

@@ -269,8 +269,8 @@ export function CustomerSusu() {
                 variants={itemVariants}
                 whileHover={{ y: -2 }}
               >
-                <Card className="border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
-                  <CardContent className="flex items-start gap-4 p-5">
+                <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+                  <CardContent className="flex flex-col items-start gap-4 p-5 h-full justify-between">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100">
                       <Users className="h-5 w-5 text-blue-600" />
                     </div>
@@ -291,8 +291,8 @@ export function CustomerSusu() {
                 variants={itemVariants}
                 whileHover={{ y: -2 }}
               >
-                <Card className="border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
-                  <CardContent className="flex items-start gap-4 p-5">
+                <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+                  <CardContent className="flex flex-col items-start gap-4 p-5 h-full justify-between">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100">
                       <Gift className="h-5 w-5 text-amber-600" />
                     </div>
@@ -448,7 +448,7 @@ export function CustomerSusu() {
                     <Label htmlFor="contribute-amount">Amount (GHS)</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-                        GH₵
+                        ₵
                       </span>
                       <Input
                         id="contribute-amount"
@@ -727,7 +727,7 @@ export function CustomerSusu() {
                       <div className="space-y-2">
                         <Label htmlFor="goal-target">Target Amount (GHS) *</Label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">GH₵</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">₵</span>
                           <Input
                             id="goal-target"
                             type="number"
@@ -752,7 +752,7 @@ export function CustomerSusu() {
                       <div className="space-y-2">
                         <Label htmlFor="goal-contribution">Contribution Amount (GHS) *</Label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">GH₵</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">₵</span>
                           <Input
                             id="goal-contribution"
                             type="number"
@@ -965,7 +965,7 @@ export function CustomerSusu() {
               <Label htmlFor="add-funds-amount">Amount (GHS)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-                  GH₵
+                  ₵
                 </span>
                 <Input
                   id="add-funds-amount"

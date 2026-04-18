@@ -1,5 +1,5 @@
 // ============================================
-// SusuPay Ghana - Zustand State Management
+// iSusuPro Ghana - Zustand State Management
 // ============================================
 import { create } from 'zustand';
 import type {

@@ -141,7 +141,7 @@ export function LoginPage() {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="text-5xl font-bold tracking-tight text-white"
           >
-            SusuPay
+            iSusuPro
           </motion.h1>
 
           <motion.p
@@ -185,7 +185,7 @@ export function LoginPage() {
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg">
               <Landmark className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-emerald-800">SusuPay</h1>
+            <h1 className="text-3xl font-bold text-emerald-800">iSusuPro</h1>
             <p className="text-center text-sm text-muted-foreground">
               Empowering Ghanaian Communities Through Inclusive Finance
             </p>
@@ -197,7 +197,7 @@ export function LoginPage() {
               <CardHeader className="space-y-1 pb-4">
                 <CardTitle className="text-2xl font-bold text-emerald-900">Welcome back</CardTitle>
                 <CardDescription>
-                  Sign in to your SusuPay account to continue
+                  Sign in to your iSusuPro account to continue
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">

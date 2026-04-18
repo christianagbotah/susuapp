@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomerStore, useAgentStore, useAdminStore, useTreasurerStore, useNavigationStore } from '@/store/app-store';
@@ -78,6 +78,7 @@ import { TreasurerGroups } from '@/components/pages/treasurer/treasurer-groups';
 import { TreasurerPayouts } from '@/components/pages/treasurer/treasurer-payouts';
 import { TreasurerMembers } from '@/components/pages/treasurer/treasurer-members';
 import { TreasurerReports } from '@/components/pages/treasurer/treasurer-reports';
+import { NotificationPanel } from '@/components/shared/notification-panel';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -182,7 +183,7 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, onLogout }: {
           <Landmark className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-lg leading-tight tracking-tight">SusuPay</h1>
+          <h1 className="font-bold text-lg leading-tight tracking-tight">iSusuPro</h1>
           <p className="text-[11px] text-muted-foreground">{portalLabels[portal]}</p>
         </div>
       </div>
@@ -255,7 +256,7 @@ function MobileDrawerContent({ portal, activePage, user, onNavigate, onLogout, o
             <Landmark className="h-4.5 w-4.5 text-primary" />
           </div>
           <div>
-            <h1 className="font-bold text-base leading-tight">SusuPay</h1>
+            <h1 className="font-bold text-base leading-tight">iSusuPro</h1>
             <p className="text-[10px] text-muted-foreground">{portalLabels[portal]}</p>
           </div>
         </div>
@@ -379,6 +380,9 @@ export function AppLayout() {
   const bottomTabs = getBottomTabs(navItems, currentPortal);
 
   // Notification count
+  // Notification panel state
+  const [notificationOpen, setNotificationOpen] = useState(false);
+
   const notificationCount = (() => {
     switch (currentPortal) {
       case 'customer':
@@ -472,7 +476,7 @@ export function AppLayout() {
             {/* Notification bell */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative touch-target">
+                <Button variant="ghost" size="icon" className="relative touch-target" onClick={() => setNotificationOpen(true)}>
                   <Bell className="h-5 w-5" />
                   {notificationCount > 0 && (
                     <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px] font-bold border-2 border-background">
@@ -544,13 +548,13 @@ export function AppLayout() {
               <div className="flex items-center justify-center h-7 w-7 rounded-md bg-primary/10 shrink-0">
                 <Landmark className="h-4 w-4 text-primary" />
               </div>
-              <h1 className="font-bold text-sm truncate">SusuPay</h1>
+              <h1 className="font-bold text-sm truncate">iSusuPro</h1>
             </div>
 
             {/* Right actions */}
             <div className="flex items-center gap-0.5 shrink-0">
               {/* Notifications */}
-              <button className="touch-target relative flex items-center justify-center h-10 w-10 rounded-full hover:bg-muted transition-colors">
+              <button className="touch-target relative flex items-center justify-center h-10 w-10 rounded-full hover:bg-muted transition-colors" onClick={() => setNotificationOpen(true)}>
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
                   <span className="absolute top-1 right-1 h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
@@ -603,6 +607,13 @@ export function AppLayout() {
           onTabChange={handleNavigate}
         />
       )}
+
+      {/* ============ Notification Panel ============ */}
+      <NotificationPanel
+        open={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+        portal={currentPortal}
+      />
 
       {/* ============ Mobile Drawer ============ */}
       <MobileDrawer

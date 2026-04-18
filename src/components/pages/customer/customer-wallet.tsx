@@ -552,7 +552,7 @@ export function CustomerWallet() {
                             <Label htmlFor="deposit-amount">Amount</Label>
                             <div className="relative">
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">
-                                GH₵
+                                ₵
                               </span>
                               <Input
                                 id="deposit-amount"
@@ -642,7 +642,7 @@ export function CustomerWallet() {
                       <div className="flex items-start gap-2">
                         <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                         <p className="text-sm text-slate-700 leading-relaxed">
-                          <span className="font-semibold">GH₵ 0.00</span> for amounts under GH₵ 5,000
+                          <span className="font-semibold">₵0.00</span> for amounts under ₵5,000
                         </p>
                       </div>
                     </div>
@@ -650,7 +650,7 @@ export function CustomerWallet() {
                       <div className="flex items-start gap-2">
                         <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                         <p className="text-sm text-slate-700 leading-relaxed">
-                          <span className="font-semibold">GH₵ 2.50</span> for amounts GH₵ 5,000 – GH₵ 10,000
+                          <span className="font-semibold">₵2.50</span> for amounts ₵5,000 – ₵10,000
                         </p>
                       </div>
                     </div>
@@ -658,7 +658,7 @@ export function CustomerWallet() {
                       <div className="flex items-start gap-2">
                         <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                         <p className="text-sm text-slate-700 leading-relaxed">
-                          <span className="font-semibold">0.25%</span> for amounts above GH₵ 10,000
+                          <span className="font-semibold">0.25%</span> for amounts above ₵10,000
                         </p>
                       </div>
                     </div>
@@ -771,7 +771,7 @@ export function CustomerWallet() {
                         <Label htmlFor="withdraw-amount">Amount to Withdraw</Label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">
-                            GH₵
+                            ₵
                           </span>
                           <Input
                             id="withdraw-amount"

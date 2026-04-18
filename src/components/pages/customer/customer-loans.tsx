@@ -241,8 +241,8 @@ export function CustomerLoans() {
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <motion.div variants={itemVariants} whileHover={{ y: -2 }}>
-                <Card className="overflow-hidden border-0 shadow-lg shadow-emerald-900/10">
-                  <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 px-5 py-5">
+                <Card className="overflow-hidden border-0 shadow-lg shadow-emerald-900/10 h-full">
+                  <div className="relative bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 px-5 py-5 flex flex-col justify-between h-full">
                     <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
                     <div className="relative">
                       <p className="text-xs font-medium text-white/75">Total Borrowed</p>
@@ -259,8 +259,8 @@ export function CustomerLoans() {
               </motion.div>
 
               <motion.div variants={itemVariants} whileHover={{ y: -2 }}>
-                <Card className="border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
-                  <CardContent className="flex items-start gap-4 p-5">
+                <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+                  <CardContent className="flex flex-col items-start gap-4 p-5 h-full justify-between">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100">
                       <DollarSign className="h-5 w-5 text-amber-600" />
                     </div>
@@ -278,8 +278,8 @@ export function CustomerLoans() {
               </motion.div>
 
               <motion.div variants={itemVariants} whileHover={{ y: -2 }}>
-                <Card className="border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
-                  <CardContent className="flex items-start gap-4 p-5">
+                <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+                  <CardContent className="flex flex-col items-start gap-4 p-5 h-full justify-between">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100">
                       <Calendar className="h-5 w-5 text-blue-600" />
                     </div>
@@ -685,7 +685,7 @@ export function CustomerLoans() {
                       <Label htmlFor="apply-amount">Loan Amount (GHS) *</Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-                          GH₵
+                          ₵
                         </span>
                         <Input
                           id="apply-amount"
@@ -855,7 +855,7 @@ export function CustomerLoans() {
                       </Label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-                          GH₵
+                          ₵
                         </span>
                         <Input
                           id="calc-amount"

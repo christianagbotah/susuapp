@@ -1,5 +1,5 @@
 // ============================================
-// SusuPay Ghana - Enterprise Type Definitions
+// iSusuPro Ghana - Enterprise Type Definitions
 // ============================================
 
 // Portal & Navigation

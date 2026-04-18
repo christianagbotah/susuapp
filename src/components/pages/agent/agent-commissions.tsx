@@ -29,7 +29,7 @@ const monthlyEarningsData = [
 ];
 
 const chartConfig = {
-  amount: { label: 'Commission (GH₵)', color: 'hsl(var(--chart-2))' },
+  amount: { label: 'Commission (₵)', color: 'hsl(var(--chart-2))' },
 };
 
 const typeConfig: Record<string, { label: string; color: string; icon: typeof PiggyBank }> = {
@@ -337,7 +337,7 @@ export function AgentCommissions() {
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                     <p className="text-muted-foreground">
                       Pending commissions are processed automatically. Minimum payout threshold is{' '}
-                      <strong className="text-foreground">GH₵ 50.00</strong>.
+                      <strong className="text-foreground">₵50.00</strong>.
                     </p>
                   </div>
                   <div className="flex items-start gap-2">
