@@ -56,6 +56,7 @@ import {
   UsersRound,
   BarChart3,
   ShieldAlert,
+  ShieldCheck,
   Gift,
   FileText,
   ChevronDown,
@@ -89,6 +90,7 @@ import { AdminAgents } from '@/components/pages/admin/admin-agents';
 import { AdminSusuGroups } from '@/components/pages/admin/admin-susu-groups';
 import { AdminAnalytics } from '@/components/pages/admin/admin-analytics';
 import { AdminCompliance } from '@/components/pages/admin/admin-compliance';
+import { AdminKYCVerification } from '@/components/pages/admin/admin-kyc-verification';
 import { AdminSettings } from '@/components/pages/admin/admin-settings';
 import { TreasurerDashboard } from '@/components/pages/treasurer/treasurer-dashboard';
 import { TreasurerGroups } from '@/components/pages/treasurer/treasurer-groups';
@@ -134,6 +136,7 @@ const adminNavItems: NavItem[] = [
   { id: 'agents', label: 'Agents', icon: Building2 },
   { id: 'susu-groups', label: 'Susu', icon: UsersRound },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+  { id: 'kyc-verification', label: 'KYC Verification', icon: ShieldCheck },
   { id: 'compliance', label: 'Compliance', icon: ShieldAlert },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
@@ -469,6 +472,7 @@ export function AppLayout() {
           case 'agents': return <AdminAgents />;
           case 'susu-groups': return <AdminSusuGroups />;
           case 'analytics': return <AdminAnalytics />;
+          case 'kyc-verification': return <AdminKYCVerification />;
           case 'compliance': return <AdminCompliance />;
           case 'settings': return <AdminSettings />;
           default: return <AdminDashboard />;

@@ -491,6 +491,8 @@ export type KYCVerificationStep =
   | 'capture-back'
   | 'processing'
   | 'review-data'
+  | 'next-of-kin'
+  | 'address-info'
   | 'selfie'
   | 'complete';
 
@@ -521,4 +523,49 @@ export interface KYCAddressInfo {
   city: string;
   region: string;
   digitalAddress: string;  // Ghana Post GPS
+}
+
+// ---- KYC VERIFICATION RECORD (Admin Management) ----
+export type KYCRecordStatus = 'pending_review' | 'in_review' | 'approved' | 'rejected' | 'expired';
+export type KYCRecommendation = 'approve' | 'manual_review' | 'reject';
+
+export interface KYCVerificationRecord {
+  id: string;                              // KYC-XXXXXXXX
+  userId: string;
+  userName: string;
+  userPhone: string;
+  userEmail: string;
+  status: KYCRecordStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+  // Card data from OCR
+  cardData: GhanaCardOCRResult;
+  // Verification results
+  facialMatchScore: number;                // 0-100
+  niaVerified: boolean;
+  documentValid: boolean;
+  identityVerified: boolean;
+  recommendation: KYCRecommendation;
+  ocrConfidence: number;                   // 0-100
+  warnings: string[];
+  processingTime: number;                  // ms
+  // Additional info
+  addressInfo?: KYCAddressInfo;
+  nextOfKin?: KYCNextOfKin;
+  // Metadata
+  kycLevel: 'none' | 'basic' | 'full';
+  expiresAt: string;
+}
+
+
+
+export interface KYCAdminStats {
+  totalVerified: number;
+  totalPending: number;
+  totalRejected: number;
+  completionRate: number;
+  averageOCRConfidence: number;
+  averageFacialMatch: number;
 }

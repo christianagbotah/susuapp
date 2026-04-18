@@ -181,3 +181,193 @@
 - Biometric authentication
 - Multi-language support (Twi, Ga, Ewe)
 - API documentation with Swagger/OpenAPI
+
+---
+Task ID: 1
+Agent: main
+Task: Add KYC store slice, new types, and KYC persistence
+
+Work Log:
+- Added KYCVerificationRecord and KYCAdminStats types to types.ts
+- Added useKYCStore with mock records, approve/reject actions
+- Added completeKYC action to CustomerState
+- Added kycRecords to AdminState (shared mockKYCRecords array)
+
+Stage Summary:
+- KYC state management now fully implemented with Zustand
+- Types support full verification workflow including admin review
+- Customer store can persist KYC level changes
+
+---
+Task ID: 3
+Agent: main
+Task: Upgrade Ghana Card Verification Component — Add Next-of-Kin and Address Steps
+
+Work Log:
+- Updated `KYCVerificationStep` type in `src/lib/types.ts` to include `'next-of-kin'` and `'address-info'` steps
+- Added `Select, SelectContent, SelectItem, SelectTrigger, SelectValue` imports from `@/components/ui/select`
+- Added `Heart` and `Home` icon imports from `lucide-react`
+- Added `GHANA_REGIONS` (16 regions) and `RELATIONSHIPS` (6 types) constants at file top
+- Updated `PROCESSING_MESSAGES` from 5 to 7 messages (more detailed OCR stages)
+- Added `nextOfKin` and `addressInfo` state hooks with proper defaults
+- Updated `stepOrder` array: intro → capture-front → capture-back → processing → review-data → **next-of-kin** → **address-info** → selfie → complete
+- Updated review-data "Looks Correct" button to navigate to `next-of-kin` instead of `selfie`
+- Created `renderNextOfKin()` function: Card with Heart icon header, 3 form fields (Full Name, Phone with +233 prefix, Relationship Select), validation on continue
+- Created `renderAddressInfo()` function: Card with MapPin icon header, 6 form fields (House Number, Street Name, Area/Locality, City/Town, Region Select with all 16 Ghana regions, Ghana Post GPS with GA-XXX-XXXX hint), validation on continue
+- Updated selfie back button to navigate to `address-info` instead of `review-data`
+- Updated processing step indicator grid from `grid-cols-5` to `grid-cols-7`
+- Updated `handleSubmitVerification` to include `nextOfKin` and `addressInfo` in API body
+- Updated dependency array of `handleSubmitVerification` to include new state
+- Updated `renderComplete` to show Next of Kin (name + phone) and Address (area, city, region) in verified summary
+- Updated intro "How it works" from 5 steps to 7 steps (added N.o.K. and Address steps with Heart and MapPin icons)
+- Updated `renderStepIndicator` with 2 new step pills: 'N.o.K.' and 'Address'
+- Updated main return to render `renderNextOfKin()` and `renderAddressInfo()` for their respective steps
+- All forms use `min-h-[44px]` for mobile touch targets, amber/gold branding consistent with existing steps
+
+Files Modified:
+- `src/lib/types.ts` — Added 2 new KYCVerificationStep values
+- `src/components/pages/customer/ghana-card-verification.tsx` — ~1100 → ~1509 lines (+400 lines)
+
+Build: zero errors in modified files. Dev server compiling successfully.
+
+---
+Task ID: 2
+Agent: main
+Task: Upgrade OCR and Verification API Routes + Create Records & Facial-Compare Routes
+
+Work Log:
+
+**1. Upgraded `/api/kyc/ocr/route.ts` (complete rewrite):**
+- Expanded `MOCK_CARD_DATA` from 2 to 6 realistic Ghana Card entries (added Okonkwo, Adjei, Danso, Agbekor) covering all 16 Ghana regions
+- Added multi-provider support via `?provider=` query param (`textract`, `google_vision`, `mindee`, `ondevice`) with provider-specific latency/accuracy baselines
+- Added GHA ID format validation (`GHA-\d{9}-\d`) with `validateGhaIdFormat()`
+- Added simulated image dimension check (min 480px width) with Ghana Card aspect ratio (~1.586:1)
+- Added JSON body fallback mode (accepts `{ image: "data:image/...;base64,..." }` alongside FormData)
+- Added field-level confidence scoring via `generateFieldConfidences()` with per-field thresholds
+- Added `warnings` array for fields below confidence thresholds
+- Added `processingTime` tracking (start-to-end millisecond measurement)
+- Response includes: `provider`, `dimensions`, `idFormatValid`, `warnings`, `fieldConfidences`, `processingTime`
+
+**2. Upgraded `/api/kyc/verify/route.ts` (complete rewrite):**
+- Added `validateDateOfBirth()` with age calculation and minimum 18-year check (handles leap year edge cases)
+- Added `validateExpiryDate()` with 30-day grace period
+- Added `validateGender()` (must be "Male" or "Female")
+- Enhanced NIA database simulation: 5 individual checks (idInDatabase, nameMatches, dobMatches, cardNotRevoked, cardNotBlacklisted) with detailed pass/fail messages
+- Added facial comparison simulation (`simulateFacialMatch`) returning score 85-99%
+- Added recommendation engine (`determineRecommendation`): auto-approve, manual_review, or reject based on combined scores
+- Response includes: `facialMatchScore`, `niaVerified`, `documentValid`, `identityVerified`, `recommendation`, `niaChecks`, `niaDetails`, `warnings`, `processingTime`
+- Accepts `addressInfo` and `nextOfKin` in request body and echoes them back
+
+**3. Created NEW `/api/kyc/records/route.ts`:**
+- 6 mock KYC records with varying statuses: approved (2), pending (1), in_review (1), rejected (1), expired (1)
+- Each record includes full card data, facial match score, NIA verification results, address info, next of kin
+- GET endpoint: paginated listing with filters (`status`, `search`), sorted newest-first, summary stats (totals, averages)
+- PATCH endpoint: approve/reject/in_review with reviewer tracking, rejection reason, kyc level update, conflict protection for already-reviewed records
+
+**4. Created NEW `/api/kyc/facial-compare/route.ts`:**
+- Accepts `{ selfieImage, cardFrontImage }` as base64 strings
+- Simulates face detection with 95% success rate, landmark detection (68-point face mesh), liveness check (93% pass), sharpness/lighting scoring, pose matching
+- Returns match score 60-99% adjusted by image quality
+- Confidence levels: high (≥85%), medium (≥70%), low (<70%)
+- Full response: `matchScore`, `isMatch`, `confidence`, `details` (face detection, liveness, pose, quality), `landmarks`, `processingTime`, `warning`
+
+**5. Updated `src/lib/types.ts`:**
+- Removed duplicate `KYCVerificationRecord` interface
+- Added `KYCRecordStatus` type ('pending' | 'in_review' | 'approved' | 'rejected' | 'expired')
+- Added `KYCRecommendation` type ('approve' | 'manual_review' | 'reject')
+- Enhanced `KYCVerificationRecord` with comprehensive fields: `userEmail`, `niaVerified`, `documentValid`, `identityVerified`, `recommendation`, `ocrConfidence`, `warnings`, `processingTime`, `kycLevel`, `expiresAt`
+
+Files Modified:
+- `src/app/api/kyc/ocr/route.ts` — Complete rewrite (92 → ~240 lines)
+- `src/app/api/kyc/verify/route.ts` — Complete rewrite (53 → ~260 lines)
+- `src/app/api/kyc/records/route.ts` — NEW file (~300 lines)
+- `src/app/api/kyc/facial-compare/route.ts` — NEW file (~210 lines)
+- `src/lib/types.ts` — Added KYCRecordStatus, KYCRecommendation types; consolidated KYCVerificationRecord
+
+Lint: zero errors on all modified/new files. Dev server compiling successfully.
+
+---
+Task ID: 6
+Agent: main
+Task: Create Admin KYC Review/Approval Page
+
+Work Log:
+- Created `src/components/pages/admin/admin-kyc-verification.tsx` — comprehensive admin page for reviewing/approving/rejecting KYC verification submissions
+- **Stats Cards Row** (top): Total Verified (emerald), Pending Review (amber), Rejected (red), Average Confidence (blue) — each with lucide-react icons (ShieldCheck, Clock, XCircle, BarChart3)
+- **Filters Bar**: Search input (by name, phone, or ID number) with Search icon, Sort toggle button (Newest/Oldest), Status filter buttons (All, Pending Review, In Review, Approved, Rejected, Expired) with count badges, result count display
+- **KYC Records List**: Desktop table (hidden md:block) with columns: Applicant (avatar+name+phone), ID Number (mono font), OCR Confidence, Facial Match, Recommendation, Status, Date, Actions. Mobile card view (md:hidden) with compact layout. Empty state with Users icon when no records match filters.
+- **Record Detail Dialog** (View Details): Customer info section (name, phone, email, submitted date), Ghana Card Data section (ID number, full name, DOB, gender, nationality, region, issue/expiry dates), Verification Scores section with visual Progress bars (OCR confidence, facial match) with color-coded indicators, Recommendation & Checks section (badge + NIA verified/document valid/identity verified/processing time), Warnings section with AlertTriangle icons (conditional render), Next of Kin section (name, phone, relationship), Address section (full address + Ghana Post GPS), Review Information section (reviewer, date, rejection reason if any), Approve/Reject action buttons in dialog footer
+- **Approve Flow**: Direct approve via `useKYCStore.approveKYC()` with toast success notification, closes detail dialog
+- **Reject Flow**: Opens separate Reject Dialog with applicant info summary and Textarea for rejection reason, validates non-empty reason, calls `useKYCStore.rejectKYC()` with toast error notification, closes both dialogs
+- Color scheme: emerald for approved, amber for pending/in_review, red for rejected, blue for info, gray for expired
+- Status badges: pending_review → amber, in_review → blue, approved → emerald, rejected → red, expired → gray
+- Recommendation badges: approve → emerald, manual_review → amber, reject → red
+- OCR confidence colors: >90 → emerald, >70 → amber, ≤70 → red
+- Facial match colors: >90 → emerald, >75 → amber, ≤75 → red
+- Uses framer-motion fadeUp animations on stats cards and sections
+- All interactive elements use `min-h-[44px]` for mobile touch targets
+- Imported `useKYCStore` from `@/store/app-store` and types from `@/lib/types`
+- Exported as `AdminKYCVerification`
+
+Files Created:
+- `src/components/pages/admin/admin-kyc-verification.tsx` — ~480 lines
+
+Lint: zero errors on new file (pre-existing errors in mobile-components.tsx unrelated). Dev server compiling successfully.
+
+---
+Task ID: 7
+Agent: main
+Task: Add KYC Verification to Agent Customer View
+
+Work Log:
+
+**1. Updated Agent Store (`src/store/app-store.ts`):**
+- Added `verifyCustomerKYC: (customerId: string, kycLevel: 'basic' | 'full') => void` to `AgentState` interface
+- Implementation: Updates `allCustomers` array to change the matching customer's `kycLevel`
+
+**2. Enhanced Agent Customers Page (`src/components/pages/agent/agent-customers.tsx`):**
+
+- **New imports**: `useCallback` from React; `Select, SelectContent, SelectItem, SelectTrigger, SelectValue`, `Textarea`, `Tabs, TabsContent, TabsList, TabsTrigger`, `Label` from shadcn/ui; `IdCard, CheckCircle, AlertTriangle, Camera, Upload, Loader2, Heart, Home` from lucide-react
+
+- **New constants**: `GHANA_REGIONS` (16 regions), `RELATIONSHIPS` (6 types), `GHA_ID_REGEX` for Ghana Card format validation
+
+- **New types**: `KYCFormData` interface with all form fields (ID number, full name, DOB, gender, region, next of kin fields, address fields, card image)
+
+- **New state**: `kycVerifyOpen`, `kycVerifyCustomer`, `kycForm`, `kycSubmitting`, `kycActiveTab`
+
+- **Verify KYC button in Desktop Table**: Amber-styled Shield icon button shown in actions column for customers with `kycLevel === 'none'` or `kycLevel === 'basic'`
+
+- **Verify KYC button in Mobile Cards**: Amber/gold gradient button below "View Profile" for eligible customers
+
+- **KYC Status Section in Customer Detail Dialog**: Added after the existing details section. Shows:
+  - Current KYC level badge (Full/Basic/None with check/warning/x prefixes)
+  - For Full KYC: green "Fully Verified" card with access description
+  - For Basic KYC: amber "Basic KYC Only" card with "Upgrade KYC to Full" button
+  - For No KYC: gray "Not Verified" card with "Initiate KYC Verification" button
+  - All action buttons navigate to the KYC Verification Dialog
+
+- **KYC Verification Dialog** (separate dialog, max-w-lg, scrollable):
+  - Header with amber/gold gradient Shield icon and customer name
+  - Customer info summary bar (avatar, name, phone, current KYC badge)
+  - **3-tab form layout** using Tabs component:
+    - **Card Info tab**: Camera/upload capture area (dashed border, amber theme) with Camera and Upload buttons, image preview with Remove option; Manual entry fallback with separator: Ghana Card ID (mono font, GHA-XXXXXXXXX-X hint), Full Name, DOB (DD/MM/YYYY), Gender Select, Card Region Select (all 16 regions)
+    - **Next of Kin tab**: Info card with Heart icon; Full Name, Phone (+233 prefix), Relationship Select (6 options)
+    - **Address tab**: Info card with Home icon; House No + Street (2-col grid), Area/Locality, City/Town + Region (2-col grid, 16 Ghana regions), Digital Address (GA-XXX-XXXX hint, mono font)
+  - Warning banner about NIA verification
+  - Submit button: amber/gold gradient, "Verifying with NIA..." spinner state when submitting
+  - Calls POST `/api/kyc/verify` with cardData, addressInfo, nextOfKin
+  - On success: updates customer KYC level via `verifyCustomerKYC` store action, updates `selectedCustomer` if same customer, shows toast notification, closes dialog
+  - On failure: shows error toast with API error message
+  - Form validation: requires ID number (GHA format), all card fields if no image, next of kin fields, address fields
+
+**Styling:**
+- All KYC-related buttons use amber/gold gradient (`from-amber-500 to-yellow-500`)
+- Consistent with existing Ghana Card verification amber/gold branding
+- `min-h-[44px]` on all interactive elements for mobile touch targets
+- Dark mode support throughout
+
+Files Modified:
+- `src/store/app-store.ts` — Added `verifyCustomerKYC` to AgentState interface and implementation
+- `src/components/pages/agent/agent-customers.tsx` — ~450 → ~1090 lines (+640 lines)
+
+Dev server: compiling successfully. Lint: zero new errors (2 pre-existing errors in mobile-components.tsx unrelated).

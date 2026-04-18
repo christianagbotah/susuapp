@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
   Camera,
@@ -33,11 +34,23 @@ import {
   Smartphone,
   Loader2,
   IdCard,
+  Heart,
+  Home,
 } from 'lucide-react';
 import type {
   KYCVerificationStep,
   GhanaCardOCRResult,
 } from '@/lib/types';
+
+const GHANA_REGIONS = [
+  'Greater Accra', 'Ashanti', 'Western', 'Central', 'Eastern', 'Volta',
+  'Northern', 'Brong-Ahafo', 'Upper East', 'Upper West', 'North East',
+  'Savannah', 'Bono East', 'Ahafo', 'Oti', 'Western North',
+];
+
+const RELATIONSHIPS = [
+  'Spouse', 'Parent', 'Sibling', 'Child', 'Friend', 'Other',
+];
 
 interface GhanaCardVerificationProps {
   onComplete: () => void;
@@ -68,9 +81,11 @@ const scanningKeyframes = `
 
 const PROCESSING_MESSAGES = [
   'Detecting card edges...',
-  'Extracting text from card...',
-  'Reading ID number...',
-  'Verifying data with NIA...',
+  'Extracting text from front...',
+  'Reading ID number and details...',
+  'Extracting data from back...',
+  'Running OCR analysis...',
+  'Verifying with NIA database...',
   'Complete!',
 ];
 
@@ -95,6 +110,14 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
 
   // Flash effect
   const [flashVisible, setFlashVisible] = useState(false);
+
+  // Next of kin state
+  const [nextOfKin, setNextOfKin] = useState({ name: '', phone: '', relationship: '' });
+
+  // Address info state
+  const [addressInfo, setAddressInfo] = useState({ 
+    houseNumber: '', street: '', area: '', city: '', region: 'Greater Accra', digitalAddress: '' 
+  });
 
   // File input refs
   const frontInputRef = useRef<HTMLInputElement>(null);
@@ -259,6 +282,8 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
         body: JSON.stringify({
           cardData: editableResult,
           selfieImage,
+          addressInfo,
+          nextOfKin,
         }),
       });
 
@@ -280,7 +305,7 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
     } finally {
       setIsSubmitting(false);
     }
-  }, [editableResult, selfieImage, onComplete]);
+  }, [editableResult, selfieImage, addressInfo, nextOfKin, onComplete]);
 
   // ---- Navigation ----
   const goToStep = (step: KYCVerificationStep) => setCurrentStep(step);
@@ -291,6 +316,8 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
     'capture-back',
     'processing',
     'review-data',
+    'next-of-kin',
+    'address-info',
     'selfie',
     'complete',
   ];
@@ -346,6 +373,8 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
               { icon: CreditCard, label: 'Capture front of your Ghana Card', color: 'text-amber-600' },
               { icon: ScanLine, label: 'Capture back of your Ghana Card', color: 'text-amber-600' },
               { icon: Eye, label: 'Review extracted information', color: 'text-amber-600' },
+              { icon: Heart, label: 'Provide next of kin details', color: 'text-amber-600' },
+              { icon: MapPin, label: 'Enter your residential address', color: 'text-amber-600' },
               { icon: User, label: 'Take a selfie for liveness check', color: 'text-amber-600' },
               { icon: CircleCheckBig, label: 'Verification complete!', color: 'text-emerald-600' },
             ].map((step, i) => (
@@ -635,7 +664,7 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
       </div>
 
       {/* Step indicators */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-7 gap-1">
         {PROCESSING_MESSAGES.map((msg, i) => (
           <motion.div
             key={i}
@@ -742,7 +771,7 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
                     <div key={field.key} className="space-y-1">
                       <Label className="text-xs text-muted-foreground">{field.label}</Label>
                       <Input
-                        value={(editableResult as Record<string, string>)[field.key] || ''}
+                        value={(editableResult as unknown as Record<string, string>)[field.key] || ''}
                         onChange={(e) =>
                           setEditableResult((prev) =>
                             prev ? { ...prev, [field.key]: e.target.value } : prev
@@ -789,7 +818,7 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
                           </span>
                         </div>
                         <span className="text-sm font-medium text-right truncate max-w-[60%]">
-                          {(editableResult as Record<string, string>)[field.key] || '—'}
+                          {(editableResult as unknown as Record<string, string>)[field.key] || '—'}
                         </span>
                       </div>
                     ))}
@@ -823,7 +852,7 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
             Rescan
           </Button>
           <Button
-            onClick={() => goToStep('selfie')}
+            onClick={() => goToStep('next-of-kin')}
             className="flex-1 min-h-[44px] bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white"
           >
             Looks Correct
@@ -833,6 +862,241 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
       </motion.div>
     );
   };
+
+  const renderNextOfKin = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-5"
+    >
+      <div className="text-center space-y-2">
+        <div className="flex justify-center mb-2">
+          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <Heart className="h-6 w-6 text-amber-500" />
+          </div>
+        </div>
+        <h3 className="text-lg font-bold">Next of Kin Information</h3>
+        <p className="text-sm text-muted-foreground">
+          Please provide details of your next of kin. This is required for account security.
+        </p>
+      </div>
+
+      <Card className="border-amber-200 dark:border-amber-800/50">
+        <CardContent className="pt-4 pb-4 space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="nok-name" className="text-xs text-muted-foreground">
+              Full Name <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="nok-name"
+              placeholder="Enter full name"
+              value={nextOfKin.name}
+              onChange={(e) => setNextOfKin((prev) => ({ ...prev, name: e.target.value }))}
+              className="h-10 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="nok-phone" className="text-xs text-muted-foreground">
+              Phone Number <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">
+                +233
+              </span>
+              <Input
+                id="nok-phone"
+                type="tel"
+                placeholder="24 123 4567"
+                value={nextOfKin.phone}
+                onChange={(e) => setNextOfKin((prev) => ({ ...prev, phone: e.target.value }))}
+                className="h-10 text-sm pl-14"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="nok-relationship" className="text-xs text-muted-foreground">
+              Relationship <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              value={nextOfKin.relationship}
+              onValueChange={(value) => setNextOfKin((prev) => ({ ...prev, relationship: value }))}
+            >
+              <SelectTrigger className="h-10 text-sm min-h-[44px]">
+                <SelectValue placeholder="Select relationship" />
+              </SelectTrigger>
+              <SelectContent>
+                {RELATIONSHIPS.map((rel) => (
+                  <SelectItem key={rel} value={rel}>
+                    {rel}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          onClick={() => goToStep('review-data')}
+          className="min-h-[44px]"
+        >
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back to Review
+        </Button>
+        <Button
+          onClick={() => {
+            if (!nextOfKin.name.trim() || !nextOfKin.phone.trim() || !nextOfKin.relationship) {
+              toast.error('Missing Information', { description: 'Please fill in all next of kin fields.' });
+              return;
+            }
+            goToStep('address-info');
+          }}
+          className="flex-1 min-h-[44px] bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white"
+        >
+          Continue to Address
+          <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </motion.div>
+  );
+
+  const renderAddressInfo = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-5"
+    >
+      <div className="text-center space-y-2">
+        <div className="flex justify-center mb-2">
+          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <MapPin className="h-6 w-6 text-amber-500" />
+          </div>
+        </div>
+        <h3 className="text-lg font-bold">Residential Address</h3>
+        <p className="text-sm text-muted-foreground">
+          Please provide your current residential address including your Ghana Post GPS digital address.
+        </p>
+      </div>
+
+      <Card className="border-amber-200 dark:border-amber-800/50">
+        <CardContent className="pt-4 pb-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="addr-house" className="text-xs text-muted-foreground">House Number</Label>
+              <Input
+                id="addr-house"
+                placeholder="e.g. 24"
+                value={addressInfo.houseNumber}
+                onChange={(e) => setAddressInfo((prev) => ({ ...prev, houseNumber: e.target.value }))}
+                className="h-10 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="addr-street" className="text-xs text-muted-foreground">Street Name</Label>
+              <Input
+                id="addr-street"
+                placeholder="e.g. Oxford Street"
+                value={addressInfo.street}
+                onChange={(e) => setAddressInfo((prev) => ({ ...prev, street: e.target.value }))}
+                className="h-10 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="addr-area" className="text-xs text-muted-foreground">Area / Locality</Label>
+            <Input
+              id="addr-area"
+              placeholder="e.g. Osu"
+              value={addressInfo.area}
+              onChange={(e) => setAddressInfo((prev) => ({ ...prev, area: e.target.value }))}
+              className="h-10 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="addr-city" className="text-xs text-muted-foreground">City / Town</Label>
+            <Input
+              id="addr-city"
+              placeholder="e.g. Accra"
+              value={addressInfo.city}
+              onChange={(e) => setAddressInfo((prev) => ({ ...prev, city: e.target.value }))}
+              className="h-10 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="addr-region" className="text-xs text-muted-foreground">Region</Label>
+            <Select
+              value={addressInfo.region}
+              onValueChange={(value) => setAddressInfo((prev) => ({ ...prev, region: value }))}
+            >
+              <SelectTrigger className="h-10 text-sm min-h-[44px]">
+                <SelectValue placeholder="Select region" />
+              </SelectTrigger>
+              <SelectContent>
+                {GHANA_REGIONS.map((region) => (
+                  <SelectItem key={region} value={region}>
+                    {region}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="addr-gps" className="text-xs text-muted-foreground">
+              Ghana Post GPS
+            </Label>
+            <Input
+              id="addr-gps"
+              placeholder="GA-XXX-XXXX"
+              value={addressInfo.digitalAddress}
+              onChange={(e) => setAddressInfo((prev) => ({ ...prev, digitalAddress: e.target.value.toUpperCase() }))}
+              className="h-10 text-sm font-mono"
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Format: GA-XXX-XXXX (e.g. GA-123-4567)
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex gap-3">
+        <Button
+          variant="outline"
+          onClick={() => goToStep('next-of-kin')}
+          className="min-h-[44px]"
+        >
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Back to Next of Kin
+        </Button>
+        <Button
+          onClick={() => {
+            if (!addressInfo.area.trim() || !addressInfo.city.trim()) {
+              toast.error('Missing Information', { description: 'Please fill in at least your area and city.' });
+              return;
+            }
+            goToStep('selfie');
+          }}
+          className="flex-1 min-h-[44px] bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white"
+        >
+          Continue to Selfie
+          <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </motion.div>
+  );
 
   const renderSelfie = () => (
     <motion.div
@@ -986,11 +1250,11 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
       {/* Back button */}
       <Button
         variant="ghost"
-        onClick={() => goToStep('review-data')}
+        onClick={() => goToStep('address-info')}
         className="w-full min-h-[44px] text-muted-foreground"
       >
         <ChevronLeft className="mr-1 h-4 w-4" />
-        Back to Review
+        Back to Address
       </Button>
     </motion.div>
   );
@@ -1103,6 +1367,26 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
                 </span>
                 <span className="text-sm font-medium">{new Date().toLocaleString()}</span>
               </div>
+              {nextOfKin.name && (
+                <div className="flex items-center justify-between py-1.5 border-t border-muted/50">
+                  <span className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Heart className="h-3.5 w-3.5" /> Next of Kin
+                  </span>
+                  <span className="text-sm font-medium">
+                    {nextOfKin.name} {nextOfKin.phone && `(${nextOfKin.phone})`}
+                  </span>
+                </div>
+              )}
+              {(addressInfo.area || addressInfo.city) && (
+                <div className="flex items-center justify-between py-1.5 border-t border-muted/50">
+                  <span className="text-sm text-muted-foreground flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5" /> Address
+                  </span>
+                  <span className="text-sm font-medium text-right max-w-[60%] truncate">
+                    {[addressInfo.area, addressInfo.city, addressInfo.region].filter(Boolean).join(', ')}
+                  </span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1154,6 +1438,8 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
       { step: 'capture-back', label: 'Back' },
       { step: 'processing', label: 'Scan' },
       { step: 'review-data', label: 'Review' },
+      { step: 'next-of-kin', label: 'N.o.K.' },
+      { step: 'address-info', label: 'Address' },
       { step: 'selfie', label: 'Selfie' },
       { step: 'complete', label: 'Done' },
     ];
@@ -1212,6 +1498,8 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
           {currentStep === 'capture-back' && renderCapture('back')}
           {currentStep === 'processing' && renderProcessing()}
           {currentStep === 'review-data' && renderReviewData()}
+          {currentStep === 'next-of-kin' && renderNextOfKin()}
+          {currentStep === 'address-info' && renderAddressInfo()}
           {currentStep === 'selfie' && renderSelfie()}
           {currentStep === 'complete' && renderComplete()}
         </AnimatePresence>

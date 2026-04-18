@@ -10,6 +10,7 @@ import type {
   Referral, Transfer, Dispute,
   CompanyDetails, PaymentGatewayConfig, PaymentGatewayId, PaymentGatewayCredential, PaymentGatewayStatus,
   SMSProviderConfig, SMSProviderId, SMSCredential, SMSProviderStatus,
+  KYCVerificationRecord,
 } from '@/lib/types';
 import {
   currentUser, currentAgent, currentTreasurer, currentAdmin,
@@ -67,6 +68,7 @@ interface CustomerState {
   initiateTransfer: (recipientPhone: string, amount: number, note?: string) => void;
   fileDispute: (transactionId: string, type: string, description: string) => void;
   markDisputeResolved: (disputeId: string, resolution: string) => void;
+  completeKYC: (kycLevel: 'basic' | 'full') => void;
 }
 
 export const useCustomerStore = create<CustomerState>((set) => ({
@@ -242,6 +244,12 @@ export const useCustomerStore = create<CustomerState>((set) => ({
       ),
     }));
   },
+
+  completeKYC: (kycLevel) => {
+    set((s) => ({
+      user: { ...s.user, kycLevel },
+    }));
+  },
 }));
 
 // ---- Agent Store ----
@@ -257,6 +265,7 @@ interface AgentState {
   setActivePage: (page: string) => void;
   collectFromCustomer: (routeId: string, customerId: string, amount: number) => void;
   markCustomerAbsent: (routeId: string, customerId: string, notes: string) => void;
+  verifyCustomerKYC: (customerId: string, kycLevel: 'basic' | 'full') => void;
 }
 
 export const useAgentStore = create<AgentState>((set) => ({
@@ -301,7 +310,129 @@ export const useAgentStore = create<AgentState>((set) => ({
       }),
     }));
   },
+
+  verifyCustomerKYC: (customerId, kycLevel) => {
+    set((s) => ({
+      allCustomers: s.allCustomers.map(c =>
+        c.id === customerId ? { ...c, kycLevel } : c
+      ),
+    }));
+  },
 }));
+
+// ---- KYC Verification Mock Data ----
+const mockKYCRecords: KYCVerificationRecord[] = [
+  {
+    id: 'kyc-001',
+    userId: 'usr-001',
+    userName: 'Ama Mensah',
+    userPhone: '+233 24 123 4567',
+    userEmail: 'ama.mensah@email.com',
+    status: 'approved',
+    submittedAt: '2026-03-14T14:20:00Z',
+    reviewedAt: '2026-03-15T10:30:00Z',
+    reviewedBy: 'Daniel Tetteh',
+    cardData: {
+      idNumber: 'GHA-123456789-0',
+      fullName: 'MENSAH AMA SERWAA',
+      dateOfBirth: '15/03/1992',
+      gender: 'Female',
+      nationality: 'Ghanaian',
+      expiryDate: '15/03/2032',
+      issueDate: '15/03/2022',
+      cardNumber: 'GC-2022-04589371',
+      personalIdNumber: 'PIN-2847193650',
+      documentType: 'Ghana Card',
+      region: 'Greater Accra',
+      verificationScore: 96,
+    },
+    facialMatchScore: 94,
+    niaVerified: true,
+    documentValid: true,
+    identityVerified: true,
+    recommendation: 'approve',
+    ocrConfidence: 96,
+    warnings: [],
+    processingTime: 3200,
+    nextOfKin: { name: 'Kwame Mensah', phone: '+233 20 555 1234', relationship: 'Spouse' },
+    addressInfo: { houseNumber: '24', street: 'Osu Oxford Street', area: 'Osu', city: 'Accra', region: 'Greater Accra', digitalAddress: 'GA-234-5678' },
+    kycLevel: 'full',
+    expiresAt: '2032-03-15T10:30:00Z',
+  },
+  {
+    id: 'kyc-002',
+    userId: 'usr-002',
+    userName: 'Kofi Asante',
+    userPhone: '+233 20 987 6543',
+    userEmail: 'kofi.asante@email.com',
+    status: 'pending_review',
+    submittedAt: '2026-04-18T08:15:00Z',
+    cardData: {
+      idNumber: 'GHA-987654321-1',
+      fullName: 'ASANTE KOFI BOAKYE',
+      dateOfBirth: '22/08/1988',
+      gender: 'Male',
+      nationality: 'Ghanaian',
+      expiryDate: '22/08/2028',
+      issueDate: '22/08/2018',
+      cardNumber: 'GC-2018-07128456',
+      personalIdNumber: 'PIN-6392841057',
+      documentType: 'Ghana Card',
+      region: 'Ashanti',
+      verificationScore: 89,
+    },
+    facialMatchScore: 87,
+    niaVerified: true,
+    documentValid: true,
+    identityVerified: false,
+    recommendation: 'manual_review',
+    ocrConfidence: 89,
+    warnings: ['Card expiry date is within 2 years'],
+    processingTime: 4100,
+    nextOfKin: { name: 'Adwoa Asante', phone: '+233 50 333 9876', relationship: 'Mother' },
+    addressInfo: { houseNumber: '12', street: 'Kejetia Road', area: 'Kejetia', city: 'Kumasi', region: 'Ashanti', digitalAddress: 'AS-567-1234' },
+    kycLevel: 'none',
+    expiresAt: '2028-08-22T08:15:00Z',
+  },
+  {
+    id: 'kyc-003',
+    userId: 'usr-003',
+    userName: 'Abena Owusu',
+    userPhone: '+233 27 456 7890',
+    userEmail: 'abena.owusu@email.com',
+    status: 'rejected',
+    submittedAt: '2026-04-09T11:45:00Z',
+    reviewedAt: '2026-04-10T16:00:00Z',
+    reviewedBy: 'Daniel Tetteh',
+    rejectionReason: 'Facial match score too low (65%). Blurry selfie image. Please retake with better lighting.',
+    cardData: {
+      idNumber: 'GHA-456789123-2',
+      fullName: 'OWUSU ABENA FREMA',
+      dateOfBirth: '10/11/1995',
+      gender: 'Female',
+      nationality: 'Ghanaian',
+      expiryDate: '10/11/2025',
+      issueDate: '10/11/2015',
+      cardNumber: 'GC-2015-03298471',
+      personalIdNumber: 'PIN-4719283056',
+      documentType: 'Ghana Card',
+      region: 'Western',
+      verificationScore: 72,
+    },
+    facialMatchScore: 65,
+    niaVerified: true,
+    documentValid: true,
+    identityVerified: false,
+    recommendation: 'reject',
+    ocrConfidence: 72,
+    warnings: ['Low OCR confidence on date of birth', 'Low facial match score', 'Selfie image may be blurry'],
+    processingTime: 3800,
+    nextOfKin: { name: 'Kofi Owusu', phone: '+233 24 111 2233', relationship: 'Father' },
+    addressInfo: { houseNumber: '8', street: 'Market Circle', area: 'Takoradi', city: 'Takoradi', region: 'Western', digitalAddress: 'WE-890-5678' },
+    kycLevel: 'none',
+    expiresAt: '2025-11-10T11:45:00Z',
+  },
+];
 
 // ---- Admin Store ----
 interface AdminState {
@@ -315,6 +446,7 @@ interface AdminState {
   complianceReports: ComplianceReport[];
   activityLogs: ActivityLog[];
   allDisputes: Dispute[];
+  kycRecords: KYCVerificationRecord[];
   activePage: string;
 
   setActivePage: (page: string) => void;
@@ -334,6 +466,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   complianceReports: complianceReports,
   activityLogs: activityLogs,
   allDisputes: disputes,
+  kycRecords: mockKYCRecords,
   activePage: 'dashboard',
 
   setActivePage: (page) => set({ activePage: page }),
@@ -579,4 +712,54 @@ export const useConfigStore = create<ConfigState>((set) => ({
         : p
     ),
   })),
+}));
+
+// ---- KYC Verification Store ----
+interface KYCState {
+  records: KYCVerificationRecord[];
+
+  addVerificationRecord: (record: Omit<KYCVerificationRecord, 'id' | 'status' | 'submittedAt'>) => string;
+  approveKYC: (recordId: string, reviewerName: string) => void;
+  rejectKYC: (recordId: string, reviewerName: string, reason: string) => void;
+  getRecordByUserId: (userId: string) => KYCVerificationRecord | undefined;
+}
+
+export const useKYCStore = create<KYCState>((set, get) => ({
+  records: mockKYCRecords,
+
+  addVerificationRecord: (record) => {
+    const id = `kyc-${Date.now()}`;
+    const newRecord: KYCVerificationRecord = {
+      ...record,
+      id,
+      status: 'pending_review',
+      submittedAt: new Date().toISOString(),
+    };
+    set((s) => ({ records: [newRecord, ...s.records] }));
+    return id;
+  },
+
+  approveKYC: (recordId, reviewerName) => {
+    set((s) => ({
+      records: s.records.map(r =>
+        r.id === recordId
+          ? { ...r, status: 'approved' as const, reviewedBy: reviewerName, reviewedAt: new Date().toISOString(), kycLevel: 'full' as const }
+          : r
+      ),
+    }));
+  },
+
+  rejectKYC: (recordId, reviewerName, reason) => {
+    set((s) => ({
+      records: s.records.map(r =>
+        r.id === recordId
+          ? { ...r, status: 'rejected' as const, reviewedBy: reviewerName, reviewedAt: new Date().toISOString(), rejectionReason: reason }
+          : r
+      ),
+    }));
+  },
+
+  getRecordByUserId: (userId) => {
+    return get().records.find(r => r.userId === userId);
+  },
 }));
