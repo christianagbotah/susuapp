@@ -656,7 +656,7 @@ export function AppLayout() {
         <div className={`flex-1 overflow-y-auto no-pull-refresh ${
           hasBottomNav ? 'pb-20 lg:pb-0' : ''
         }`}>
-          <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+          <div className="px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-6 xl:px-10 max-w-7xl mx-auto w-full">
             {/* Desktop page title (shown in top bar on mobile) */}
             <h2 className="hidden lg:block font-semibold text-xl mb-5">{pageTitle}</h2>
             <PageTransition pageKey={activePage}>
