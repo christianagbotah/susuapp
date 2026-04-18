@@ -122,6 +122,28 @@
     @apply border-border outline-ring/50;
     -webkit-tap-highlight-color: transparent;
   }
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  [role="button"],
+  a,
+  [role="link"],
+  summary,
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  label[for] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [type="button"]:disabled,
+  [type="submit"]:disabled,
+  [type="reset"]:disabled,
+  a[aria-disabled="true"] {
+    cursor: not-allowed;
+  }
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
