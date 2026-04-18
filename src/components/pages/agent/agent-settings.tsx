@@ -356,12 +356,12 @@ export function AgentSettings() {
                     <div>
                       <Label className="text-sm font-medium">Daily Collection Target</Label>
                       <p className="text-xs text-muted-foreground">
-                        Set your daily target amount in GHS
+                        Set your daily target amount
                       </p>
                     </div>
                   </div>
                   <Badge variant="secondary" className="text-sm">
-                    GHS {parseFloat(dailyTarget).toLocaleString()}
+                    ₵{parseFloat(dailyTarget).toLocaleString()}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-3">

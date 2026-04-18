@@ -331,7 +331,7 @@ export function TreasurerSettings() {
                   <div className="space-y-0.5">
                     <Label className="text-sm font-medium">Auto-approve Small Payouts</Label>
                     <p className="text-xs text-muted-foreground">
-                      Automatically approve payouts below GHS 1,000 without manual review
+                      Automatically approve payouts below ₵1,000 without manual review
                     </p>
                   </div>
                 </div>

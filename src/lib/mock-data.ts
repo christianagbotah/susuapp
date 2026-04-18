@@ -6,7 +6,8 @@ import type {
   Loan, LoanPayment, LoanProduct, Wallet, MobileMoneyProvider,
   Transaction, Agent, CollectionRoute, AgentCommission,
   SystemStats, Branch, ComplianceReport, Notification,
-  ActivityLog, DepositRequest, WithdrawalRequest
+  ActivityLog, DepositRequest, WithdrawalRequest,
+  Referral, Transfer, Dispute
 } from './types';
 
 // ---- Mobile Money Providers ----
@@ -243,6 +244,30 @@ export const activityLogs: ActivityLog[] = [
   { id: 'al-005', userId: 'usr-008', userName: 'Patricia Ampah', action: 'Payout Processed', details: 'Processed ₵10,000.00 payout to Efua Darko', date: '2026-04-15T16:50:00', category: 'Susu' },
   { id: 'al-006', userId: 'usr-009', userName: 'Daniel Tetteh', action: 'Loan Approved', details: 'Approved ₵25,000.00 business loan for Efua Darko', date: '2026-04-10T10:30:00', category: 'Loan' },
   { id: 'al-007', userId: 'usr-001', userName: 'Ama Mensah', action: 'Goal Created', details: 'Created savings goal "Shop Rent Fund" - ₵18,000.00', date: '2026-04-08T08:00:00', category: 'Savings' },
+];
+
+// ---- Referrals ----
+export const referrals: Referral[] = [
+  { id: 'ref-001', referrerId: 'usr-001', referrerName: 'Ama Mensah', referredName: 'Akosua Takyi', referredPhone: '0248899002', status: 'rewarded', rewardAmount: 25, rewardStatus: 'paid', date: '2026-02-10', registeredDate: '2026-02-12' },
+  { id: 'ref-002', referrerId: 'usr-001', referrerName: 'Ama Mensah', referredName: 'Kwabena Ofori', referredPhone: '0503344557', status: 'active', rewardAmount: 25, rewardStatus: 'pending', date: '2026-03-05', registeredDate: '2026-03-07' },
+  { id: 'ref-003', referrerId: 'usr-001', referrerName: 'Ama Mensah', referredName: 'Beatrice Amoah', referredPhone: '0271122335', status: 'registered', rewardAmount: 25, rewardStatus: 'pending', date: '2026-03-28', registeredDate: '2026-04-01' },
+  { id: 'ref-004', referrerId: 'usr-001', referrerName: 'Ama Mensah', referredName: 'Nana Akufo', referredPhone: '0236677881', status: 'pending', rewardAmount: 25, rewardStatus: 'pending', date: '2026-04-15' },
+  { id: 'ref-005', referrerId: 'usr-001', referrerName: 'Ama Mensah', referredName: 'Felicia Owusu', referredPhone: '0209988776', status: 'rewarded', rewardAmount: 25, rewardStatus: 'paid', date: '2025-12-20', registeredDate: '2025-12-22' },
+];
+
+// ---- Recent Transfers ----
+export const recentTransfers: Transfer[] = [
+  { id: 'trf-001', senderId: 'usr-001', senderName: 'Ama Mensah', recipientName: 'Efua Darko', recipientPhone: '0501112233', amount: 500, status: 'completed', date: '2026-04-10T12:00:00', reference: 'ISP-T001-Q7R8S9', note: 'Monthly susu top-up' },
+  { id: 'trf-002', senderId: 'usr-001', senderName: 'Ama Mensah', recipientName: 'Kwame Asante', recipientPhone: '0209876543', amount: 200, status: 'completed', date: '2026-04-08T15:30:00', reference: 'ISP-T002-M3N4O5', note: 'Market supplies payment' },
+  { id: 'trf-003', senderId: 'usr-001', senderName: 'Ama Mensah', recipientName: 'Adwoa Poku', recipientPhone: '0237788990', amount: 1500, status: 'completed', date: '2026-04-05T10:00:00', reference: 'ISP-T003-P6Q7R8' },
+  { id: 'trf-004', senderId: 'usr-001', senderName: 'Ama Mensah', recipientName: 'Kofi Boateng', recipientPhone: '0274455667', amount: 750, status: 'pending', date: '2026-04-18T14:20:00', reference: 'ISP-T004-S9T0U1', note: 'Loan repayment share' },
+];
+
+// ---- Disputes ----
+export const disputes: Dispute[] = [
+  { id: 'dsp-001', transactionId: 'txn-008', userId: 'usr-001', type: 'incorrect_amount', description: 'I withdrew ₵500 to Vodafone Cash but only ₵300 was received in my wallet.', amount: 500, status: 'open', date: '2026-04-13T16:00:00', updatedAt: '2026-04-13T16:00:00' },
+  { id: 'dsp-002', transactionId: 'txn-005', userId: 'usr-001', type: 'duplicate', description: 'This susu contribution was debited twice from my wallet for the same day.', amount: 500, status: 'investigating', date: '2026-04-15T10:00:00', updatedAt: '2026-04-16T09:00:00' },
+  { id: 'dsp-003', transactionId: 'txn-009', userId: 'usr-003', type: 'not_received', description: 'Deposited ₵1,000 via AirtelTigo Money but the amount does not reflect in my iSusuPro wallet.', amount: 1000, status: 'resolved', date: '2026-04-12T09:00:00', updatedAt: '2026-04-14T11:30:00', resolution: 'Deposit was delayed by the telecom provider. Funds have been credited to the wallet.' },
 ];
 
 // ---- Monthly Revenue Data (for charts) ----

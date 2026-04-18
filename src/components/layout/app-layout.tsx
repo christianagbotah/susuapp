@@ -52,6 +52,8 @@ import {
   X,
   Home,
   MoreHorizontal,
+  SendHorizontal,
+  UserPlus,
 } from 'lucide-react';
 
 // Page component imports
@@ -62,6 +64,8 @@ import { CustomerLoans } from '@/components/pages/customer/customer-loans';
 import { CustomerWallet } from '@/components/pages/customer/customer-wallet';
 import { CustomerTransactions } from '@/components/pages/customer/customer-transactions';
 import { CustomerSettings } from '@/components/pages/customer/customer-settings';
+import { CustomerTransfers } from '@/components/pages/customer/customer-transfers';
+import { CustomerReferrals } from '@/components/pages/customer/customer-referrals';
 import { AgentDashboard } from '@/components/pages/agent/agent-dashboard';
 import { AgentCollections } from '@/components/pages/agent/agent-collections';
 import { AgentCustomers } from '@/components/pages/agent/agent-customers';
@@ -95,6 +99,8 @@ const customerNavItems: NavItem[] = [
   { id: 'susu', label: 'Susu', icon: PiggyBank },
   { id: 'loans', label: 'Loans', icon: Landmark },
   { id: 'wallet', label: 'Wallet', icon: Wallet },
+  { id: 'transfers', label: 'Transfer', icon: SendHorizontal },
+  { id: 'referrals', label: 'Refer', icon: UserPlus },
   { id: 'transactions', label: 'History', icon: ArrowLeftRight },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
@@ -143,7 +149,7 @@ const portalRoles: Record<string, string> = {
 
 // Bottom tabs: first N items shown in bottom bar, rest in "More" drawer
 function getBottomTabs(navItems: NavItem[], portal: string): BottomTabItem[] {
-  const maxTabs = portal === 'admin' ? 4 : 5; // Admin has more nav items
+  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 5 : 5;
   return navItems.slice(0, maxTabs).map(item => ({
     id: item.id,
     label: item.label,
@@ -411,6 +417,8 @@ export function AppLayout() {
           case 'susu': return <CustomerSusu />;
           case 'loans': return <CustomerLoans />;
           case 'wallet': return <CustomerWallet />;
+          case 'transfers': return <CustomerTransfers />;
+          case 'referrals': return <CustomerReferrals />;
           case 'transactions': return <CustomerTransactions />;
           case 'settings': return <CustomerSettings />;
           default: return <CustomerDashboard />;

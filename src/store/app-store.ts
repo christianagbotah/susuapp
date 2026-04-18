@@ -6,14 +6,16 @@ import type {
   PortalId, User, Wallet, SusuGroup, SusuContribution, SusuPayout,
   SavingsGoal, Loan, LoanPayment, Transaction, Notification,
   Agent, CollectionRoute, AgentCommission, SystemStats,
-  Branch, ComplianceReport, ActivityLog
+  Branch, ComplianceReport, ActivityLog,
+  Referral, Transfer, Dispute
 } from '@/lib/types';
 import {
   currentUser, currentAgent, currentTreasurer, currentAdmin,
   users, customerWallets, susuGroups, susuContributions, susuPayouts,
   savingsGoals, loans, loanPayments, transactions, notifications,
   agents, collectionRoutes, agentCommissions, systemStats, branches,
-  complianceReports, activityLogs
+  complianceReports, activityLogs,
+  referrals, recentTransfers, disputes
 } from '@/lib/mock-data';
 import { generateReference } from '@/lib/formatters';
 
@@ -48,6 +50,9 @@ interface CustomerState {
   loanPayments: LoanPayment[];
   transactions: Transaction[];
   notifications: Notification[];
+  referrals: Referral[];
+  recentTransfers: Transfer[];
+  disputes: Dispute[];
   activePage: string;
 
   setActivePage: (page: string) => void;
@@ -57,6 +62,9 @@ interface CustomerState {
   markNotificationRead: (id: string) => void;
   createSavingsGoal: (goal: Omit<SavingsGoal, 'id'>) => void;
   contributeToGoal: (goalId: string, amount: number) => void;
+  initiateTransfer: (recipientPhone: string, amount: number, note?: string) => void;
+  fileDispute: (transactionId: string, type: string, description: string) => void;
+  markDisputeResolved: (disputeId: string, resolution: string) => void;
 }
 
 export const useCustomerStore = create<CustomerState>((set) => ({
@@ -74,6 +82,9 @@ export const useCustomerStore = create<CustomerState>((set) => ({
   ),
   transactions: transactions.filter(t => t.userId === 'usr-001'),
   notifications: notifications,
+  referrals: referrals.filter(r => r.referrerId === 'usr-001'),
+  recentTransfers: recentTransfers.filter(t => t.senderId === 'usr-001'),
+  disputes: disputes.filter(d => d.userId === 'usr-001'),
   activePage: 'dashboard',
 
   setActivePage: (page) => set({ activePage: page }),
@@ -169,6 +180,66 @@ export const useCustomerStore = create<CustomerState>((set) => ({
       wallets: s.wallets.map(w => w.type === 'savings' ? { ...w, balance: w.balance + amount } : w),
     }));
   },
+
+  initiateTransfer: (recipientPhone, amount, note) => {
+    const newTransfer: Transfer = {
+      id: `trf-${Date.now()}`,
+      senderId: 'usr-001',
+      senderName: 'Ama Mensah',
+      recipientName: recipientPhone,
+      recipientPhone,
+      amount,
+      status: 'completed',
+      date: new Date().toISOString(),
+      reference: generateReference(),
+      note,
+    };
+    const newTxn: Transaction = {
+      id: `txn-${Date.now()}`,
+      userId: 'usr-001',
+      type: 'transfer',
+      amount,
+      currency: 'GHS',
+      status: 'completed',
+      date: new Date().toISOString(),
+      description: `Transfer to ${recipientPhone}${note ? ` - ${note}` : ''}`,
+      reference: newTransfer.reference,
+      category: 'Transfer',
+      balanceAfter: 0,
+      counterpartName: recipientPhone,
+    };
+    set((s) => ({
+      recentTransfers: [newTransfer, ...s.recentTransfers],
+      transactions: [newTxn, ...s.transactions],
+      wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: w.balance - amount } : w),
+    }));
+  },
+
+  fileDispute: (transactionId, type, description) => {
+    const txn = transactions.find(t => t.id === transactionId);
+    const newDispute: Dispute = {
+      id: `dsp-${Date.now()}`,
+      transactionId,
+      userId: 'usr-001',
+      type: type as Dispute['type'],
+      description,
+      amount: txn?.amount || 0,
+      status: 'open',
+      date: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    set((s) => ({
+      disputes: [newDispute, ...s.disputes],
+    }));
+  },
+
+  markDisputeResolved: (disputeId, resolution) => {
+    set((s) => ({
+      disputes: s.disputes.map(d =>
+        d.id === disputeId ? { ...d, status: 'resolved' as const, resolution, updatedAt: new Date().toISOString() } : d
+      ),
+    }));
+  },
 }));
 
 // ---- Agent Store ----
@@ -241,11 +312,13 @@ interface AdminState {
   allSusuGroups: SusuGroup[];
   complianceReports: ComplianceReport[];
   activityLogs: ActivityLog[];
+  allDisputes: Dispute[];
   activePage: string;
 
   setActivePage: (page: string) => void;
   approveLoan: (loanId: string) => void;
   rejectLoan: (loanId: string, reason: string) => void;
+  resolveDispute: (disputeId: string, resolution: string) => void;
 }
 
 export const useAdminStore = create<AdminState>((set) => ({
@@ -258,6 +331,7 @@ export const useAdminStore = create<AdminState>((set) => ({
   allSusuGroups: susuGroups,
   complianceReports: complianceReports,
   activityLogs: activityLogs,
+  allDisputes: disputes,
   activePage: 'dashboard',
 
   setActivePage: (page) => set({ activePage: page }),
@@ -274,6 +348,14 @@ export const useAdminStore = create<AdminState>((set) => ({
     set((s) => ({
       allLoans: s.allLoans.map(l =>
         l.id === loanId ? { ...l, status: 'rejected' as const, reviewedBy: 'Daniel Tetteh', reviewDate: new Date().toISOString(), rejectReason: reason } : l
+      ),
+    }));
+  },
+
+  resolveDispute: (disputeId, resolution) => {
+    set((s) => ({
+      allDisputes: s.allDisputes.map(d =>
+        d.id === disputeId ? { ...d, status: 'resolved' as const, resolution, updatedAt: new Date().toISOString() } : d
       ),
     }));
   },

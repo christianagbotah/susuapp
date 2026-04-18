@@ -313,6 +313,48 @@ export interface Notification {
   link?: string;
 }
 
+// ---- REFER-A-FRIEND MODULE ----
+export interface Referral {
+  id: string;
+  referrerId: string;
+  referrerName: string;
+  referredName: string;
+  referredPhone: string;
+  status: 'pending' | 'registered' | 'active' | 'rewarded';
+  rewardAmount: number;
+  rewardStatus: 'pending' | 'paid' | 'cancelled';
+  date: string;
+  registeredDate?: string;
+}
+
+// ---- MONEY TRANSFER MODULE ----
+export interface Transfer {
+  id: string;
+  senderId: string;
+  senderName: string;
+  recipientName: string;
+  recipientPhone: string;
+  amount: number;
+  status: 'pending' | 'completed' | 'failed' | 'reversed';
+  date: string;
+  reference: string;
+  note?: string;
+}
+
+// ---- TRANSACTION DISPUTE MODULE ----
+export interface Dispute {
+  id: string;
+  transactionId: string;
+  userId: string;
+  type: 'unauthorized' | 'duplicate' | 'incorrect_amount' | 'not_received' | 'other';
+  description: string;
+  amount: number;
+  status: 'open' | 'investigating' | 'resolved' | 'rejected';
+  resolution?: string;
+  date: string;
+  updatedAt: string;
+}
+
 // ---- ACTIVITY LOG ----
 export interface ActivityLog {
   id: string;

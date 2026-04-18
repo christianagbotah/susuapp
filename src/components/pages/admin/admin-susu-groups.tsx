@@ -123,7 +123,7 @@ export function AdminSusuGroups() {
                           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSelectedGroup(group)}>
                             <Eye className="mr-1 h-3 w-3" /> Details
                           </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-xs">
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSelectedGroup(group)}>
                             <Users className="mr-1 h-3 w-3" /> Members
                           </Button>
                         </div>
@@ -175,7 +175,7 @@ export function AdminSusuGroups() {
                     <Button size="sm" variant="outline" className="flex-1 text-xs min-h-[44px]" onClick={() => setSelectedGroup(group)}>
                       <Eye className="mr-1 h-3 w-3" /> View Details
                     </Button>
-                    <Button size="sm" variant="outline" className="flex-1 text-xs min-h-[44px]">
+                    <Button size="sm" variant="outline" className="flex-1 text-xs min-h-[44px]" onClick={() => setSelectedGroup(group)}>
                       <Users className="mr-1 h-3 w-3" /> View Members
                     </Button>
                   </div>

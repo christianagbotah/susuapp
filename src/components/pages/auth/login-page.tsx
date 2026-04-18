@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useNavigationStore } from '@/store/app-store';
+import { toast } from 'sonner';
 import type { PortalId } from '@/lib/types';
 
 // ---- Portal card data ----
@@ -264,7 +265,12 @@ export function LoginPage() {
                 {/* Forgot PIN */}
                 <p className="text-center text-sm text-muted-foreground">
                   Forgot your PIN?{' '}
-                  <button className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline">
+                  <button
+                    className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
+                    onClick={() => toast.info('PIN Reset', {
+                      description: 'A PIN reset link has been sent to your registered phone number.',
+                    })}
+                  >
                     Reset it here
                   </button>
                 </p>
