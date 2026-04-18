@@ -150,7 +150,27 @@
 - Fix: independent `detailsOpen`/`membersOpen` state + separate close handlers
 - Also fixed "View All Members" button inside details dialog (removed setTimeout hack)
 
-**Commits: `0f76b2c` (settings), `72e5091` (dialog fix)**
+**Commits: `0f76b2c` (settings), `72e5091` (dialog fix), `8e78c5d` (Ghana Card OCR)**
+
+### 7. Ghana Card OCR Verification (commit `8e78c5d`)
+
+**New files created (3):**
+- `src/app/api/kyc/ocr/route.ts` — OCR API: accepts multipart image, validates type/size, returns mock Ghana Card data (GHA-XXXXXXXXX-X format), 85-99% confidence, 1.5-3s simulated processing
+- `src/app/api/kyc/verify/route.ts` — Verification API: validates GHA card number regex, simulates NIA database check (90% success), returns KYC level upgrade
+- `src/components/pages/customer/ghana-card-verification.tsx` — 7-step verification wizard (~1100 lines):
+  - **Step 1 (Intro)**: Animated Ghana Card illustration (gold/amber), process steps, requirements checklist
+  - **Step 2 (Front Capture)**: Camera (capture="environment") + gallery upload, card overlay guide, retake
+  - **Step 3 (Back Capture)**: Same UX, back-specific labels
+  - **Step 4 (Processing)**: Dual image scanline animation (CSS @keyframes), progress bar 0-100%, 5 cycling status messages (Detecting edges → Extracting text → Reading ID → NIA verify → Complete)
+  - **Step 5 (Review Data)**: 11 fields in 2 groups (Card Info, Personal Info), confidence badge (green >90%, yellow >70%), inline edit mode with Input fields, "Rescan" fallback
+  - **Step 6 (Selfie)**: Circular face guide, flash capture effect (AnimatePresence), liveness tips card, retake
+  - **Step 7 (Complete)**: Spring-animated checkmark with sparkle decorations, "Full KYC Verified" badge, verified data summary
+
+**Modified files (2):**
+- `src/lib/types.ts` — Added: `GhanaCardOCRResult`, `KYCVerificationStep`, `KYCVerificationState`, `KYCNextOfKin`, `KYCAddressInfo`
+- `src/components/pages/customer/customer-settings.tsx` — KYC tab now shows verification wizard for non-verified users; verified users see document status + "Update Documents" button
+
+**Build: zero errors. Both API routes registered as dynamic routes.**
 
 ### Remaining Enhancement Opportunities
 - Backend API integration (currently mock data via Zustand)
