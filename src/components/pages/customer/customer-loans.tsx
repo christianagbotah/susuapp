@@ -730,7 +730,7 @@ export function CustomerLoans() {
                         label: 'Pay',
                         icon: CreditCard,
                         bg: 'bg-emerald-500',
-                        onClick: () => toast.info('Navigate to payment for this loan'),
+                        onClick: () => setActiveTab('my-loans'),
                       },
                       {
                         label: 'Details',
@@ -782,8 +782,8 @@ export function CustomerLoans() {
             {/* FAB: Quick Pay */}
             <FAB
               icon={CreditCard}
-              onClick={() => toast.info('Quick payment for active loans')}
-              label="Quick Pay"
+              onClick={() => setActiveTab('apply')}
+              label="Apply"
             />
           </TabsContent>
 

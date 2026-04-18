@@ -693,7 +693,7 @@ export function AdminLoans() {
                   </Button>
                 )}
                 {detailLoan.status === 'active' && (
-                  <Button variant="outline" className="flex-1 min-h-[44px]" onClick={() => toast.info('Repayment schedule viewed')}>
+                  <Button variant="outline" className="flex-1 min-h-[44px]" onClick={() => toast.success('Repayment schedule opened')}>
                     <Calendar className="mr-2 h-4 w-4" /> View Schedule
                   </Button>
                 )}

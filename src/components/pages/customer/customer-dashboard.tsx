@@ -223,7 +223,8 @@ export function CustomerDashboard() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
+                  className="relative h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25 touch-target"
+                  onClick={() => setActivePage('transactions')}
                 >
                   <Bell className="h-5 w-5" />
                   {unreadNotifications > 0 && (
@@ -246,20 +247,20 @@ export function CustomerDashboard() {
           const Icon = stat.icon;
           return (
             <motion.div key={stat.title} variants={itemVariants}>
-              <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md touch-manipulation">
-                <CardContent className="flex flex-col items-center gap-2 p-3 lg:flex-row lg:items-start lg:gap-4 lg:p-5 h-full justify-between">
-                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${stat.iconBg}`}>
+              <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md touch-manipulation overflow-hidden">
+                <CardContent className="flex flex-col items-center gap-1.5 p-3 lg:flex-row lg:items-start lg:gap-4 lg:p-5 h-full justify-between">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${stat.iconBg}`}>
                     <Icon className={`h-5 w-5 ${stat.iconColor}`} />
                   </div>
                   <div className="min-w-0 flex-1 text-center lg:text-left">
-                    <p className="text-[10px] font-medium text-slate-500 lg:text-xs">{stat.title}</p>
-                    <p className="mt-0.5 text-base font-bold tracking-tight text-slate-900 lg:text-lg">
+                    <p className="text-[10px] font-medium text-slate-500 lg:text-xs truncate">{stat.title}</p>
+                    <p className="mt-0.5 text-base font-bold tracking-tight text-slate-900 lg:text-lg truncate">
                       {stat.value}
                     </p>
-                    <div className="mt-1 flex items-center justify-center gap-1.5 lg:justify-start">
+                    <div className="mt-1 flex items-center justify-center gap-1 lg:justify-start flex-wrap">
                       {stat.trend && (
                         <span
-                          className={`flex items-center gap-0.5 text-xs font-medium ${
+                          className={`flex items-center gap-0.5 text-[11px] font-medium shrink-0 ${
                             stat.trend.positive ? 'text-emerald-600' : 'text-red-600'
                           }`}
                         >
@@ -271,7 +272,7 @@ export function CustomerDashboard() {
                           {stat.trend.value}
                         </span>
                       )}
-                      <span className="truncate text-[10px] text-slate-400 lg:text-xs">{stat.subtitle}</span>
+                      <span className="truncate text-[10px] text-slate-400 lg:text-xs leading-tight">{stat.subtitle}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -293,7 +294,7 @@ export function CustomerDashboard() {
                   {/* Left: Circular Progress */}
                   <div className="flex flex-col items-center gap-2 shrink-0">
                     <div className="relative">
-                      <svg width={140} height={140} viewBox="0 0 140 140" className="-rotate-90">
+                      <svg width={120} height={120} viewBox="0 0 140 140" className="-rotate-90 sm:w-[140px] sm:h-[140px]">
                         {/* Background ring */}
                         <circle
                           cx={70}
