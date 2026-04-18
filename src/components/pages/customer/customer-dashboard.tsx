@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   PiggyBank, Landmark, Wallet, TrendingUp,
   ArrowUpRight, ArrowDownRight, Bell, Target, Users,
-  ChevronRight, DollarSign, CreditCard,
+  ChevronRight, DollarSign, CreditCard, Shield, CheckCircle2,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -278,6 +278,98 @@ export function CustomerDashboard() {
           );
         })}
       </div>
+
+      {/* ==============================
+          2.5 Credit Score Widget
+          ============================== */}
+      <motion.div variants={itemVariants}>
+        <motion.div whileHover={{ y: -2 }}>
+          <Card className="border-slate-200/80 bg-white shadow-sm overflow-hidden">
+            <div className="bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/20">
+              <CardContent className="p-4 lg:p-6">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
+                  {/* Left: Circular Progress */}
+                  <div className="flex flex-col items-center gap-2 shrink-0">
+                    <div className="relative">
+                      <svg width={140} height={140} viewBox="0 0 140 140" className="-rotate-90">
+                        {/* Background ring */}
+                        <circle
+                          cx={70}
+                          cy={70}
+                          r={58}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={10}
+                          className="text-slate-100"
+                        />
+                        {/* Progress ring */}
+                        <circle
+                          cx={70}
+                          cy={70}
+                          r={58}
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth={10}
+                          strokeLinecap="round"
+                          strokeDasharray={364.42}
+                          strokeDashoffset={364.42 - (364.42 * 78) / 100}
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-bold text-slate-800">78</span>
+                        <span className="text-[10px] font-medium text-slate-400">out of 100</span>
+                      </div>
+                    </div>
+                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 gap-1">
+                      <Shield className="h-3 w-3" />
+                      Good
+                    </Badge>
+                  </div>
+
+                  {/* Right: Score Factors */}
+                  <div className="flex-1 space-y-1">
+                    <div className="mb-3">
+                      <h3 className="text-sm font-semibold text-slate-800">Credit Score</h3>
+                      <p className="text-xs text-slate-500">Based on your financial activity</p>
+                    </div>
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2">
+                        <span className="text-xs font-medium text-slate-600">Payment History</span>
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                          Excellent
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2">
+                        <span className="text-xs font-medium text-slate-600">Susu Savings</span>
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                          Strong
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2">
+                        <span className="text-xs font-medium text-slate-600">Active Loans</span>
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+                          On Track
+                          <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg bg-white/70 px-3 py-2">
+                        <span className="text-xs font-medium text-slate-600">Account Age</span>
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                          2+ years
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       {/* ==============================
           3. Quick Actions

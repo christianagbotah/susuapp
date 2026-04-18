@@ -13,6 +13,7 @@ import {
   Users, PiggyBank, Wallet, Clock, Shield, ArrowRight,
   TrendingUp, CalendarCheck, CircleDollarSign, BarChart3,
   Building2, ChevronRight, Play, CheckCircle, Layers,
+  ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 
 const fadeUp = {
@@ -139,6 +140,85 @@ export function TreasurerDashboard() {
           </motion.div>
         ))}
       </div>
+
+      {/* Today's Collection Summary */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.45 }}
+      >
+        <Card className="border-l-4 border-emerald-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm lg:text-base font-semibold flex items-center gap-2">
+              <CalendarCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              Today's Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Total Collected */}
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Total Collected</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">₵3,200.00</span>
+                  <ArrowUpRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400">+12% from yesterday</p>
+              </div>
+
+              {/* Members Paid */}
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Members Paid</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold">28</span>
+                  <span className="text-sm text-muted-foreground">/45</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="h-2 w-full rounded-full bg-blue-200 dark:bg-blue-800 overflow-hidden">
+                    <div className="h-full rounded-full bg-blue-600 dark:bg-blue-400" style={{ width: '62%' }} />
+                  </div>
+                  <p className="text-xs text-blue-600 dark:text-blue-400">62% completion</p>
+                </div>
+              </div>
+
+              {/* Pending */}
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Pending</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-amber-700 dark:text-amber-300">17</span>
+                  <span className="text-sm text-muted-foreground">members</span>
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <ArrowDownRight className="h-3 w-3" />
+                  Needs follow-up
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Status */}
+            <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <TrendingUp className="h-4 w-4" />
+                  2 groups need attention
+                </span>
+                <span className="text-xs text-muted-foreground">28 of 45 members paid</span>
+              </div>
+              <div className="space-y-1">
+                <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: '62%' }}
+                    transition={{ duration: 1, delay: 0.3 }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Overall daily completion: 62%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Group Summary */}

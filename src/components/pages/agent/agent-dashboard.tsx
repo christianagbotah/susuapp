@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import {
   Route, Users, BadgeDollarSign, DollarSign, Star, MapPin, Clock,
-  ChevronRight, TrendingUp, CheckCircle, Play,
+  ChevronRight, TrendingUp, CheckCircle, Play, Trophy, Target,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -333,6 +333,81 @@ export function AgentDashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Performance Metrics */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.35 }}
+      >
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-500" />
+              This Month&apos;s Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Collection Rate */}
+              <div className="flex flex-col gap-2 rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-emerald-100 p-1.5 dark:bg-emerald-900/30">
+                    <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Collection Rate</span>
+                </div>
+                <span className="text-2xl font-bold">94.5%</span>
+                <Progress value={94.5} className="h-1.5 [&>div]:bg-emerald-500" />
+                <p className="text-xs text-muted-foreground">Above 90% target</p>
+              </div>
+
+              {/* Customer Retention */}
+              <div className="flex flex-col gap-2 rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-emerald-100 p-1.5 dark:bg-emerald-900/30">
+                    <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Customer Retention</span>
+                </div>
+                <span className="text-2xl font-bold">96%</span>
+                <Progress value={96} className="h-1.5 [&>div]:bg-emerald-500" />
+                <p className="text-xs text-muted-foreground">Excellent retention</p>
+              </div>
+
+              {/* New Customers */}
+              <div className="flex flex-col gap-2 rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-blue-100 p-1.5 dark:bg-blue-900/30">
+                    <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">New Customers</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold">12</span>
+                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300">
+                    +3 this week
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">Growing steadily</p>
+              </div>
+
+              {/* On-time Rate */}
+              <div className="flex flex-col gap-2 rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-amber-100 p-1.5 dark:bg-amber-900/30">
+                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">On-time Rate</span>
+                </div>
+                <span className="text-2xl font-bold">91%</span>
+                <Progress value={91} className="h-1.5 [&>div]:bg-amber-500" />
+                <p className="text-xs text-muted-foreground">Room for improvement</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Performance Chart */}
       <motion.div
