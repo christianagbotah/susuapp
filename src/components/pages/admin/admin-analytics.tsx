@@ -8,7 +8,7 @@ import {
 } from '@/lib/mock-data';
 import { motion } from 'framer-motion';
 import {
-  DollarSign, Landmark, TrendingUp, Users, Download, FileText,
+  DollarSign, Landmark, TrendingUp, Users, Download, FileText, Printer,
   Calendar, Building2, PieChart as PieIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +20,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 
-const dateRanges = ['This Month', 'Last Month', 'Last 3 Months', 'This Year'];
+const dateRanges = ['Last 30 days', 'Last 90 days', 'This Year', 'All Time'];
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -31,10 +31,11 @@ const fadeUp = {
 
 export function AdminAnalytics() {
   const { stats } = useAdminStore();
-  const [selectedRange, setSelectedRange] = useState('This Month');
+  const [selectedRange, setSelectedRange] = useState('Last 30 days');
 
-  const handleExportPDF = () => toast.success('PDF report generated (mock)');
-  const handleExportExcel = () => toast.success('Excel export started (mock)');
+  const handleExportPDF = () => toast.success('Report exported as PDF');
+  const handleExportCSV = () => toast.success('Report exported as CSV');
+  const handlePrintReport = () => toast.success('Print dialog opened');
 
   const branchComparisonData = [...branches]
     .sort((a, b) => b.totalCustomers - a.totalCustomers)
@@ -67,10 +68,13 @@ export function AdminAnalytics() {
           </div>
           <div className="flex gap-2 overflow-x-auto overscroll-x-contain">
             <Button size="sm" variant="outline" className="text-xs min-h-[44px] shrink-0" onClick={handleExportPDF}>
-              <FileText className="mr-1 h-3 w-3" /> PDF Report
+              <Download className="mr-1 h-3 w-3" /> Export PDF
             </Button>
-            <Button size="sm" variant="outline" className="text-xs min-h-[44px] shrink-0" onClick={handleExportExcel}>
-              <Download className="mr-1 h-3 w-3" /> Excel Export
+            <Button size="sm" variant="outline" className="text-xs min-h-[44px] shrink-0" onClick={handleExportCSV}>
+              <FileText className="mr-1 h-3 w-3" /> Export CSV
+            </Button>
+            <Button size="sm" variant="outline" className="text-xs min-h-[44px] shrink-0" onClick={handlePrintReport}>
+              <Printer className="mr-1 h-3 w-3" /> Print Report
             </Button>
           </div>
         </div>

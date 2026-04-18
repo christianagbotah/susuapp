@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   PiggyBank, Landmark, Wallet, TrendingUp,
   ArrowUpRight, ArrowDownRight, Bell, Target, Users,
-  ChevronRight, DollarSign, CreditCard, Shield, CheckCircle2,
+  ChevronRight, DollarSign, CreditCard, Shield, CheckCircle2, Lightbulb,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -778,6 +778,61 @@ export function CustomerDashboard() {
             </CardContent>
           </Card>
         </motion.div>
+      </motion.div>
+
+      {/* ==============================
+          6. Financial Tips
+          ============================== */}
+      <motion.div variants={itemVariants}>
+        <Card className="border-0 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 lg:p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100">
+                <Lightbulb className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Financial Tips</h3>
+                <p className="text-xs text-slate-500">Smart ways to grow your money</p>
+              </div>
+            </div>
+            <div className="flex gap-4 overflow-x-auto overscroll-x-contain scrollbar-none lg:grid lg:grid-cols-4 lg:overflow-visible">
+              {[
+                {
+                  emoji: '💡',
+                  title: 'Save Automatically',
+                  description: 'Set up automatic daily contributions to your susu group. Even small amounts add up significantly over time.',
+                },
+                {
+                  emoji: '📈',
+                  title: 'Track Your Progress',
+                  description: 'Monitor your savings goals regularly. Members who track progress save 23% more on average.',
+                },
+                {
+                  emoji: '🛡️',
+                  title: 'Complete Your KYC',
+                  description: 'Full KYC verification unlocks higher transaction limits and access to premium loan products.',
+                },
+                {
+                  emoji: '💰',
+                  title: 'Earn Referral Bonuses',
+                  description: 'Refer friends to iSusuPro and earn ₵25 for each successful referral. No limit on earnings!',
+                },
+              ].map((tip) => (
+                <div
+                  key={tip.title}
+                  className="min-w-[220px] shrink-0 rounded-xl border border-blue-100/60 bg-white/80 backdrop-blur-sm p-4 shadow-sm transition-shadow hover:shadow-md lg:min-w-0"
+                >
+                  <span className="text-2xl">{tip.emoji}</span>
+                  <h4 className="mt-3 text-sm font-semibold text-slate-800">{tip.title}</h4>
+                  <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{tip.description}</p>
+                  <button className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                    Learn More →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
       </motion.div>
     </motion.div>
   );
