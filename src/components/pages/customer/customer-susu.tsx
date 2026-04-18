@@ -128,7 +128,7 @@ export function CustomerSusu() {
 
   function openContributeDialog(groupId: string) {
     setSelectedGroupId(groupId);
-    setContributeAmount('');
+    setContributionAmount('');
     setContributeDialogOpen(true);
   }
 

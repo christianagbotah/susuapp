@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { format } from 'date-fns';
 import { useCustomerStore } from '@/store/app-store';
 import { MobileDrawer } from '@/components/shared/mobile-components';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatTimeAgo } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,6 +17,8 @@ import {
   AlertCircle,
   XCircle,
   CheckCheck,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 import type { Notification } from '@/lib/types';
 
@@ -316,6 +320,9 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
   const displayNotifications = isCustomerPortal ? storeNotifications : localNotifications;
   const unreadCount = displayNotifications.filter((n) => !n.read).length;
 
+  // ---- Selected notification for detail view ----
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+
   // When the portal changes, reset local mock data
   React.useEffect(() => {
     if (!isCustomerPortal) {
@@ -324,14 +331,17 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
   }, [portal, isCustomerPortal]);
 
   const handleNotificationClick = useCallback(
-    (id: string) => {
+    (notification: Notification) => {
+      // Mark as read
       if (isCustomerPortal) {
-        markNotificationRead(id);
+        markNotificationRead(notification.id);
       } else {
         setLocalNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+          prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)),
         );
       }
+      // Open detail dialog
+      setSelectedNotification({ ...notification, read: true });
     },
     [isCustomerPortal, markNotificationRead],
   );
@@ -426,7 +436,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
                   <button
                     key={notification.id}
                     type="button"
-                    onClick={() => handleNotificationClick(notification.id)}
+                    onClick={() => handleNotificationClick(notification)}
                     className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/50 cursor-pointer touch-manipulation ${
                       !notification.read ? 'bg-muted/50 dark:bg-muted/30' : ''
                     }`}
@@ -479,6 +489,86 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
           )}
         </ScrollArea>
       </div>
+
+      {/* ---- Notification Detail Dialog ---- */}
+      <Dialog
+        open={!!selectedNotification}
+        onOpenChange={(open) => {
+          if (!open) setSelectedNotification(null);
+        }}
+      >
+        {selectedNotification && (() => {
+          const { icon: Icon, color, bg, label } = getNotificationTypeConfig(selectedNotification.type);
+          return (
+            <DialogContent className="mx-4 sm:mx-0 sm:max-w-lg">
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${bg}`}>
+                    <Icon className={`h-5 w-5 ${color}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <DialogTitle className="text-base leading-snug">
+                      {selectedNotification.title}
+                    </DialogTitle>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge
+                        variant="secondary"
+                        className={`text-[10px] px-1.5 py-0 font-medium border-0 ${bg} ${color}`}
+                      >
+                        {label}
+                      </Badge>
+                      <span className="text-[11px] text-muted-foreground">
+                        {formatTimeAgo(selectedNotification.date)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                {/* Full message */}
+                <div className="rounded-lg bg-muted/50 p-4">
+                  <div className="flex items-start gap-2.5">
+                    <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                      {selectedNotification.message}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Metadata */}
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <p className="font-medium text-muted-foreground">Category</p>
+                    <p className="capitalize font-medium text-foreground">
+                      {selectedNotification.category}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-medium text-muted-foreground">Date &amp; Time</p>
+                    <p className="font-medium text-foreground">
+                      {format(new Date(selectedNotification.date), 'dd MMM yyyy, hh:mm a')}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedNotification.link && (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => {
+                      window.open(selectedNotification.link, '_blank');
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    View Details
+                  </Button>
+                )}
+              </div>
+            </DialogContent>
+          );
+        })()}
+      </Dialog>
     </MobileDrawer>
   );
 }
