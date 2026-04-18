@@ -1,7 +1,7 @@
 'use client';
 
-import { AppLayout } from '@/components/layout/app-layout';
+import { CustomerBudgeting } from '@/components/pages/customer/customer-budgeting';
 
 export default function Home() {
-  return <AppLayout />;
+  return <CustomerBudgeting />;
 }

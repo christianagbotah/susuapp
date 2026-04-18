@@ -66,6 +66,13 @@ import {
   SendHorizontal,
   UserPlus,
   ChevronRight,
+  // New module icons
+  Banknote,
+  Receipt,
+  Calculator,
+  Smartphone,
+  Zap,
+  PieChart,
 } from 'lucide-react';
 
 // Page component imports
@@ -98,6 +105,13 @@ import { TreasurerPayouts } from '@/components/pages/treasurer/treasurer-payouts
 import { TreasurerMembers } from '@/components/pages/treasurer/treasurer-members';
 import { TreasurerReports } from '@/components/pages/treasurer/treasurer-reports';
 import { TreasurerSettings } from '@/components/pages/treasurer/treasurer-settings';
+// New module imports
+import { AdminPayroll } from '@/components/pages/admin/admin-payroll';
+import { AdminSSNIT } from '@/components/pages/admin/admin-ssnit';
+import { AdminTax } from '@/components/pages/admin/admin-tax';
+import { CustomerAirtime } from '@/components/pages/customer/customer-airtime';
+import { CustomerBills } from '@/components/pages/customer/customer-bills';
+import { CustomerBudgeting } from '@/components/pages/customer/customer-budgeting';
 import { NotificationPanel } from '@/components/shared/notification-panel';
 
 import type { LucideIcon } from 'lucide-react';
@@ -115,7 +129,10 @@ const customerNavItems: NavItem[] = [
   { id: 'susu', label: 'Susu', icon: PiggyBank },
   { id: 'loans', label: 'Loans', icon: Landmark },
   { id: 'wallet', label: 'Wallet', icon: Wallet },
+  { id: 'airtime', label: 'Airtime', icon: Smartphone },
+  { id: 'bills', label: 'Bills', icon: Zap },
   { id: 'transfers', label: 'Transfer', icon: SendHorizontal },
+  { id: 'budgeting', label: 'Budget', icon: PieChart },
   { id: 'referrals', label: 'Refer', icon: UserPlus },
   { id: 'transactions', label: 'History', icon: ArrowLeftRight },
   { id: 'settings', label: 'Settings', icon: Settings },
@@ -135,6 +152,9 @@ const adminNavItems: NavItem[] = [
   { id: 'loans', label: 'Loans', icon: Landmark },
   { id: 'agents', label: 'Agents', icon: Building2 },
   { id: 'susu-groups', label: 'Susu', icon: UsersRound },
+  { id: 'payroll', label: 'Payroll', icon: Banknote },
+  { id: 'ssnit', label: 'SSNIT', icon: Receipt },
+  { id: 'tax', label: 'Tax & GRA', icon: Calculator },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'kyc-verification', label: 'KYC Verification', icon: ShieldCheck },
   { id: 'compliance', label: 'Compliance', icon: ShieldAlert },
@@ -449,7 +469,10 @@ export function AppLayout() {
           case 'susu': return <CustomerSusu />;
           case 'loans': return <CustomerLoans />;
           case 'wallet': return <CustomerWallet />;
+          case 'airtime': return <CustomerAirtime />;
+          case 'bills': return <CustomerBills />;
           case 'transfers': return <CustomerTransfers />;
+          case 'budgeting': return <CustomerBudgeting />;
           case 'referrals': return <CustomerReferrals />;
           case 'transactions': return <CustomerTransactions />;
           case 'settings': return <CustomerSettings />;
@@ -471,6 +494,9 @@ export function AppLayout() {
           case 'loans': return <AdminLoans />;
           case 'agents': return <AdminAgents />;
           case 'susu-groups': return <AdminSusuGroups />;
+          case 'payroll': return <AdminPayroll />;
+          case 'ssnit': return <AdminSSNIT />;
+          case 'tax': return <AdminTax />;
           case 'analytics': return <AdminAnalytics />;
           case 'kyc-verification': return <AdminKYCVerification />;
           case 'compliance': return <AdminCompliance />;

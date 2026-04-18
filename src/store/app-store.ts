@@ -11,6 +11,13 @@ import type {
   CompanyDetails, PaymentGatewayConfig, PaymentGatewayId, PaymentGatewayCredential, PaymentGatewayStatus,
   SMSProviderConfig, SMSProviderId, SMSCredential, SMSProviderStatus,
   KYCVerificationRecord,
+  // New modules
+  PayrollEmployee, Payslip, PayrollRun,
+  SSNITContribution, SSNITFiling,
+  TAXFiling, TAXPayment, TAXCalendarItem,
+  AirtimeProduct, AirtimeTransaction,
+  Biller, BillPayment,
+  Budget, Expense,
 } from '@/lib/types';
 import {
   currentUser, currentAgent, currentTreasurer, currentAdmin,
@@ -761,5 +768,332 @@ export const useKYCStore = create<KYCState>((set, get) => ({
 
   getRecordByUserId: (userId) => {
     return get().records.find(r => r.userId === userId);
+  },
+}));
+
+// ============================================
+// MOCK DATA FOR NEW MODULES
+// ============================================
+
+// -- Payroll Employees --
+const mockPayrollEmployees: PayrollEmployee[] = [
+  { id: 'emp-001', employeeId: 'EMP001', name: 'Daniel Tetteh', position: 'Operations Manager', department: 'Operations', branch: 'Head Office', phone: '+233 24 123 4567', email: 'daniel.tetteh@isusupro.com', bankName: 'GCB Bank', bankAccount: '0123456789', ssnitNumber: 'SSNIT-001234567', tinNumber: 'TIN-0001234567', ghanaCardId: 'GHA-123456789-0', basicSalary: 4500, housingAllowance: 600, transportAllowance: 400, otherAllowances: 200, status: 'active', dateJoined: '2022-01-15', contractType: 'permanent', payGrade: 'M3' },
+  { id: 'emp-002', employeeId: 'EMP002', name: 'Abena Amoah', position: 'Finance Lead', department: 'Finance', branch: 'Head Office', phone: '+233 20 987 6543', email: 'abena.amoah@isusupro.com', bankName: 'Ecobank', bankAccount: '0234567890', ssnitNumber: 'SSNIT-002345678', tinNumber: 'TIN-0002345678', ghanaCardId: 'GHA-234567890-1', basicSalary: 5200, housingAllowance: 700, transportAllowance: 450, otherAllowances: 250, status: 'active', dateJoined: '2021-06-01', contractType: 'permanent', payGrade: 'M4' },
+  { id: 'emp-003', employeeId: 'EMP003', name: 'Kwame Boateng', position: 'Field Agent Supervisor', department: 'Field Operations', branch: 'Kumasi', phone: '+233 27 456 7890', email: 'kwame.boateng@isusupro.com', bankName: 'CalBank', bankAccount: '0345678901', ssnitNumber: 'SSNIT-003456789', tinNumber: 'TIN-0003456789', ghanaCardId: 'GHA-345678901-2', basicSalary: 3200, housingAllowance: 400, transportAllowance: 350, otherAllowances: 150, status: 'active', dateJoined: '2023-03-10', contractType: 'permanent', payGrade: 'M2' },
+  { id: 'emp-004', employeeId: 'EMP004', name: 'Adwoa Mensah', position: 'Customer Service Officer', department: 'Customer Service', branch: 'Accra', phone: '+233 50 111 2233', email: 'adwoa.mensah@isusupro.com', bankName: 'Fidelity Bank', bankAccount: '0456789012', ssnitNumber: 'SSNIT-004567890', tinNumber: 'TIN-0004567890', ghanaCardId: 'GHA-456789012-3', basicSalary: 2200, housingAllowance: 250, transportAllowance: 200, otherAllowances: 100, status: 'active', dateJoined: '2024-01-15', contractType: 'probation', payGrade: 'J3' },
+  { id: 'emp-005', employeeId: 'EMP005', name: 'Emmanuel Darko', position: 'IT Support Specialist', department: 'IT', branch: 'Head Office', phone: '+233 24 555 6677', email: 'emmanuel.darko@isusupro.com', bankName: 'Stanbic Bank', bankAccount: '0567890123', ssnitNumber: 'SSNIT-005678901', tinNumber: 'TIN-0005678901', ghanaCardId: 'GHA-567890123-4', basicSalary: 3500, housingAllowance: 500, transportAllowance: 400, otherAllowances: 200, status: 'active', dateJoined: '2023-07-01', contractType: 'permanent', payGrade: 'M2' },
+  { id: 'emp-006', employeeId: 'EMP006', name: 'Felicia Osei', position: 'Treasurer', department: 'Field Operations', branch: 'Tema', phone: '+233 20 888 9900', email: 'felicia.osei@isusupro.com', bankName: 'GCB Bank', bankAccount: '0678901234', ssnitNumber: 'SSNIT-006789012', tinNumber: 'TIN-0006789012', ghanaCardId: 'GHA-678901234-5', basicSalary: 2800, housingAllowance: 350, transportAllowance: 300, otherAllowances: 150, status: 'active', dateJoined: '2022-09-15', contractType: 'permanent', payGrade: 'M1' },
+  { id: 'emp-007', employeeId: 'EMP007', name: 'Kwasi Frimpong', position: 'National Service Personnel', department: 'Marketing', branch: 'Head Office', phone: '+233 27 333 4455', email: 'kwasi.frimpong@isusupro.com', bankName: 'UBA', bankAccount: '0789012345', ssnitNumber: 'SSNIT-007890123', tinNumber: 'TIN-0007890123', ghanaCardId: 'GHA-789012345-6', basicSalary: 800, housingAllowance: 0, transportAllowance: 200, otherAllowances: 50, status: 'active', dateJoined: '2025-09-01', contractType: 'national_service', payGrade: 'J1' },
+  { id: 'emp-008', employeeId: 'EMP008', name: 'Grace Nartey', position: 'Compliance Officer', department: 'Compliance', branch: 'Head Office', phone: '+233 24 222 3344', email: 'grace.nartey@isusupro.com', bankName: 'Standard Chartered', bankAccount: '0890123456', ssnitNumber: 'SSNIT-008901234', tinNumber: 'TIN-0008901234', ghanaCardId: 'GHA-890123456-7', basicSalary: 4200, housingAllowance: 550, transportAllowance: 400, otherAllowances: 200, status: 'on_leave', dateJoined: '2022-04-01', contractType: 'permanent', payGrade: 'M3' },
+];
+
+// -- Payroll Runs --
+const mockPayrollRuns: PayrollRun[] = [
+  { id: 'pr-001', period: 'March 2026', payDate: '2026-03-31', totalEmployees: 7, totalGrossPay: 35750, totalDeductions: 6320, totalNetPay: 29430, totalSSNIT: 8231, totalPAYE: 3520, status: 'paid', createdAt: '2026-03-25T10:00:00Z', approvedBy: 'Daniel Tetteh', paidAt: '2026-03-31T09:00:00Z' },
+  { id: 'pr-002', period: 'April 2026', payDate: '2026-04-30', totalEmployees: 8, totalGrossPay: 38500, totalDeductions: 6850, totalNetPay: 31650, totalSSNIT: 8925, totalPAYE: 3875, status: 'approved', createdAt: '2026-04-25T10:00:00Z', approvedBy: 'Daniel Tetteh' },
+  { id: 'pr-003', period: 'May 2026', payDate: '2026-05-31', totalEmployees: 8, totalGrossPay: 38500, totalDeductions: 0, totalNetPay: 0, totalSSNIT: 0, totalPAYE: 0, status: 'draft', createdAt: '2026-04-28T10:00:00Z' },
+];
+
+// -- Payslips --
+const mockPayslips: Payslip[] = [
+  { id: 'ps-001', payrollRunId: 'pr-001', employeeId: 'emp-001', employeeName: 'Daniel Tetteh', position: 'Operations Manager', department: 'Operations', period: 'March 2026', payDate: '2026-03-31', basicSalary: 4500, housingAllowance: 600, transportAllowance: 400, otherAllowances: 200, overtimePay: 0, bonus: 0, grossPay: 5700, ssnitEmployee: 247.5, tier2Employee: 225, payeTax: 718.75, nhfDeduction: 0, otherDeductions: 0, loanDeduction: 0, totalDeductions: 1191.25, netPay: 4508.75, ssnitEmployer: 607.5, tier2Employer: 225, status: 'paid' },
+  { id: 'ps-002', payrollRunId: 'pr-001', employeeId: 'emp-002', employeeName: 'Abena Amoah', position: 'Finance Lead', department: 'Finance', period: 'March 2026', payDate: '2026-03-31', basicSalary: 5200, housingAllowance: 700, transportAllowance: 450, otherAllowances: 250, overtimePay: 0, bonus: 0, grossPay: 6600, ssnitEmployee: 286, tier2Employee: 260, payeTax: 981.25, nhfDeduction: 0, otherDeductions: 0, loanDeduction: 0, totalDeductions: 1527.25, netPay: 5072.75, ssnitEmployer: 702, tier2Employer: 260, status: 'paid' },
+  { id: 'ps-003', payrollRunId: 'pr-001', employeeId: 'emp-004', employeeName: 'Adwoa Mensah', position: 'Customer Service Officer', department: 'Customer Service', period: 'March 2026', payDate: '2026-03-31', basicSalary: 2200, housingAllowance: 250, transportAllowance: 200, otherAllowances: 100, overtimePay: 0, bonus: 0, grossPay: 2750, ssnitEmployee: 121, tier2Employee: 110, payeTax: 237.5, nhfDeduction: 0, otherDeductions: 0, loanDeduction: 0, totalDeductions: 468.5, netPay: 2281.5, ssnitEmployer: 297, tier2Employer: 110, status: 'paid' },
+];
+
+// -- SSNIT Contributions --
+const mockSSNITContributions: SSNITContribution[] = [
+  { id: 'ssnit-001', employeeId: 'emp-001', employeeName: 'Daniel Tetteh', ssnitNumber: 'SSNIT-001234567', period: 'March 2026', basicSalary: 4500, employeeContribution: 247.5, employerContribution: 607.5, tier2Employer: 225, totalContribution: 1080, paymentDate: '2026-04-10', status: 'paid', reference: 'SSNIT-202603-001' },
+  { id: 'ssnit-002', employeeId: 'emp-002', employeeName: 'Abena Amoah', ssnitNumber: 'SSNIT-002345678', period: 'March 2026', basicSalary: 5200, employeeContribution: 286, employerContribution: 702, tier2Employer: 260, totalContribution: 1248, paymentDate: '2026-04-10', status: 'paid', reference: 'SSNIT-202603-002' },
+  { id: 'ssnit-003', employeeId: 'emp-003', employeeName: 'Kwame Boateng', ssnitNumber: 'SSNIT-003456789', period: 'March 2026', basicSalary: 3200, employeeContribution: 176, employerContribution: 432, tier2Employer: 160, totalContribution: 768, paymentDate: '2026-04-10', status: 'paid', reference: 'SSNIT-202603-003' },
+  { id: 'ssnit-004', employeeId: 'emp-004', employeeName: 'Adwoa Mensah', ssnitNumber: 'SSNIT-004567890', period: 'March 2026', basicSalary: 2200, employeeContribution: 121, employerContribution: 297, tier2Employer: 110, totalContribution: 528, paymentDate: '2026-04-10', status: 'paid', reference: 'SSNIT-202603-004' },
+  { id: 'ssnit-005', employeeId: 'emp-001', employeeName: 'Daniel Tetteh', ssnitNumber: 'SSNIT-001234567', period: 'April 2026', basicSalary: 4500, employeeContribution: 247.5, employerContribution: 607.5, tier2Employer: 225, totalContribution: 1080, status: 'pending', reference: 'SSNIT-202604-001' },
+  { id: 'ssnit-006', employeeId: 'emp-002', employeeName: 'Abena Amoah', ssnitNumber: 'SSNIT-002345678', period: 'April 2026', basicSalary: 5200, employeeContribution: 286, employerContribution: 702, tier2Employer: 260, totalContribution: 1248, status: 'pending', reference: 'SSNIT-202604-002' },
+];
+
+// -- SSNIT Filings --
+const mockSSNITFilings: SSNITFiling[] = [
+  { id: 'sf-001', period: 'January 2026', totalEmployees: 7, totalEmployeeContributions: 1780, totalEmployerContributions: 4382, totalTier2: 1620, grandTotal: 7782, filingDate: '2026-02-10', paymentDate: '2026-02-12', status: 'paid', reference: 'SSF-202601', ssnitReceiptNumber: 'RCP-2026-001234' },
+  { id: 'sf-002', period: 'February 2026', totalEmployees: 7, totalEmployeeContributions: 1780, totalEmployerContributions: 4382, totalTier2: 1620, grandTotal: 7782, filingDate: '2026-03-10', paymentDate: '2026-03-12', status: 'paid', reference: 'SSF-202602', ssnitReceiptNumber: 'RCP-2026-001235' },
+  { id: 'sf-003', period: 'March 2026', totalEmployees: 7, totalEmployeeContributions: 1856, totalEmployerContributions: 4558, totalTier2: 1690, grandTotal: 8104, filingDate: '2026-04-10', paymentDate: '2026-04-12', status: 'paid', reference: 'SSF-202603', ssnitReceiptNumber: 'RCP-2026-001236' },
+  { id: 'sf-004', period: 'April 2026', totalEmployees: 8, totalEmployeeContributions: 1989, totalEmployerContributions: 4884, totalTier2: 1810, grandTotal: 8683, filingDate: '2026-04-28', status: 'submitted', reference: 'SSF-202604' },
+];
+
+// -- GRA Tax Filings --
+const mockTAXFilings: TAXFiling[] = [
+  { id: 'tax-001', taxType: 'paye', period: 'March 2026', taxpayerName: 'iSusuPro Ghana Ltd', tin: 'P0001234567', totalTax: 3520, filingDate: '2026-04-14', paymentDate: '2026-04-14', dueDate: '2026-04-15', status: 'paid', reference: 'GRA-PAYE-202603' },
+  { id: 'tax-002', taxType: 'vat', period: 'Q1 2026', taxpayerName: 'iSusuPro Ghana Ltd', tin: 'P0001234567', totalTax: 4250, filingDate: '2026-04-30', paymentDate: '2026-04-30', dueDate: '2026-04-30', status: 'paid', reference: 'GRA-VAT-Q1-2026' },
+  { id: 'tax-003', taxType: 'withholding', period: 'March 2026', taxpayerName: 'iSusuPro Ghana Ltd', tin: 'P0001234567', totalTax: 1200, filingDate: '2026-04-14', dueDate: '2026-04-15', status: 'paid', reference: 'GRA-WHT-202603' },
+  { id: 'tax-004', taxType: 'paye', period: 'April 2026', taxpayerName: 'iSusuPro Ghana Ltd', tin: 'P0001234567', totalTax: 3875, filingDate: '2026-04-28', dueDate: '2026-05-15', status: 'filed', reference: 'GRA-PAYE-202604' },
+  { id: 'tax-005', taxType: 'nhil', period: 'Q1 2026', taxpayerName: 'iSusuPro Ghana Ltd', tin: 'P0001234567', totalTax: 850, filingDate: '2026-04-30', dueDate: '2026-04-30', status: 'paid', reference: 'GRA-NHIL-Q1-2026' },
+  { id: 'tax-006', taxType: 'getfund', period: 'Q1 2026', taxpayerName: 'iSusuPro Ghana Ltd', tin: 'P0001234567', totalTax: 850, filingDate: '2026-04-30', dueDate: '2026-04-30', status: 'paid', reference: 'GRA-GETF-Q1-2026' },
+];
+
+// -- GRA Tax Payments --
+const mockTAXPayments: TAXPayment[] = [
+  { id: 'tp-001', taxType: 'paye', amount: 3520, penaltyAmount: 0, totalAmount: 3520, paymentDate: '2026-04-14', method: 'bank_transfer', reference: 'PAY-REF-001', period: 'March 2026', status: 'completed' },
+  { id: 'tp-002', taxType: 'vat', amount: 4250, penaltyAmount: 0, totalAmount: 4250, paymentDate: '2026-04-30', method: 'bank_transfer', reference: 'PAY-REF-002', period: 'Q1 2026', status: 'completed' },
+  { id: 'tp-003', taxType: 'withholding', amount: 1200, penaltyAmount: 0, totalAmount: 1200, paymentDate: '2026-04-14', method: 'bank_transfer', reference: 'PAY-REF-003', period: 'March 2026', status: 'completed' },
+  { id: 'tp-004', taxType: 'nhil', amount: 850, penaltyAmount: 0, totalAmount: 850, paymentDate: '2026-04-30', method: 'bank_transfer', reference: 'PAY-REF-004', period: 'Q1 2026', status: 'completed' },
+];
+
+// -- Tax Calendar --
+const mockTaxCalendar: TAXCalendarItem[] = [
+  { id: 'tc-001', taxType: 'paye', name: 'PAYE Income Tax', description: 'Monthly PAYE deductions remittance to GRA', dueDay: 15, frequency: 'monthly', penaltyPercent: 5, nextDueDate: '2026-05-15' },
+  { id: 'tc-002', taxType: 'vat', name: 'VAT Returns', description: 'Quarterly VAT + NHIL + GETFund filing and payment', dueDay: 30, frequency: 'quarterly', penaltyPercent: 5, nextDueDate: '2026-06-30' },
+  { id: 'tc-003', taxType: 'withholding', name: 'Withholding Tax', description: 'Monthly withholding tax on contractor payments', dueDay: 15, frequency: 'monthly', penaltyPercent: 5, nextDueDate: '2026-05-15' },
+  { id: 'tc-004', taxType: 'nhil', name: 'NHIL Levy', description: 'National Health Insurance Levy (filed with VAT)', dueDay: 30, frequency: 'quarterly', penaltyPercent: 5, nextDueDate: '2026-06-30' },
+  { id: 'tc-005', taxType: 'getfund', name: 'GETFund Levy', description: 'Ghana Education Trust Fund levy (filed with VAT)', dueDay: 30, frequency: 'quarterly', penaltyPercent: 5, nextDueDate: '2026-06-30' },
+  { id: 'tc-006', taxType: 'income_tax', name: 'Annual Income Tax', description: 'Corporate income tax annual return', dueDay: 30, frequency: 'annually', penaltyPercent: 10, nextDueDate: '2027-04-30' },
+];
+
+// -- Airtime Products --
+const mockAirtimeProducts: AirtimeProduct[] = [
+  { id: 'at-001', provider: 'mtn', name: 'MTN 1hr', type: 'airtime', description: 'GH1 Airtime - All Networks', price: 1, value: 1, validity: 'Lifetime', popular: false },
+  { id: 'at-002', provider: 'mtn', name: 'MTN 5hr', type: 'airtime', description: 'GH5 Airtime - All Networks', price: 5, value: 5, validity: 'Lifetime', popular: true },
+  { id: 'at-003', provider: 'mtn', name: 'MTN 10hr', type: 'airtime', description: 'GH10 Airtime - All Networks', price: 10, value: 10, validity: 'Lifetime', popular: true },
+  { id: 'at-004', provider: 'mtn', name: 'MTN 20hr', type: 'airtime', description: 'GH20 Airtime - All Networks', price: 20, value: 20, validity: 'Lifetime', popular: false },
+  { id: 'at-005', provider: 'telecel', name: 'Telecel 5hr', type: 'airtime', description: 'GH5 Airtime', price: 5, value: 5, validity: 'Lifetime', popular: true },
+  { id: 'at-006', provider: 'telecel', name: 'Telecel 10hr', type: 'airtime', description: 'GH10 Airtime', price: 10, value: 10, validity: 'Lifetime', popular: true },
+  { id: 'at-007', provider: 'atum', name: 'AT 5hr', type: 'airtime', description: 'GH5 Airtime', price: 5, value: 5, validity: 'Lifetime', popular: false },
+  { id: 'at-008', provider: 'mtn', name: 'MTN 1GB', type: 'data', description: '1GB Data - 7 Days', price: 7.5, value: 1024, validity: '7 days', popular: true },
+  { id: 'at-009', provider: 'mtn', name: 'MTN 3.5GB', type: 'data', description: '3.5GB Data - 30 Days', price: 20, value: 3584, validity: '30 days', popular: true },
+  { id: 'at-010', provider: 'mtn', name: 'MTN 10GB', type: 'data', description: '10GB Data - 30 Days', price: 50, value: 10240, validity: '30 days', popular: false },
+  { id: 'at-011', provider: 'telecel', name: 'Telecel 1GB', type: 'data', description: '1GB Data - 7 Days', price: 7, value: 1024, validity: '7 days', popular: true },
+  { id: 'at-012', provider: 'telecel', name: 'Telecel 5GB', type: 'data', description: '5GB Data - 30 Days', price: 30, value: 5120, validity: '30 days', popular: false },
+  { id: 'at-013', provider: 'atum', name: 'AT 1GB', type: 'data', description: '1GB Data - 7 Days', price: 8, value: 1024, validity: '7 days', popular: false },
+  { id: 'at-014', provider: 'mtn', name: 'MTN Flexi 15', type: 'bundle', description: '400mins + 5GB + GH10 Airtime - 30 Days', price: 35, value: 0, validity: '30 days', popular: true },
+  { id: 'at-015', provider: 'telecel', name: 'Telecel Xtra 15', type: 'bundle', description: '300mins + 3GB + GH10 Airtime - 30 Days', price: 30, value: 0, validity: '30 days', popular: false },
+];
+
+// -- Airtime Transactions --
+const mockAirtimeTransactions: AirtimeTransaction[] = [
+  { id: 'att-001', userId: 'usr-001', provider: 'mtn', recipientPhone: '+233 24 123 4567', type: 'airtime', productName: 'MTN 10hr', amount: 10, status: 'completed', reference: 'ATT-20260418-001', date: '2026-04-17T14:30:00Z', balanceAfter: 4520 },
+  { id: 'att-002', userId: 'usr-001', provider: 'mtn', recipientPhone: '+233 24 123 4567', type: 'data', productName: 'MTN 3.5GB', amount: 20, status: 'completed', reference: 'ATT-20260415-002', date: '2026-04-15T10:00:00Z', balanceAfter: 4530 },
+  { id: 'att-003', userId: 'usr-001', provider: 'telecel', recipientPhone: '+233 20 987 6543', recipientName: 'Kofi Asante', type: 'airtime', productName: 'Telecel 5hr', amount: 5, status: 'completed', reference: 'ATT-20260412-003', date: '2026-04-12T16:00:00Z', balanceAfter: 4550 },
+  { id: 'att-004', userId: 'usr-001', provider: 'mtn', recipientPhone: '+233 24 123 4567', type: 'bundle', productName: 'MTN Flexi 15', amount: 35, status: 'completed', reference: 'ATT-20260410-004', date: '2026-04-10T09:00:00Z', balanceAfter: 4555 },
+];
+
+// -- Billers --
+const mockBillers: Biller[] = [
+  { id: 'bill-ecg-pre', name: 'ECG Prepaid', category: 'electricity', logo: 'Z', fieldLabel: 'Meter Number', fieldPlaceholder: 'Enter your ECG meter number', supportedPaymentMethods: ['momo', 'card', 'bank_transfer'], isActive: true },
+  { id: 'bill-ecg-post', name: 'ECG Postpaid', category: 'electricity', logo: 'Z', fieldLabel: 'Account Number', fieldPlaceholder: 'Enter your ECG account number', supportedPaymentMethods: ['momo', 'card', 'bank_transfer'], isActive: true },
+  { id: 'bill-gwcl', name: 'Ghana Water', category: 'water', logo: 'G', fieldLabel: 'Account Number', fieldPlaceholder: 'Enter your GWCL account number', supportedPaymentMethods: ['momo', 'card'], isActive: true },
+  { id: 'bill-dstv', name: 'DSTV', category: 'tv', logo: 'D', fieldLabel: 'Smart Card Number', fieldPlaceholder: 'Enter your DSTV smart card number', supportedPaymentMethods: ['momo', 'card'], isActive: true },
+  { id: 'bill-gotv', name: 'GOtv', category: 'tv', logo: 'G', fieldLabel: 'Smart Card Number', fieldPlaceholder: 'Enter your GOtv IUC number', supportedPaymentMethods: ['momo', 'card'], isActive: true },
+  { id: 'bill-startimes', name: 'StarTimes', category: 'tv', logo: 'S', fieldLabel: 'Smart Card Number', fieldPlaceholder: 'Enter your StarTimes smart card number', supportedPaymentMethods: ['momo', 'card'], isActive: true },
+  { id: 'bill-surfline', name: 'Surfline', category: 'internet', logo: 'S', fieldLabel: 'Account Number', fieldPlaceholder: 'Enter your Surfline account number', supportedPaymentMethods: ['momo', 'card'], isActive: true },
+  { id: 'bill-busy', name: 'Busy Internet', category: 'internet', logo: 'B', fieldLabel: 'Account Number', fieldPlaceholder: 'Enter your Busy account number', supportedPaymentMethods: ['momo', 'card'], isActive: true },
+  { id: 'bill-dvla', name: 'DVLA', category: 'government', logo: 'D', fieldLabel: 'Application ID', fieldPlaceholder: 'Enter your DVLA application reference', supportedPaymentMethods: ['momo'], isActive: true },
+];
+
+// -- Bill Payments --
+const mockBillPayments: BillPayment[] = [
+  { id: 'bp-001', userId: 'usr-001', billerId: 'bill-ecg-pre', billerName: 'ECG Prepaid', billerCategory: 'electricity', accountNumber: '04123456789', customerName: 'Ama Mensah', amount: 100, fee: 1.5, totalAmount: 101.5, status: 'completed', reference: 'BILL-20260418-001', date: '2026-04-17T15:00:00Z', token: '4758-2916-3847-5621', balanceAfter: 4418.5 },
+  { id: 'bp-002', userId: 'usr-001', billerId: 'bill-dstv', billerName: 'DSTV', billerCategory: 'tv', accountNumber: '4123456789', customerName: 'Ama Mensah', amount: 350, fee: 2, totalAmount: 352, status: 'completed', reference: 'BILL-20260410-002', date: '2026-04-10T11:00:00Z', balanceAfter: 4068.5 },
+  { id: 'bp-003', userId: 'usr-001', billerId: 'bill-gwcl', billerName: 'Ghana Water', billerCategory: 'water', accountNumber: 'GW-12345678', customerName: 'Ama Mensah', amount: 85, fee: 1.5, totalAmount: 86.5, status: 'completed', reference: 'BILL-20260405-003', date: '2026-04-05T09:30:00Z', balanceAfter: 4420.5 },
+  { id: 'bp-004', userId: 'usr-001', billerId: 'bill-surfline', billerName: 'Surfline', billerCategory: 'internet', accountNumber: 'SL-98765432', customerName: 'Ama Mensah', amount: 150, fee: 1, totalAmount: 151, status: 'completed', reference: 'BILL-20260328-004', date: '2026-03-28T14:00:00Z', balanceAfter: 4571.5 },
+];
+
+// -- Budgets --
+const mockBudgets: Budget[] = [
+  { id: 'bgt-001', userId: 'usr-001', category: 'food', categoryName: 'Food & Groceries', allocatedAmount: 800, spentAmount: 620, remainingAmount: 180, period: 'monthly', startDate: '2026-04-01', endDate: '2026-04-30', color: '#22c55e', icon: 'utensils' },
+  { id: 'bgt-002', userId: 'usr-001', category: 'transport', categoryName: 'Transport', allocatedAmount: 400, spentAmount: 310, remainingAmount: 90, period: 'monthly', startDate: '2026-04-01', endDate: '2026-04-30', color: '#3b82f6', icon: 'car' },
+  { id: 'bgt-003', userId: 'usr-001', category: 'utilities', categoryName: 'Utilities (Electricity, Water)', allocatedAmount: 300, spentAmount: 235, remainingAmount: 65, period: 'monthly', startDate: '2026-04-01', endDate: '2026-04-30', color: '#f59e0b', icon: 'zap' },
+  { id: 'bgt-004', userId: 'usr-001', category: 'airtime_data', categoryName: 'Airtime & Data', allocatedAmount: 100, spentAmount: 70, remainingAmount: 30, period: 'monthly', startDate: '2026-04-01', endDate: '2026-04-30', color: '#8b5cf6', icon: 'smartphone' },
+  { id: 'bgt-005', userId: 'usr-001', category: 'entertainment', categoryName: 'Entertainment', allocatedAmount: 200, spentAmount: 245, remainingAmount: -45, period: 'monthly', startDate: '2026-04-01', endDate: '2026-04-30', color: '#ef4444', icon: 'film' },
+  { id: 'bgt-006', userId: 'usr-001', category: 'healthcare', categoryName: 'Healthcare', allocatedAmount: 150, spentAmount: 0, remainingAmount: 150, period: 'monthly', startDate: '2026-04-01', endDate: '2026-04-30', color: '#ec4899', icon: 'heart-pulse' },
+  { id: 'bgt-007', userId: 'usr-001', category: 'savings', categoryName: 'Savings Goal', allocatedAmount: 500, spentAmount: 500, remainingAmount: 0, period: 'monthly', startDate: '2026-04-01', endDate: '2026-04-30', color: '#06b6d4', icon: 'piggy-bank' },
+];
+
+// -- Expenses --
+const mockExpenses: Expense[] = [
+  { id: 'exp-001', userId: 'usr-001', category: 'food', categoryName: 'Food & Groceries', amount: 45, description: 'Makola Market - vegetables and provisions', date: '2026-04-18T10:00:00Z', reference: 'EXP-001', recurring: false },
+  { id: 'exp-002', userId: 'usr-001', category: 'transport', categoryName: 'Transport', amount: 15, description: 'Trotro fare - Circle to Osu', date: '2026-04-18T08:30:00Z', reference: 'EXP-002', recurring: false },
+  { id: 'exp-003', userId: 'usr-001', category: 'entertainment', categoryName: 'Entertainment', amount: 60, description: 'DSTV subscription - Compact package', date: '2026-04-17T15:00:00Z', reference: 'EXP-003', recurring: true, recurringFrequency: 'monthly' },
+  { id: 'exp-004', userId: 'usr-001', category: 'food', categoryName: 'Food & Groceries', amount: 120, description: 'Melcom - weekly groceries', date: '2026-04-16T17:00:00Z', reference: 'EXP-004', recurring: true, recurringFrequency: 'weekly' },
+  { id: 'exp-005', userId: 'usr-001', category: 'utilities', categoryName: 'Utilities (Electricity, Water)', amount: 100, description: 'ECG prepaid electricity top-up', date: '2026-04-17T14:00:00Z', reference: 'EXP-005', recurring: false },
+  { id: 'exp-006', userId: 'usr-001', category: 'airtime_data', categoryName: 'Airtime & Data', amount: 20, description: 'MTN 3.5GB data bundle', date: '2026-04-15T10:00:00Z', reference: 'EXP-006', recurring: false },
+  { id: 'exp-007', userId: 'usr-001', category: 'transport', categoryName: 'Transport', amount: 8, description: 'Uber ride - Airport to Accra Mall', date: '2026-04-14T19:00:00Z', reference: 'EXP-007', recurring: false },
+  { id: 'exp-008', userId: 'usr-001', category: 'food', categoryName: 'Food & Groceries', amount: 25, description: 'Buka joint - lunch with colleagues', date: '2026-04-14T13:00:00Z', reference: 'EXP-008', recurring: false },
+  { id: 'exp-009', userId: 'usr-001', category: 'healthcare', categoryName: 'Healthcare', amount: 85, description: 'Ghana Water bill payment', date: '2026-04-05T09:30:00Z', reference: 'EXP-009', recurring: false },
+  { id: 'exp-010', userId: 'usr-001', category: 'entertainment', categoryName: 'Entertainment', amount: 150, description: 'Palace Mall - Netflix and movie tickets', date: '2026-04-13T20:00:00Z', reference: 'EXP-010', recurring: false },
+  { id: 'exp-011', userId: 'usr-001', category: 'savings', categoryName: 'Savings Goal', amount: 500, description: 'Monthly susu contribution', date: '2026-04-01T09:00:00Z', reference: 'EXP-011', recurring: true, recurringFrequency: 'monthly' },
+  { id: 'exp-012', userId: 'usr-001', category: 'utilities', categoryName: 'Utilities (Electricity, Water)', amount: 85, description: 'Ghana Water bill payment', date: '2026-04-05T09:30:00Z', reference: 'EXP-012', recurring: false },
+  { id: 'exp-013', userId: 'usr-001', category: 'food', categoryName: 'Food & Groceries', amount: 35, description: 'Marina Mall - fruits and snacks', date: '2026-04-12T16:00:00Z', reference: 'EXP-013', recurring: false },
+  { id: 'exp-014', userId: 'usr-001', category: 'transport', categoryName: 'Transport', amount: 12, description: 'Okada - Spintex to East Legon', date: '2026-04-11T18:30:00Z', reference: 'EXP-014', recurring: false },
+  { id: 'exp-015', userId: 'usr-001', category: 'airtime_data', categoryName: 'Airtime & Data', amount: 50, description: 'MTN Flexi bundle - calls + data', date: '2026-04-10T09:00:00Z', reference: 'EXP-015', recurring: true, recurringFrequency: 'monthly' },
+];
+
+// ============================================
+// ADMIN EXTENDED STORE (Payroll, SSNIT, Tax)
+// ============================================
+interface AdminExtendedState {
+  // Payroll
+  payrollEmployees: PayrollEmployee[];
+  payrollRuns: PayrollRun[];
+  payslips: Payslip[];
+  // SSNIT
+  ssnitContributions: SSNITContribution[];
+  ssnitFilings: SSNITFiling[];
+  // Tax
+  taxFilings: TAXFiling[];
+  taxPayments: TAXPayment[];
+  taxCalendar: TAXCalendarItem[];
+
+  addPayrollEmployee: (emp: Omit<PayrollEmployee, 'id'>) => void;
+  updatePayrollEmployee: (id: string, updates: Partial<PayrollEmployee>) => void;
+  approvePayrollRun: (runId: string) => void;
+  createSSNITFiling: (period: string) => void;
+  submitTAXFiling: (filingId: string) => void;
+}
+
+export const useAdminExtendedStore = create<AdminExtendedState>((set) => ({
+  payrollEmployees: mockPayrollEmployees,
+  payrollRuns: mockPayrollRuns,
+  payslips: mockPayslips,
+  ssnitContributions: mockSSNITContributions,
+  ssnitFilings: mockSSNITFilings,
+  taxFilings: mockTAXFilings,
+  taxPayments: mockTAXPayments,
+  taxCalendar: mockTaxCalendar,
+
+  addPayrollEmployee: (emp) => {
+    const newEmp: PayrollEmployee = { ...emp, id: `emp-${Date.now()}` };
+    set((s) => ({ payrollEmployees: [...s.payrollEmployees, newEmp] }));
+  },
+
+  updatePayrollEmployee: (id, updates) => {
+    set((s) => ({
+      payrollEmployees: s.payrollEmployees.map(e => e.id === id ? { ...e, ...updates } : e),
+    }));
+  },
+
+  approvePayrollRun: (runId) => {
+    set((s) => ({
+      payrollRuns: s.payrollRuns.map(r =>
+        r.id === runId ? { ...r, status: 'approved' as const, approvedBy: 'Daniel Tetteh' } : r
+      ),
+    }));
+  },
+
+  createSSNITFiling: (period) => {
+    const newFiling: SSNITFiling = {
+      id: `sf-${Date.now()}`,
+      period,
+      totalEmployees: 8,
+      totalEmployeeContributions: 1989,
+      totalEmployerContributions: 4884,
+      totalTier2: 1810,
+      grandTotal: 8683,
+      filingDate: new Date().toISOString().split('T')[0],
+      status: 'draft',
+      reference: `SSF-${period.replace(/\s/g, '')}`,
+    };
+    set((s) => ({ ssnitFilings: [newFiling, ...s.ssnitFilings] }));
+  },
+
+  submitTAXFiling: (filingId) => {
+    set((s) => ({
+      taxFilings: s.taxFilings.map(f =>
+        f.id === filingId ? { ...f, status: 'filed' as const, filingDate: new Date().toISOString().split('T')[0] } : f
+      ),
+    }));
+  },
+}));
+
+// ============================================
+// CUSTOMER EXTENDED STORE (Airtime, Bills, Budget)
+// ============================================
+interface CustomerExtendedState {
+  airtimeProducts: AirtimeProduct[];
+  airtimeTransactions: AirtimeTransaction[];
+  billers: Biller[];
+  billPayments: BillPayment[];
+  budgets: Budget[];
+  expenses: Expense[];
+
+  purchaseAirtime: (provider: TelcoProvider, phone: string, productId: string) => void;
+  payBill: (billerId: string, accountNumber: string, customerName: string, amount: number) => void;
+  addBudget: (budget: Omit<Budget, 'id' | 'userId' | 'remainingAmount'>) => void;
+  addExpense: (expense: Omit<Expense, 'id' | 'userId' | 'reference'>) => void;
+}
+
+export const useCustomerExtendedStore = create<CustomerExtendedState>((set) => ({
+  airtimeProducts: mockAirtimeProducts,
+  airtimeTransactions: mockAirtimeTransactions,
+  billers: mockBillers,
+  billPayments: mockBillPayments,
+  budgets: mockBudgets,
+  expenses: mockExpenses,
+
+  purchaseAirtime: (provider, phone, productId) => {
+    const product = mockAirtimeProducts.find(p => p.id === productId);
+    if (!product) return;
+    const newTxn: AirtimeTransaction = {
+      id: `att-${Date.now()}`,
+      userId: 'usr-001',
+      provider,
+      recipientPhone: phone,
+      type: product.type,
+      productName: product.name,
+      amount: product.price,
+      status: 'completed',
+      reference: `ATT-${Date.now()}`,
+      date: new Date().toISOString(),
+      balanceAfter: 0,
+    };
+    set((s) => ({ airtimeTransactions: [newTxn, ...s.airtimeTransactions] }));
+  },
+
+  payBill: (billerId, accountNumber, customerName, amount) => {
+    const biller = mockBillers.find(b => b.id === billerId);
+    if (!biller) return;
+    const fee = amount * 0.015;
+    const newPayment: BillPayment = {
+      id: `bp-${Date.now()}`,
+      userId: 'usr-001',
+      billerId,
+      billerName: biller.name,
+      billerCategory: biller.category,
+      accountNumber,
+      customerName,
+      amount,
+      fee,
+      totalAmount: amount + fee,
+      status: 'completed',
+      reference: `BILL-${Date.now()}`,
+      date: new Date().toISOString(),
+      token: biller.category === 'electricity' ? `${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}` : undefined,
+      balanceAfter: 0,
+    };
+    set((s) => ({ billPayments: [newPayment, ...s.billPayments] }));
+  },
+
+  addBudget: (budget) => {
+    const newBudget: Budget = {
+      ...budget,
+      id: `bgt-${Date.now()}`,
+      userId: 'usr-001',
+      remainingAmount: budget.allocatedAmount - budget.spentAmount,
+    };
+    set((s) => ({ budgets: [...s.budgets, newBudget] }));
+  },
+
+  addExpense: (expense) => {
+    const newExpense: Expense = {
+      ...expense,
+      id: `exp-${Date.now()}`,
+      userId: 'usr-001',
+      reference: `EXP-${Date.now()}`,
+    };
+    set((s) => {
+      const updatedBudgets = s.budgets.map(b =>
+        b.category === newExpense.category
+          ? { ...b, spentAmount: b.spentAmount + newExpense.amount, remainingAmount: b.remainingAmount - newExpense.amount }
+          : b
+      );
+      return { expenses: [newExpense, ...s.expenses], budgets: updatedBudgets };
+    });
   },
 }));

@@ -4,9 +4,9 @@
 
 // Portal & Navigation
 export type PortalId = 'customer' | 'agent' | 'admin' | 'treasurer';
-export type CustomerPageId = 'dashboard' | 'susu' | 'loans' | 'wallet' | 'transactions' | 'settings';
+export type CustomerPageId = 'dashboard' | 'susu' | 'loans' | 'wallet' | 'transactions' | 'settings' | 'transfers' | 'referrals' | 'airtime' | 'bills' | 'budgeting';
 export type AgentPageId = 'dashboard' | 'collections' | 'customers' | 'commissions' | 'settings';
-export type AdminPageId = 'dashboard' | 'users' | 'loans' | 'analytics' | 'compliance' | 'settings' | 'agents' | 'susu-groups';
+export type AdminPageId = 'dashboard' | 'users' | 'loans' | 'analytics' | 'compliance' | 'settings' | 'agents' | 'susu-groups' | 'payroll' | 'ssnit' | 'tax';
 export type TreasurerPageId = 'dashboard' | 'groups' | 'payouts' | 'members' | 'reports' | 'settings';
 
 // Auth
@@ -568,4 +568,269 @@ export interface KYCAdminStats {
   completionRate: number;
   averageOCRConfidence: number;
   averageFacialMatch: number;
+}
+
+// ============================================
+// PAYROLL MODULE (Ghana)
+// ============================================
+
+export interface PayrollEmployee {
+  id: string;
+  employeeId: string;
+  name: string;
+  position: string;
+  department: string;
+  branch: string;
+  phone: string;
+  email: string;
+  bankName: string;
+  bankAccount: string;
+  ssnitNumber: string;
+  tinNumber: string;
+  ghanaCardId: string;
+  basicSalary: number;
+  housingAllowance: number;
+  transportAllowance: number;
+  otherAllowances: number;
+  status: 'active' | 'inactive' | 'on_leave' | 'terminated';
+  dateJoined: string;
+  contractType: 'permanent' | 'contract' | 'probation' | 'national_service';
+  payGrade: string;
+}
+
+export interface Payslip {
+  id: string;
+  payrollRunId: string;
+  employeeId: string;
+  employeeName: string;
+  position: string;
+  department: string;
+  period: string;           // e.g. "April 2026"
+  payDate: string;
+  // Earnings
+  basicSalary: number;
+  housingAllowance: number;
+  transportAllowance: number;
+  otherAllowances: number;
+  overtimePay: number;
+  bonus: number;
+  grossPay: number;
+  // Deductions
+  ssnitEmployee: number;    // 5.5%
+  tier2Employee: number;    // 5%
+  payeTax: number;
+  nhfDeduction: number;
+  otherDeductions: number;
+  loanDeduction: number;
+  totalDeductions: number;
+  // Net
+  netPay: number;
+  // Employer SSNIT (shown for reference)
+  ssnitEmployer: number;    // 13.5%
+  tier2Employer: number;    // 5%
+  status: 'draft' | 'pending' | 'approved' | 'paid' | 'cancelled';
+}
+
+export interface PayrollRun {
+  id: string;
+  period: string;
+  payDate: string;
+  totalEmployees: number;
+  totalGrossPay: number;
+  totalDeductions: number;
+  totalNetPay: number;
+  totalSSNIT: number;       // employer + employee
+  totalPAYE: number;
+  status: 'draft' | 'processing' | 'approved' | 'paid';
+  createdAt: string;
+  approvedBy?: string;
+  paidAt?: string;
+}
+
+// ============================================
+// SSNIT MODULE (Ghana)
+// ============================================
+
+export interface SSNITContribution {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  ssnitNumber: string;
+  period: string;
+  basicSalary: number;
+  employeeContribution: number;   // 5.5%
+  employerContribution: number;   // 13.5% (11% pension + 2.5% NHIS)
+  tier2Employer: number;          // 5%
+  totalContribution: number;
+  paymentDate?: string;
+  status: 'pending' | 'paid' | 'overdue' | 'failed';
+  reference: string;
+}
+
+export interface SSNITFiling {
+  id: string;
+  period: string;
+  totalEmployees: number;
+  totalEmployeeContributions: number;
+  totalEmployerContributions: number;
+  totalTier2: number;
+  grandTotal: number;
+  filingDate: string;
+  paymentDate?: string;
+  status: 'draft' | 'submitted' | 'paid' | 'rejected' | 'overdue';
+  reference: string;
+  ssnitReceiptNumber?: string;
+}
+
+// ============================================
+// GRA TAX MODULE (Ghana)
+// ============================================
+
+export type TAXType = 'paye' | 'vat' | 'withholding' | 'income_tax' | 'nhil' | 'getfund';
+
+export interface TAXFiling {
+  id: string;
+  taxType: TAXType;
+  period: string;
+  taxpayerName: string;
+  tin: string;
+  totalTax: number;
+  filingDate: string;
+  paymentDate?: string;
+  dueDate: string;
+  status: 'draft' | 'filed' | 'paid' | 'overdue' | 'penalty';
+  reference: string;
+  graReceiptNumber?: string;
+  penaltyAmount?: number;
+}
+
+export interface TAXPayment {
+  id: string;
+  taxType: TAXType;
+  amount: number;
+  penaltyAmount: number;
+  totalAmount: number;
+  paymentDate: string;
+  method: 'bank_transfer' | 'momo' | 'cheque';
+  reference: string;
+  graReceiptNumber?: string;
+  period: string;
+  status: 'completed' | 'pending' | 'failed';
+}
+
+export interface TAXCalendarItem {
+  id: string;
+  taxType: TAXType;
+  name: string;
+  description: string;
+  dueDay: number;             // day of month (e.g., 15 for PAYE)
+  frequency: 'monthly' | 'quarterly' | 'annually';
+  penaltyPercent: number;
+  nextDueDate: string;
+}
+
+// ============================================
+// AIRTIME & DATA TOP-UP MODULE (Ghana)
+// ============================================
+
+export type TelcoProvider = 'mtn' | 'telecel' | 'atum' | 'glo';
+
+export interface AirtimeProduct {
+  id: string;
+  provider: TelcoProvider;
+  name: string;
+  type: 'airtime' | 'data' | 'bundle';
+  description: string;
+  price: number;
+  value: number;
+  validity: string;           // e.g., "30 days", "7 days"
+  popular: boolean;
+}
+
+export interface AirtimeTransaction {
+  id: string;
+  userId: string;
+  provider: TelcoProvider;
+  recipientPhone: string;
+  recipientName?: string;
+  type: 'airtime' | 'data' | 'bundle';
+  productName: string;
+  amount: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  reference: string;
+  date: string;
+  balanceAfter: number;
+}
+
+// ============================================
+// BILL PAYMENTS MODULE (Ghana)
+// ============================================
+
+export type BillerCategory = 'electricity' | 'water' | 'tv' | 'internet' | 'government' | 'insurance';
+
+export interface Biller {
+  id: string;
+  name: string;
+  category: BillerCategory;
+  logo: string;
+  fieldLabel: string;         // e.g., "Meter Number", "Account Number"
+  fieldPlaceholder: string;
+  supportedPaymentMethods: ('momo' | 'card' | 'bank_transfer')[];
+  isActive: boolean;
+}
+
+export interface BillPayment {
+  id: string;
+  userId: string;
+  billerId: string;
+  billerName: string;
+  billerCategory: BillerCategory;
+  accountNumber: string;
+  customerName: string;
+  amount: number;
+  fee: number;
+  totalAmount: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  reference: string;
+  date: string;
+  token?: string;             // e.g., ECG prepaid token
+  balanceAfter: number;
+}
+
+// ============================================
+// BUDGETING & EXPENSES MODULE
+// ============================================
+
+export type BudgetCategory = 
+  | 'food' | 'transport' | 'utilities' | 'rent' | 'healthcare'
+  | 'education' | 'entertainment' | 'savings' | 'airtime_data'
+  | 'clothing' | 'family' | 'religious' | 'other';
+
+export interface Budget {
+  id: string;
+  userId: string;
+  category: BudgetCategory;
+  categoryName: string;
+  allocatedAmount: number;
+  spentAmount: number;
+  remainingAmount: number;
+  period: 'weekly' | 'monthly';
+  startDate: string;
+  endDate: string;
+  color: string;
+  icon: string;
+}
+
+export interface Expense {
+  id: string;
+  userId: string;
+  category: BudgetCategory;
+  categoryName: string;
+  amount: number;
+  description: string;
+  date: string;
+  reference: string;
+  location?: string;
+  recurring: boolean;
+  recurringFrequency?: 'daily' | 'weekly' | 'monthly';
 }
