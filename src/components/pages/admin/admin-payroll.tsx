@@ -652,7 +652,7 @@ export function AdminPayroll() {
                         </div>
                       </div>
                       <div className="flex justify-end">
-                        <Button size="sm" variant="outline" className="h-8 text-xs min-h-[44px] lg:min-h-0">
+                        <Button size="sm" variant="outline" className="h-8 text-xs min-h-[44px] lg:min-h-0" onClick={() => setSelectedPayslip(ps)}>
                           <Eye className="mr-1 h-3 w-3" /> View Details
                         </Button>
                       </div>
@@ -831,7 +831,7 @@ export function AdminPayroll() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-lg font-semibold">{selectedPayslip.employeeName}</p>
+                  <p className="text-lg font-semibold truncate">{selectedPayslip.employeeName}</p>
                   <p className="text-sm text-muted-foreground">{selectedPayslip.position} &middot; {selectedPayslip.department}</p>
                 </div>
                 <Badge variant="secondary" className={`text-xs ${payslipStatusColor[selectedPayslip.status] || ''}`}>

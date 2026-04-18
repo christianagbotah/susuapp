@@ -288,8 +288,8 @@ export function CustomerWallet() {
                             <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${getWalletTypeBg(wallet.type)} shadow-sm`}>
                               <WalletIcon className="h-5 w-5 text-white" />
                             </div>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-slate-800 truncate">
                                 {getWalletTypeLabel(wallet.type)}
                               </p>
                               <p className="text-xs text-slate-500">{wallet.currency}</p>

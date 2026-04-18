@@ -64,6 +64,7 @@ export function CustomerSusu() {
     makeContribution,
     createSavingsGoal,
     contributeToGoal,
+    setActivePage,
   } = useCustomerStore();
 
   // ---- Derived state ----
@@ -255,7 +256,7 @@ export function CustomerSusu() {
                     icon: PiggyBank,
                     color: 'text-white',
                     bgColor: 'bg-emerald-500',
-                    onClick: () => {},
+                    onClick: () => setActivePage('wallet'),
                   },
                   {
                     id: 'groups',
@@ -263,7 +264,7 @@ export function CustomerSusu() {
                     icon: Users,
                     color: 'text-blue-600',
                     bgColor: 'bg-blue-100',
-                    onClick: () => {},
+                    onClick: () => setActivePage('susu'),
                   },
                   {
                     id: 'payout',
@@ -271,7 +272,7 @@ export function CustomerSusu() {
                     icon: Gift,
                     color: 'text-amber-600',
                     bgColor: 'bg-amber-100',
-                    onClick: () => {},
+                    onClick: () => setActivePage('susu'),
                   },
                 ]}
               />

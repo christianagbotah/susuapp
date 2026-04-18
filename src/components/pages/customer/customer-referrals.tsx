@@ -693,7 +693,7 @@ export function CustomerReferrals() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 shrink-0">
                       <MessageCircle className="h-6 w-6 text-white" />
                     </div>
-                    <div className="text-left flex-1">
+                    <div className="text-left flex-1 min-w-0">
                       <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">WhatsApp</p>
                       <p className="text-xs text-emerald-600 dark:text-emerald-400">Send via WhatsApp message</p>
                     </div>
@@ -710,7 +710,7 @@ export function CustomerReferrals() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 shrink-0">
                       <Smartphone className="h-6 w-6 text-white" />
                     </div>
-                    <div className="text-left flex-1">
+                    <div className="text-left flex-1 min-w-0">
                       <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">SMS</p>
                       <p className="text-xs text-blue-600 dark:text-blue-400">Send via text message</p>
                     </div>
@@ -727,7 +727,7 @@ export function CustomerReferrals() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 shrink-0">
                       <Copy className="h-6 w-6 text-white" />
                     </div>
-                    <div className="text-left flex-1">
+                    <div className="text-left flex-1 min-w-0">
                       <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Copy Code</p>
                       <p className="text-xs text-amber-600 dark:text-amber-400">Copy & paste anywhere</p>
                     </div>

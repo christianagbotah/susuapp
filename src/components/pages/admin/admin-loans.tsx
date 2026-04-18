@@ -412,9 +412,9 @@ export function AdminLoans() {
                           {getInitials(loan.applicantName)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="font-medium text-sm">{loan.applicantName}</p>
-                        <p className="text-xs text-muted-foreground">{loan.applicantPhone}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{loan.applicantName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{loan.applicantPhone}</p>
                       </div>
                     </div>
                     <Badge variant="secondary" className={`text-xs capitalize ${getStatusColor(loan.status)}`}>

@@ -126,7 +126,7 @@ export function AdminAgents() {
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold">{agent.name}</p>
+                      <p className="font-semibold truncate">{agent.name}</p>
                       <p className="text-xs text-muted-foreground">{agent.branch} &middot; {agent.code}</p>
                       <StarRating rating={agent.rating} />
                     </div>

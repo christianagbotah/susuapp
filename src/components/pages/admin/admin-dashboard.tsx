@@ -186,7 +186,7 @@ export function AdminDashboard() {
                     {idx + 1}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{branch.name}</p>
+                    <p className="text-sm font-medium truncate">{branch.name}</p>
                     <p className="text-xs text-muted-foreground">{branch.region} &middot; {branch.totalAgents} agents</p>
                   </div>
                   <div className="text-right shrink-0">
@@ -281,7 +281,7 @@ export function AdminDashboard() {
                     <activity.Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium leading-snug">{activity.description}</p>
+                    <p className="text-sm font-medium leading-snug line-clamp-2">{activity.description}</p>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{activity.user}</span>
                       <span className="text-muted-foreground/40">·</span>

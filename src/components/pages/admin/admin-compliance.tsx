@@ -109,8 +109,8 @@ export function AdminCompliance() {
                       <Badge className="bg-red-600 text-white text-xs">CRITICAL</Badge>
                       <Badge variant="secondary" className={`text-xs ${getStatusColor(report.status)}`}>{report.status}</Badge>
                     </div>
-                    <p className="mt-1 text-sm font-semibold">{report.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{report.description}</p>
+                    <p className="mt-1 text-sm font-semibold line-clamp-2">{report.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{report.description}</p>
                   </div>
                   <Button size="sm" variant="outline" className="shrink-0 text-xs border-red-300 text-red-600 hover:bg-red-50 min-h-[44px]"
                     onClick={() => setSelectedReport(report)}>
@@ -129,8 +129,8 @@ export function AdminCompliance() {
                       <Badge className="bg-orange-500 text-white text-xs">HIGH</Badge>
                       <Badge variant="secondary" className={`text-xs ${getStatusColor(report.status)}`}>{report.status}</Badge>
                     </div>
-                    <p className="mt-1 text-sm font-semibold">{report.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{report.description}</p>
+                    <p className="mt-1 text-sm font-semibold line-clamp-2">{report.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{report.description}</p>
                   </div>
                   <Button size="sm" variant="outline" className="shrink-0 text-xs border-orange-300 text-orange-600 hover:bg-orange-50 min-h-[44px]"
                     onClick={() => setSelectedReport(report)}>

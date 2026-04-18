@@ -842,7 +842,13 @@ export function CustomerDashboard() {
                   <span className="text-2xl">{tip.emoji}</span>
                   <h4 className="mt-3 text-sm font-semibold text-slate-800">{tip.title}</h4>
                   <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{tip.description}</p>
-                  <button className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                  <button
+                    className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (tip.page) setActivePage(tip.page);
+                    }}
+                  >
                     Learn More →
                   </button>
                 </div>

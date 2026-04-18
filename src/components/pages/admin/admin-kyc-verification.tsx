@@ -308,9 +308,9 @@ export function AdminKYCVerification() {
                   {getInitials(record.userName)}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-medium text-sm">{record.userName}</p>
-                <p className="text-xs text-muted-foreground">{record.userPhone}</p>
+              <div className="min-w-0">
+                <p className="font-medium text-sm truncate">{record.userName}</p>
+                <p className="text-xs text-muted-foreground truncate">{record.userPhone}</p>
               </div>
             </div>
             <Badge

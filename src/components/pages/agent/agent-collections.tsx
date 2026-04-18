@@ -333,8 +333,8 @@ export function AgentCollections() {
                                 >
                                   <div className="mt-0.5">{getCustomerStatusIcon(customer.status)}</div>
                                   <div className="min-w-0 flex-1 space-y-1.5">
-                                    <div className="flex items-center justify-between">
-                                      <p className="font-medium">{customer.customerName}</p>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="font-medium truncate">{customer.customerName}</p>
                                       <Badge className={`text-[10px] ${getStatusColor(customer.status)}`}>
                                         {customer.status}
                                       </Badge>
