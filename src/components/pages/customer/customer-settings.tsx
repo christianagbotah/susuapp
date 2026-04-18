@@ -15,9 +15,13 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { User, Shield, Bell, Lock, Smartphone, Camera, Upload, CheckCircle, AlertCircle, Eye, EyeOff, Fingerprint, Key, Globe, Mail, MessageSquare, Trash2 } from 'lucide-react';
+import { GhanaCardVerification } from './ghana-card-verification';
 
 export function CustomerSettings() {
   const { user } = useCustomerStore();
+
+  // KYC verification wizard state
+  const [showVerification, setShowVerification] = useState(false);
 
   // Profile form
   const [fullName, setFullName] = useState(user.name);
@@ -129,12 +133,6 @@ export function CustomerSettings() {
   const handleUploadClick = (label: string) => {
     toast.info('Upload feature', {
       description: `${label} upload is not available in demo mode.`,
-    });
-  };
-
-  const handleKYCSubmit = () => {
-    toast.success('KYC verification submitted', {
-      description: 'Your documents have been submitted for review.',
     });
   };
 
@@ -277,7 +275,7 @@ export function CustomerSettings() {
 
         {/* ============ KYC TAB ============ */}
         <TabsContent value="kyc" className="space-y-6">
-          {/* Current Level */}
+          {/* Current Level — always visible */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -333,94 +331,91 @@ export function CustomerSettings() {
             </CardContent>
           </Card>
 
-          {/* Document Upload Sections */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Verification Documents</CardTitle>
-              <CardDescription>Upload required documents for identity verification</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                {
-                  label: 'Ghana Card / Passport',
-                  description: 'National ID card or valid passport',
-                  verified: true,
-                },
-                {
-                  label: 'Selfie Verification',
-                  description: 'A clear photo of yourself holding your ID',
-                  verified: true,
-                },
-                {
-                  label: 'Proof of Address (Utility Bill)',
-                  description: 'Recent utility bill showing your name and address',
-                  verified: true,
-                },
-              ].map((doc, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between rounded-lg border p-4"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {doc.verified ? (
-                      <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
-                    ) : (
-                      <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm">{doc.label}</p>
-                      <p className="text-xs text-muted-foreground">{doc.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-3">
-                    {doc.verified ? (
-                      <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+          {/* Verified state — show documents & next of kin */}
+          {user.kycLevel === 'full' && !showVerification && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Verification Documents</CardTitle>
+                  <CardDescription>Your submitted documents have been verified</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    {
+                      label: 'Ghana Card',
+                      description: 'National ID card verified via OCR',
+                      verified: true,
+                    },
+                    {
+                      label: 'Selfie Verification',
+                      description: 'Liveness check completed successfully',
+                      verified: true,
+                    },
+                    {
+                      label: 'NIA Database Check',
+                      description: 'Identity confirmed with NIA records',
+                      verified: true,
+                    },
+                  ].map((doc, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded-lg border p-4"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm">{doc.label}</p>
+                          <p className="text-xs text-muted-foreground">{doc.description}</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 shrink-0 ml-3">
                         Verified
                       </Badge>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUploadClick(doc.label)}
-                      >
-                        <Upload className="mr-1.5 h-3.5 w-3.5" />
-                        Upload
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                    </div>
+                  ))}
 
-              {/* Next of Kin */}
-              <Separator className="my-2" />
-              <div>
-                <h4 className="font-medium text-sm mb-3">Next of Kin Information</h4>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Name</Label>
-                    <Input defaultValue="Kwame Mensah" disabled />
+                  {/* Next of Kin */}
+                  <Separator className="my-2" />
+                  <div>
+                    <h4 className="font-medium text-sm mb-3">Next of Kin Information</h4>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Name</Label>
+                        <Input defaultValue="Kwame Mensah" disabled />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Phone</Label>
+                        <Input defaultValue="+233 24 555 1234" disabled />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Relationship</Label>
+                        <Input defaultValue="Spouse" disabled />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Phone</Label>
-                    <Input defaultValue="+233 24 555 1234" disabled />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Relationship</Label>
-                    <Input defaultValue="Spouse" disabled />
-                  </div>
-                </div>
+                </CardContent>
+              </Card>
+
+              {/* Update Documents link */}
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowVerification(true)}
+                  className="min-h-[44px]"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Update Documents
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            </>
+          )}
 
-          {/* Submit button */}
-          {user.kycLevel !== 'full' && (
-            <div className="flex justify-end">
-              <Button onClick={handleKYCSubmit}>
-                <Shield className="mr-2 h-4 w-4" />
-                Submit for Verification
-              </Button>
-            </div>
+          {/* Non-verified state or re-verify — show verification wizard */}
+          {(user.kycLevel !== 'full' || showVerification) && (
+            <GhanaCardVerification
+              onComplete={() => setShowVerification(false)}
+              onCancel={() => setShowVerification(false)}
+            />
           )}
         </TabsContent>
 

@@ -468,3 +468,57 @@ export interface PlatformConfig {
   activePaymentGateway: PaymentGatewayId | null;
   activeSMSProvider: SMSProviderId | null;
 }
+
+// ---- GHANA CARD OCR ----
+export interface GhanaCardOCRResult {
+  idNumber: string;           // GHA-XXXXXXXXX format
+  fullName: string;           // Surname Firstname OtherNames
+  dateOfBirth: string;        // DD/MM/YYYY
+  gender: 'Male' | 'Female';
+  nationality: string;        // Ghanaian
+  expiryDate: string;         // DD/MM/YYYY
+  issueDate: string;          // DD/MM/YYYY
+  cardNumber: string;         // Back of card number
+  personalIdNumber: string;   // Back of card PIN
+  documentType: string;       // Ghana Card
+  region: string;             // Place of registration
+  verificationScore: number;  // 0-100 OCR confidence
+}
+
+export type KYCVerificationStep = 
+  | 'intro'
+  | 'capture-front'
+  | 'capture-back'
+  | 'processing'
+  | 'review-data'
+  | 'selfie'
+  | 'complete';
+
+export interface KYCVerificationState {
+  currentStep: KYCVerificationStep;
+  frontImage: string | null;       // base64 data URL
+  backImage: string | null;        // base64 data URL
+  selfieImage: string | null;      // base64 data URL
+  ocrResult: GhanaCardOCRResult | null;
+  ocrConfidence: number;           // 0-100
+  isProcessing: boolean;
+  processingProgress: number;      // 0-100 for animation
+  errors: string[];
+  submittedAt: string | null;
+  verifiedAt: string | null;
+}
+
+export interface KYCNextOfKin {
+  name: string;
+  phone: string;
+  relationship: string;
+}
+
+export interface KYCAddressInfo {
+  houseNumber: string;
+  street: string;
+  area: string;
+  city: string;
+  region: string;
+  digitalAddress: string;  // Ghana Post GPS
+}
