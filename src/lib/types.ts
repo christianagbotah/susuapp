@@ -96,7 +96,7 @@ export interface Loan {
   amount: number;
   interestRate: number;
   term: number;
-  termUnit: 'months' | 'weeks';
+  termUnit: 'months' | 'weeks' | 'days';
   status: 'pending' | 'under_review' | 'approved' | 'active' | 'repaid' | 'rejected' | 'defaulted';
   monthlyPayment: number;
   remainingBalance: number;
@@ -116,6 +116,16 @@ export interface Loan {
   reviewedBy?: string;
   reviewDate?: string;
   rejectReason?: string;
+  repaymentSchedule?: RepaymentScheduleEntry[];
+  repaymentFrequency?: 'bullet' | 'daily' | 'weekly' | 'monthly';
+  processingFee?: number;
+  totalInterest?: number;
+  disbursementDate?: string;
+  applicationDate?: string;
+  approvedDate?: string;
+  autoApproved?: boolean;
+  interestType?: 'flat' | 'reducing_balance';
+  productId?: string;
 }
 
 export interface LoanPayment {
@@ -130,18 +140,52 @@ export interface LoanPayment {
   penalty?: number;
 }
 
+export interface RepaymentScheduleEntry {
+  dueDate: string;
+  amount: number;
+  principal: number;
+  interest: number;
+  status: 'pending' | 'paid' | 'overdue' | 'partial';
+  paidDate?: string;
+  paidAmount?: number;
+  overdueDays?: number;
+}
+
+export interface CreditScoreFactors {
+  susuConsistency: number;
+  repaymentHistory: number;
+  kycLevel: number;
+  accountAge: number;
+  walletActivity: number;
+}
+
+export interface CreditScoreResult {
+  score: number;
+  grade: 'Excellent' | 'Good' | 'Fair' | 'Poor';
+  maxLoanAmount: number;
+  interestRate: number;
+  maxTermDays: number;
+  factors: CreditScoreFactors;
+}
+
 export interface LoanProduct {
   id: string;
   name: string;
   description: string;
+  type?: 'personal' | 'business' | 'education' | 'emergency' | 'susu-backed';
   minAmount: number;
   maxAmount: number;
   interestRate: number;
   minTerm: number;
   maxTerm: number;
-  termUnit: 'months' | 'weeks';
+  termUnit: 'months' | 'weeks' | 'days';
   requirements: string[];
   isActive: boolean;
+  repaymentFrequency?: 'bullet' | 'daily' | 'weekly' | 'monthly';
+  interestType?: 'flat' | 'reducing_balance';
+  processingFeePercent?: number;
+  autoApprove?: boolean;
+  maxCreditScoreRequired?: number;
 }
 
 // ---- WALLET MODULE ----

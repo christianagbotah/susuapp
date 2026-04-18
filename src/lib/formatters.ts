@@ -142,3 +142,227 @@ export const GHANA_REGIONS = [
   'Northern', 'Volta', 'Upper East', 'Upper West', 'Bono',
   'Bono East', 'Ahafo', 'Savannah', 'North East', 'Oti', 'Western North'
 ] as const;
+
+// ---- Credit Score & Repayment Schedule Helpers (Fido-style) ----
+
+export function generateRepaymentSchedule(
+  principal: number,
+  interestRate: number,
+  term: number,
+  termUnit: 'days' | 'weeks' | 'months',
+  frequency: 'bullet' | 'daily' | 'weekly' | 'monthly',
+  startDate: string,
+  interestType: 'flat' | 'reducing_balance',
+): import('@/lib/types').RepaymentScheduleEntry[] {
+  const schedule: import('@/lib/types').RepaymentScheduleEntry[] = [];
+  const start = new Date(startDate);
+
+  if (interestType === 'flat') {
+    // Flat interest: total interest = principal * rate/100
+    const totalInterest = principal * (interestRate / 100);
+
+    if (frequency === 'bullet') {
+      // Single bullet payment at end of term
+      const endDate = new Date(start);
+      if (termUnit === 'days') endDate.setDate(endDate.getDate() + term);
+      else if (termUnit === 'weeks') endDate.setDate(endDate.getDate() + term * 7);
+      else endDate.setMonth(endDate.getMonth() + term);
+
+      schedule.push({
+        dueDate: endDate.toISOString().split('T')[0],
+        amount: Math.round((principal + totalInterest) * 100) / 100,
+        principal,
+        interest: Math.round(totalInterest * 100) / 100,
+        status: 'pending',
+      });
+    } else {
+      // Divide into installments
+      let numInstallments: number;
+      if (frequency === 'daily') {
+        numInstallments = termUnit === 'days' ? term : termUnit === 'weeks' ? term * 7 : term * 30;
+      } else if (frequency === 'weekly') {
+        numInstallments = termUnit === 'days' ? Math.max(1, Math.floor(term / 7)) : termUnit === 'weeks' ? term : Math.max(1, Math.floor(term * 4));
+      } else {
+        // monthly
+        numInstallments = termUnit === 'days' ? Math.max(1, Math.ceil(term / 30)) : termUnit === 'weeks' ? Math.max(1, Math.ceil(term / 4)) : term;
+      }
+
+      const perInstallmentPrincipal = Math.round((principal / numInstallments) * 100) / 100;
+      const perInstallmentInterest = Math.round((totalInterest / numInstallments) * 100) / 100;
+      const perInstallmentAmount = perInstallmentPrincipal + perInstallmentInterest;
+
+      for (let i = 0; i < numInstallments; i++) {
+        const dueDate = new Date(start);
+        if (frequency === 'daily') dueDate.setDate(dueDate.getDate() + i + 1);
+        else if (frequency === 'weekly') dueDate.setDate(dueDate.getDate() + (i + 1) * 7);
+        else dueDate.setMonth(dueDate.getMonth() + i + 1);
+
+        const isLast = i === numInstallments - 1;
+        schedule.push({
+          dueDate: dueDate.toISOString().split('T')[0],
+          amount: isLast
+            ? Math.round((principal + totalInterest - perInstallmentAmount * i) * 100) / 100
+            : perInstallmentAmount,
+          principal: isLast
+            ? Math.round((principal - perInstallmentPrincipal * i) * 100) / 100
+            : perInstallmentPrincipal,
+          interest: isLast
+            ? Math.round((totalInterest - perInstallmentInterest * i) * 100) / 100
+            : perInstallmentInterest,
+          status: 'pending',
+        });
+      }
+    }
+  } else {
+    // Reducing balance
+    if (frequency === 'bullet') {
+      const endDate = new Date(start);
+      if (termUnit === 'days') endDate.setDate(endDate.getDate() + term);
+      else if (termUnit === 'weeks') endDate.setDate(endDate.getDate() + term * 7);
+      else endDate.setMonth(endDate.getMonth() + term);
+
+      // Simple flat for bullet reducing balance
+      const totalInterest = principal * (interestRate / 100);
+      schedule.push({
+        dueDate: endDate.toISOString().split('T')[0],
+        amount: Math.round((principal + totalInterest) * 100) / 100,
+        principal,
+        interest: Math.round(totalInterest * 100) / 100,
+        status: 'pending',
+      });
+    } else {
+      let numInstallments: number;
+      if (frequency === 'daily') {
+        numInstallments = termUnit === 'days' ? term : termUnit === 'weeks' ? term * 7 : term * 30;
+      } else if (frequency === 'weekly') {
+        numInstallments = termUnit === 'days' ? Math.max(1, Math.floor(term / 7)) : termUnit === 'weeks' ? term : Math.max(1, Math.floor(term * 4));
+      } else {
+        numInstallments = termUnit === 'days' ? Math.max(1, Math.ceil(term / 30)) : termUnit === 'weeks' ? Math.max(1, Math.ceil(term / 4)) : term;
+      }
+
+      // For reducing balance, calculate periodic rate
+      let periodicRate: number;
+      if (frequency === 'daily') periodicRate = interestRate / 100 / 365;
+      else if (frequency === 'weekly') periodicRate = interestRate / 100 / 52;
+      else periodicRate = interestRate / 100 / 12;
+
+      const installmentPrincipal = principal / numInstallments;
+      let remainingBalance = principal;
+
+      for (let i = 0; i < numInstallments; i++) {
+        const interestPayment = remainingBalance * periodicRate;
+        const isLast = i === numInstallments - 1;
+        const principalPayment = isLast ? remainingBalance : installmentPrincipal;
+
+        const dueDate = new Date(start);
+        if (frequency === 'daily') dueDate.setDate(dueDate.getDate() + i + 1);
+        else if (frequency === 'weekly') dueDate.setDate(dueDate.getDate() + (i + 1) * 7);
+        else dueDate.setMonth(dueDate.getMonth() + i + 1);
+
+        schedule.push({
+          dueDate: dueDate.toISOString().split('T')[0],
+          amount: Math.round((principalPayment + interestPayment) * 100) / 100,
+          principal: Math.round(principalPayment * 100) / 100,
+          interest: Math.round(interestPayment * 100) / 100,
+          status: 'pending',
+        });
+
+        remainingBalance = Math.max(remainingBalance - principalPayment, 0);
+      }
+    }
+  }
+
+  return schedule;
+}
+
+export function calculateCreditScoreFromProfile(params: {
+  susuContributions: { status: string; date: string }[];
+  loans: { status: string; totalPaid: number; amount: number }[];
+  kycLevel: 'none' | 'basic' | 'full';
+  accountAgeDays: number;
+  walletActivityScore: number;
+}): import('@/lib/types').CreditScoreResult {
+  const { susuContributions, loans, kycLevel, accountAgeDays, walletActivityScore } = params;
+
+  // 1. Susu consistency (0-100)
+  let susuConsistency = 50;
+  if (susuContributions.length > 0) {
+    const paidCount = susuContributions.filter(c => c.status === 'paid').length;
+    susuConsistency = Math.min(100, Math.round((paidCount / susuContributions.length) * 100));
+  }
+
+  // 2. Repayment history (0-100)
+  let repaymentHistory = 50;
+  const activeRepaidLoans = loans.filter(l => l.status === 'repaid' || l.status === 'active');
+  if (activeRepaidLoans.length > 0) {
+    const fullyRepaid = loans.filter(l => l.status === 'repaid').length;
+    const onTimeRate = activeRepaidLoans.length > 0
+      ? (fullyRepaid / activeRepaidLoans.length) * 100
+      : 50;
+    repaymentHistory = Math.min(100, Math.round(onTimeRate * 1.1));
+  }
+
+  // 3. KYC level (0-100)
+  const kycMap = { none: 0, basic: 50, full: 100 };
+  const kycLevelScore = kycMap[kycLevel] || 0;
+
+  // 4. Account age (0-100) — max at 365 days
+  const accountAge = Math.min(100, Math.round((accountAgeDays / 365) * 100));
+
+  // 5. Wallet activity
+  const walletActivity = Math.min(100, walletActivityScore);
+
+  // Weighted score
+  const score = Math.round(
+    susuConsistency * 0.25 +
+    repaymentHistory * 0.30 +
+    kycLevelScore * 0.20 +
+    accountAge * 0.10 +
+    walletActivity * 0.15
+  );
+
+  // Grade
+  let grade: 'Excellent' | 'Good' | 'Fair' | 'Poor';
+  if (score >= 80) grade = 'Excellent';
+  else if (score >= 60) grade = 'Good';
+  else if (score >= 40) grade = 'Fair';
+  else grade = 'Poor';
+
+  // Derived limits
+  let maxLoanAmount: number;
+  let interestRate: number;
+  let maxTermDays: number;
+
+  if (grade === 'Excellent') {
+    maxLoanAmount = 2000;
+    interestRate = 3;
+    maxTermDays = 30;
+  } else if (grade === 'Good') {
+    maxLoanAmount = 1000;
+    interestRate = 5;
+    maxTermDays = 21;
+  } else if (grade === 'Fair') {
+    maxLoanAmount = 500;
+    interestRate = 7;
+    maxTermDays = 14;
+  } else {
+    maxLoanAmount = 200;
+    interestRate = 10;
+    maxTermDays = 7;
+  }
+
+  return {
+    score,
+    grade,
+    maxLoanAmount,
+    interestRate,
+    maxTermDays,
+    factors: {
+      susuConsistency,
+      repaymentHistory,
+      kycLevel: kycLevelScore,
+      accountAge,
+      walletActivity,
+    },
+  };
+}

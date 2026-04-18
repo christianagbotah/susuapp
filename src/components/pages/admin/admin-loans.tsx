@@ -32,7 +32,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import type { Loan } from '@/lib/types';
+import type { Loan, RepaymentScheduleEntry, CreditScoreFactors } from '@/lib/types';
 
 const ITEMS_PER_PAGE = 8;
 
@@ -75,7 +75,7 @@ function getCreditScoreText(score: number): string {
 }
 
 export function AdminLoans() {
-  const { allLoans, approveLoan, rejectLoan } = useAdminStore();
+  const { allLoans, approveLoan, rejectLoan, disburseLoan } = useAdminStore();
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -151,6 +151,11 @@ export function AdminLoans() {
         toast.error('Please enter recipient number/account');
         return;
       }
+      disburseLoan(
+        disburseDialog.id,
+        disburseMethod as 'momo' | 'bank',
+        disburseNumber,
+      );
       toast.success(`₵${disburseDialog.amount.toLocaleString()} disbursed to ${disburseDialog.applicantName} via ${disburseMethod === 'momo' ? 'Mobile Money' : 'Bank Transfer'}`);
       setDisburseDialog(null);
       setDisburseNumber('');

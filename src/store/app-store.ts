@@ -8,6 +8,8 @@ import type {
   Agent, CollectionRoute, AgentCommission, SystemStats,
   Branch, ComplianceReport, ActivityLog,
   Referral, Transfer, Dispute,
+  CreditScoreResult, RepaymentScheduleEntry,
+  LoanProduct,
   CompanyDetails, PaymentGatewayConfig, PaymentGatewayId, PaymentGatewayCredential, PaymentGatewayStatus,
   SMSProviderConfig, SMSProviderId, SMSCredential, SMSProviderStatus,
   KYCVerificationRecord,
@@ -25,9 +27,10 @@ import {
   savingsGoals, loans, loanPayments, transactions, notifications,
   agents, collectionRoutes, agentCommissions, systemStats, branches,
   complianceReports, activityLogs,
-  referrals, recentTransfers, disputes
+  referrals, recentTransfers, disputes,
+  loanProducts,
 } from '@/lib/mock-data';
-import { generateReference } from '@/lib/formatters';
+import { generateReference, calculateCreditScoreFromProfile } from '@/lib/formatters';
 
 // ---- Navigation Store ----
 interface NavigationState {
@@ -76,9 +79,12 @@ interface CustomerState {
   fileDispute: (transactionId: string, type: string, description: string) => void;
   markDisputeResolved: (disputeId: string, resolution: string) => void;
   completeKYC: (kycLevel: 'basic' | 'full') => void;
+  applyForLoan: (application: Partial<Loan>) => void;
+  makeLoanPayment: (loanId: string, amount: number, method: string) => void;
+  calculateCreditScore: () => CreditScoreResult;
 }
 
-export const useCustomerStore = create<CustomerState>((set) => ({
+export const useCustomerStore = create<CustomerState>((set, get) => ({
   user: currentUser,
   wallets: customerWallets,
   susuGroups: susuGroups.filter(g =>
@@ -256,6 +262,137 @@ export const useCustomerStore = create<CustomerState>((set) => ({
     set((s) => ({
       user: { ...s.user, kycLevel },
     }));
+  },
+
+  applyForLoan: (application) => {
+    const product = loanProducts.find(p => p.id === application.productId);
+    const numAmount = application.amount || 0;
+    const processingFee = product?.processingFeePercent ? Math.round(numAmount * product.processingFeePercent / 100 * 100) / 100 : 0;
+    const totalInterest = product?.interestType === 'flat' ? Math.round(numAmount * (product.interestRate / 100) * 100) / 100 : 0;
+    const totalRepayment = numAmount + totalInterest;
+    const term = application.term || 7;
+    const now = new Date().toISOString();
+    const start = new Date();
+    const end = new Date(start);
+    if (application.termUnit === 'days') end.setDate(end.getDate() + term);
+    else if (application.termUnit === 'weeks') end.setDate(end.getDate() + term * 7);
+    else end.setMonth(end.getMonth() + term);
+
+    const newLoan: Loan = {
+      id: `ln-${Date.now()}`,
+      applicantId: 'usr-001',
+      applicantName: 'Ama Mensah',
+      applicantPhone: '0241234567',
+      type: product?.type || application.type || 'personal',
+      productId: application.productId,
+      amount: numAmount,
+      interestRate: product?.interestRate || application.interestRate || 5,
+      term,
+      termUnit: application.termUnit || 'days',
+      status: product?.autoApprove ? 'approved' : 'pending',
+      monthlyPayment: Math.round(totalRepayment / term * 100) / 100,
+      remainingBalance: numAmount,
+      totalPaid: 0,
+      nextPaymentDate: '',
+      startDate: '',
+      endDate: end.toISOString().split('T')[0],
+      disbursementMethod: (application.disbursementMethod as 'momo' | 'bank') || 'momo',
+      disbursementNumber: application.disbursementNumber,
+      purpose: application.purpose || '',
+      creditScore: 78,
+      branch: 'Accra Central',
+      applicationDate: now,
+      approvedDate: product?.autoApprove ? now : undefined,
+      autoApproved: product?.autoApprove || false,
+      processingFee,
+      totalInterest,
+      repaymentFrequency: product?.repaymentFrequency || 'daily',
+      interestType: product?.interestType || 'flat',
+    };
+
+    if (product?.autoApprove) {
+      // Auto-disburse: add disbursement date and schedule
+      newLoan.status = 'active';
+      newLoan.disbursementDate = now;
+      newLoan.startDate = now;
+    }
+
+    set((s) => ({
+      myLoans: [newLoan, ...s.myLoans],
+      wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: w.balance + numAmount } : w),
+    }));
+  },
+
+  makeLoanPayment: (loanId, amount, method) => {
+    const newPayment: LoanPayment = {
+      id: `lp-${Date.now()}`,
+      loanId,
+      amount,
+      date: new Date().toISOString(),
+      status: 'completed',
+      method: method as 'momo' | 'bank' | 'agent',
+      principal: Math.round(amount * 0.8 * 100) / 100,
+      interest: Math.round(amount * 0.2 * 100) / 100,
+    };
+
+    set((s) => {
+      const updatedLoans = s.myLoans.map(l => {
+        if (l.id !== loanId) return l;
+        const newTotalPaid = l.totalPaid + amount;
+        const newRemaining = Math.max(l.remainingBalance - amount, 0);
+        const isFullyPaid = newRemaining <= 0;
+
+        // Update schedule entries
+        let remaining = amount;
+        const updatedSchedule = (l.repaymentSchedule || []).map(entry => {
+          if (entry.status !== 'pending' || remaining <= 0) return entry;
+          if (remaining >= entry.amount) {
+            remaining -= entry.amount;
+            return { ...entry, status: 'paid' as const, paidDate: new Date().toISOString().split('T')[0], paidAmount: entry.amount };
+          }
+          const partial = remaining;
+          remaining = 0;
+          return { ...entry, status: 'partial' as const, paidDate: new Date().toISOString().split('T')[0], paidAmount: partial };
+        });
+
+        return {
+          ...l,
+          totalPaid: newTotalPaid,
+          remainingBalance: newRemaining,
+          status: isFullyPaid ? 'repaid' as const : l.status,
+          repaymentSchedule: updatedSchedule,
+        };
+      });
+
+      return {
+        loanPayments: [newPayment, ...s.loanPayments],
+        myLoans: updatedLoans,
+        wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: w.balance - amount } : w),
+      };
+    });
+  },
+
+  calculateCreditScore: () => {
+    const { mySusuContributions, myLoans, user } = get();
+    const accountAgeMs = Date.now() - new Date(user.memberSince).getTime();
+    const accountAgeDays = Math.floor(accountAgeMs / (1000 * 60 * 60 * 24));
+
+    // Wallet activity: based on number of transactions
+    const { transactions } = get();
+    const recentTx = transactions.filter(t => {
+      const txDate = new Date(t.date);
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      return txDate >= thirtyDaysAgo;
+    });
+    const walletActivityScore = Math.min(100, recentTx.length * 10);
+
+    return calculateCreditScoreFromProfile({
+      susuContributions: mySusuContributions.map(c => ({ status: c.status, date: c.date })),
+      loans: myLoans.map(l => ({ status: l.status, totalPaid: l.totalPaid, amount: l.amount })),
+      kycLevel: user.kycLevel,
+      accountAgeDays,
+      walletActivityScore,
+    });
   },
 }));
 
@@ -460,6 +597,7 @@ interface AdminState {
   approveLoan: (loanId: string) => void;
   rejectLoan: (loanId: string, reason: string) => void;
   resolveDispute: (disputeId: string, resolution: string) => void;
+  disburseLoan: (loanId: string, method: 'momo' | 'bank', number: string) => void;
 }
 
 export const useAdminStore = create<AdminState>((set) => ({
@@ -500,6 +638,75 @@ export const useAdminStore = create<AdminState>((set) => ({
         d.id === disputeId ? { ...d, status: 'resolved' as const, resolution, updatedAt: new Date().toISOString() } : d
       ),
     }));
+  },
+
+  disburseLoan: (loanId, method, number) => {
+    set((s) => {
+      const loan = s.allLoans.find(l => l.id === loanId);
+      if (!loan) return s;
+
+      const totalInterest = loan.interestType === 'flat'
+        ? loan.amount * (loan.interestRate / 100)
+        : loan.amount * (loan.interestRate / 100);
+      const totalRepayment = loan.amount + totalInterest;
+      const term = loan.term;
+      const numPayments = loan.repaymentFrequency === 'daily' && loan.termUnit === 'days'
+        ? term
+        : loan.repaymentFrequency === 'weekly' && loan.termUnit === 'weeks'
+          ? term
+          : loan.repaymentFrequency === 'monthly' && loan.termUnit === 'months'
+            ? term
+            : term;
+
+      const startDate = new Date().toISOString().split('T')[0];
+      const endDate = new Date();
+      if (loan.termUnit === 'days') endDate.setDate(endDate.getDate() + term);
+      else if (loan.termUnit === 'weeks') endDate.setDate(endDate.getDate() + term * 7);
+      else endDate.setMonth(endDate.getMonth() + term);
+
+      // Generate schedule
+      const schedule: RepaymentScheduleEntry[] = [];
+      const start = new Date(startDate);
+      for (let i = 0; i < numPayments; i++) {
+        const dueDate = new Date(start);
+        if (loan.repaymentFrequency === 'daily') dueDate.setDate(dueDate.getDate() + i + 1);
+        else if (loan.repaymentFrequency === 'weekly') dueDate.setDate(dueDate.getDate() + (i + 1) * 7);
+        else dueDate.setMonth(dueDate.getMonth() + i + 1);
+
+        const isLast = i === numPayments - 1;
+        const perPrincipal = Math.round((loan.amount / numPayments) * 100) / 100;
+        const perInterest = Math.round((totalInterest / numPayments) * 100) / 100;
+        schedule.push({
+          dueDate: dueDate.toISOString().split('T')[0],
+          amount: perPrincipal + perInterest,
+          principal: perPrincipal,
+          interest: perInterest,
+          status: 'pending',
+        });
+      }
+
+      return {
+        allLoans: s.allLoans.map(l =>
+          l.id === loanId
+            ? {
+                ...l,
+                status: 'active' as const,
+                disbursementDate: new Date().toISOString().split('T')[0],
+                startDate,
+                endDate: endDate.toISOString().split('T')[0],
+                monthlyPayment: Math.round(totalRepayment / numPayments * 100) / 100,
+                disbursementMethod: method,
+                disbursementNumber: number,
+                disbursementProvider: method === 'momo' ? 'Mobile Money' : undefined,
+                repaymentSchedule: schedule,
+                totalInterest,
+                reviewedBy: 'Daniel Tetteh',
+                reviewDate: new Date().toISOString(),
+              }
+            : l
+        ),
+      };
+    });
   },
 }));
 

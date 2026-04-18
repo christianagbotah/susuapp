@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info, CreditCard, ShieldCheck, TrendingDown, Zap, ArrowRight, PiggyBank } from 'lucide-react';
 import { SwipeableRow, FAB } from '@/components/shared/mobile-components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
-import type { LoanProduct } from '@/lib/types';
+import type { LoanProduct, RepaymentScheduleEntry } from '@/lib/types';
 
 // ---- Animation variants ----
 const containerVariants = {
@@ -166,7 +166,7 @@ const creditScoreTips = [
 // Main Component
 // ============================================================
 export function CustomerLoans() {
-  const { myLoans, loanPayments } = useCustomerStore();
+  const { myLoans, loanPayments, applyForLoan, makeLoanPayment, calculateCreditScore } = useCustomerStore();
 
   // ---- Tab state (controlled) ----
   const [activeTab, setActiveTab] = useState('my-loans');
@@ -182,18 +182,15 @@ export function CustomerLoans() {
     return activeLoans[0] ?? null;
   }, [myLoans]);
 
-  // ---- Credit score & pre-qualification ----
-  const userCreditScore = useMemo(() => {
-    if (myLoans.length === 0) return 72;
-    return Math.round(myLoans.reduce((s, l) => s + l.creditScore, 0) / myLoans.length);
-  }, [myLoans]);
+  // ---- Credit score & pre-qualification (Fido-style dynamic) ----
+  const creditScoreResult = useMemo(() => calculateCreditScore(), [myLoans, loanPayments]);
+  const userCreditScore = creditScoreResult.score;
 
   const preQualifiedAmount = useMemo(() => {
-    const maxProductAmount = Math.max(...loanProducts.filter((p) => p.isActive).map((p) => p.maxAmount));
-    if (userCreditScore >= 75) return maxProductAmount;
-    if (userCreditScore >= 60) return Math.round(maxProductAmount * 0.6);
-    return Math.round(maxProductAmount * 0.3);
-  }, [userCreditScore]);
+    return creditScoreResult.maxLoanAmount;
+  }, [creditScoreResult]);
+
+  const isFidoProduct = (productId: string | undefined) => productId === 'lp-006';
 
   // ---- Expanded row state ----
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
@@ -230,6 +227,11 @@ export function CustomerLoans() {
   const [calcAmount, setCalcAmount] = useState<string>('5000');
   const [calcRate, setCalcRate] = useState<string>('8');
   const [calcTerm, setCalcTerm] = useState<string>('12');
+
+  // ---- Payment dialog state ----
+  const [payDialogLoan, setPayDialogLoan] = useState<import('@/lib/types').Loan | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [payMethod, setPayMethod] = useState('momo');
 
   // ---- Calculator memo ----
   const calculatorResult = useMemo(() => {
@@ -280,9 +282,29 @@ export function CustomerLoans() {
       toast.error(`Amount must be between ${formatGHS(selectedProduct.minAmount)} and ${formatGHS(selectedProduct.maxAmount)}`);
       return;
     }
-    toast.success('Loan application submitted!', {
-      description: `Your application for ${formatGHS(numAmount)} (${selectedProduct.name}) is being reviewed.`,
+
+    // Call store action
+    applyForLoan({
+      productId: selectedProduct.id,
+      amount: numAmount,
+      purpose,
+      term: parseInt(duration),
+      termUnit: selectedProduct.termUnit,
+      disbursementMethod,
+      disbursementNumber: phoneNumber,
+      interestRate: selectedProduct.interestRate,
     });
+
+    const isAutoApprove = selectedProduct.autoApprove;
+    if (isAutoApprove) {
+      toast.success('Instant Loan Approved! 🎉', {
+        description: `${formatGHS(numAmount)} has been sent to your ${disbursementMethod === 'momo' ? 'Mobile Money' : 'bank account'} in under 60 seconds.`,
+      });
+    } else {
+      toast.success('Loan application submitted!', {
+        description: `Your application for ${formatGHS(numAmount)} (${selectedProduct.name}) is being reviewed.`,
+      });
+    }
     setApplyDialogOpen(false);
     setSelectedProduct(null);
   }
@@ -322,19 +344,24 @@ export function CustomerLoans() {
               <div className="flex flex-wrap items-center gap-4 text-sm text-white/90">
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-white/70" />
-                  <span>Funds in under 5 minutes</span>
+                  <span>{creditScoreResult.grade === 'Excellent' ? 'Apply in 60 seconds' : 'Funds in under 5 minutes'}</span>
                 </div>
                 <div className="h-4 w-px bg-white/30" />
                 <div className="flex items-center gap-1.5">
                   <Percent className="h-4 w-4 text-white/70" />
-                  <span>From 3% per month</span>
+                  <span>From {creditScoreResult.interestRate}% interest</span>
+                </div>
+                <div className="h-4 w-px bg-white/30" />
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-white/70" />
+                  <span>Up to {creditScoreResult.maxTermDays} days</span>
                 </div>
               </div>
               {/* Credit score badge */}
               <div className="flex items-center gap-2">
                 <Badge
                   className={`text-xs font-semibold border-0 ${
-                    userCreditScore >= 75
+                    userCreditScore >= 80
                       ? 'bg-white/20 text-white'
                       : userCreditScore >= 60
                         ? 'bg-yellow-400/30 text-yellow-100'
@@ -342,13 +369,22 @@ export function CustomerLoans() {
                   }`}
                 >
                   <ShieldCheck className="mr-1 h-3.5 w-3.5" />
-                  Credit Score: {userCreditScore}
-                  {userCreditScore >= 75
-                    ? ' — Excellent'
-                    : userCreditScore >= 60
-                      ? ' — Good'
-                      : ' — Fair'}
+                  Credit Score: {userCreditScore} — {creditScoreResult.grade}
                 </Badge>
+              </div>
+              {/* Factor breakdown mini bars */}
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {Object.entries(creditScoreResult.factors).map(([key, val]) => (
+                  <div key={key} className="space-y-1">
+                    <Progress
+                      value={val}
+                      className={`h-1.5 ${
+                        val >= 80 ? '[&>bar-bg-emerald-400]' : val >= 60 ? '[&>bar-bg-amber-400]' : val >= 40 ? '[&>bar-bg-orange-400]' : '[&>bar-bg-red-400]'
+                      } bg-white/20`}
+                    />
+                    <p className="text-[10px] text-white/60 truncate text-center capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -726,12 +762,14 @@ export function CustomerLoans() {
                   <SwipeableRow
                     key={loan.id}
                     rightActions={[
-                      {
+                      ...(loan.status === 'active' ? [{
                         label: 'Pay',
                         icon: CreditCard,
                         bg: 'bg-emerald-500',
-                        onClick: () => setActiveTab('my-loans'),
-                      },
+                        onClick: () => {
+                          setPayDialogLoan(loan);
+                        },
+                      }] : []),
                       {
                         label: 'Details',
                         icon: FileText,
@@ -782,8 +820,17 @@ export function CustomerLoans() {
             {/* FAB: Quick Pay */}
             <FAB
               icon={CreditCard}
-              onClick={() => setActiveTab('apply')}
-              label="Apply"
+              onClick={() => {
+                const activeLoans = myLoans.filter(l => l.status === 'active');
+                if (activeLoans.length > 0) {
+                  setPayDialogLoan(activeLoans[0]);
+                  const nextSchedule = activeLoans[0].repaymentSchedule?.find(e => e.status === 'pending' || e.status === 'overdue');
+                  if (nextSchedule) setPayAmount(nextSchedule.amount.toString());
+                } else {
+                  setActiveTab('apply');
+                }
+              }}
+              label="Pay"
             />
           </TabsContent>
 
@@ -1403,6 +1450,128 @@ export function CustomerLoans() {
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      {/* ---- Loan Payment Dialog ---- */}
+      <Dialog open={!!payDialogLoan} onOpenChange={(open) => { if (!open) setPayDialogLoan(null); }}>
+        {payDialogLoan && (
+          <DialogContent className="mx-4 sm:mx-0 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-emerald-600" />
+                Repay Loan
+              </DialogTitle>
+              <DialogDescription>
+                Make a payment towards your {payDialogLoan.type.replace('-', ' ')} loan.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Loan summary */}
+              <div className="rounded-lg bg-muted/50 p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Loan Amount</span>
+                  <span className="font-medium">{formatGHS(payDialogLoan.amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Outstanding Balance</span>
+                  <span className="font-semibold text-red-600">{formatGHS(payDialogLoan.remainingBalance)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Next Payment</span>
+                  <span className="font-medium">{formatGHS(payDialogLoan.monthlyPayment)}</span>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label htmlFor="pay-amount">Payment Amount (₵)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">₵</span>
+                  <Input
+                    id="pay-amount"
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="0.00"
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                    className="pl-12"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => setPayAmount(payDialogLoan.monthlyPayment.toString())}
+                  >
+                    Full Installment
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => setPayAmount(payDialogLoan.remainingBalance.toString())}
+                  >
+                    Pay Off
+                  </Button>
+                </div>
+              </div>
+
+              {/* Method */}
+              <div className="space-y-2">
+                <Label>Payment Method</Label>
+                <Select value={payMethod} onValueChange={setPayMethod}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="momo">Mobile Money (MTN MoMo)</SelectItem>
+                    <SelectItem value="bank">Bank Transfer</SelectItem>
+                    <SelectItem value="agent">Agent Collection</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Separator />
+
+            <DialogFooter className="flex-row gap-2 sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setPayDialogLoan(null)}
+                className="flex-1 sm:flex-none"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const amt = parseFloat(payAmount);
+                  if (!amt || amt <= 0) {
+                    toast.error('Please enter a valid amount');
+                    return;
+                  }
+                  if (amt > payDialogLoan.remainingBalance) {
+                    toast.error(`Amount cannot exceed outstanding balance of ${formatGHS(payDialogLoan.remainingBalance)}`);
+                    return;
+                  }
+                  makeLoanPayment(payDialogLoan.id, amt, payMethod);
+                  toast.success('Payment successful!', {
+                    description: `${formatGHS(amt)} has been paid towards your loan.`,
+                  });
+                  setPayDialogLoan(null);
+                  setPayAmount('');
+                }}
+                className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-none"
+              >
+                <CheckCircle className="mr-1.5 h-4 w-4" />
+                Pay Now
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
     </motion.div>
   );
 }
