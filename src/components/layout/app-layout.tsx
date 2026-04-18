@@ -357,6 +357,9 @@ export function AppLayout() {
   const adminStore = useAdminStore();
   const treasurerStore = useTreasurerStore();
 
+  // Notification panel state (must be before any conditional return - Rules of Hooks)
+  const [notificationOpen, setNotificationOpen] = useState(false);
+
   // Login state
   if (!currentPortal) {
     return <LoginPage />;
@@ -380,9 +383,6 @@ export function AppLayout() {
   const bottomTabs = getBottomTabs(navItems, currentPortal);
 
   // Notification count
-  // Notification panel state
-  const [notificationOpen, setNotificationOpen] = useState(false);
-
   const notificationCount = (() => {
     switch (currentPortal) {
       case 'customer':
