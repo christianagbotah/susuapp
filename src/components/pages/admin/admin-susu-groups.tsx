@@ -68,12 +68,11 @@ function getGroupMembers(group: SusuGroup) {
   return members;
 }
 
-type DialogView = 'details' | 'members' | null;
-
 export function AdminSusuGroups() {
   const { allSusuGroups } = useAdminStore();
   const [selectedGroup, setSelectedGroup] = useState<SusuGroup | null>(null);
-  const [dialogView, setDialogView] = useState<DialogView>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
 
   const totalGroups = allSusuGroups.length;
@@ -83,19 +82,23 @@ export function AdminSusuGroups() {
 
   function openDetails(group: SusuGroup) {
     setSelectedGroup(group);
-    setDialogView('details');
+    setDetailsOpen(true);
+    setMembersOpen(false);
   }
 
   function openMembers(group: SusuGroup) {
     setSelectedGroup(group);
-    setDialogView('members');
+    setMembersOpen(true);
+    setDetailsOpen(false);
     setMemberSearch('');
   }
 
-  function closeDialog() {
-    setSelectedGroup(null);
-    setDialogView(null);
-    setMemberSearch('');
+  function closeDetailsDialog() {
+    setDetailsOpen(false);
+  }
+
+  function closeMembersDialog() {
+    setMembersOpen(false);
   }
 
   const groupMembers = selectedGroup ? getGroupMembers(selectedGroup) : [];
@@ -258,7 +261,7 @@ export function AdminSusuGroups() {
       </motion.div>
 
       {/* ======== GROUP DETAILS DIALOG ======== */}
-      <Dialog open={dialogView === 'details' && !!selectedGroup} onOpenChange={closeDialog}>
+      <Dialog open={detailsOpen && !!selectedGroup} onOpenChange={(open) => { if (!open) closeDetailsDialog(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -374,7 +377,7 @@ export function AdminSusuGroups() {
               <Button
                 variant="outline"
                 className="w-full gap-2"
-                onClick={() => { closeDialog(); setTimeout(() => openMembers(selectedGroup), 100); }}
+                onClick={() => openMembers(selectedGroup)}
               >
                 <Users className="h-4 w-4" />
                 View All {selectedGroup.members} Members
@@ -386,7 +389,7 @@ export function AdminSusuGroups() {
       </Dialog>
 
       {/* ======== MEMBERS DIALOG ======== */}
-      <Dialog open={dialogView === 'members' && !!selectedGroup} onOpenChange={closeDialog}>
+      <Dialog open={membersOpen && !!selectedGroup} onOpenChange={(open) => { if (!open) closeMembersDialog(); }}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
