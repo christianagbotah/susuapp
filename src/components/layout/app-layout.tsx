@@ -23,6 +23,16 @@ import {
 } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   BottomTabBar, MobileDrawer, MobilePageHeader,
   type BottomTabItem,
 } from '@/components/shared/mobile-components';
@@ -177,9 +187,9 @@ function getNavItems(portal: string): NavItem[] {
 }
 
 // ---- Desktop Sidebar Content ----
-function DesktopSidebar({ portal, activePage, user, onNavigate, onLogout }: {
+function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogOpen }: {
   portal: string; activePage: string; user: { name: string; email?: string };
-  onNavigate: (page: string) => void; onLogout: () => void;
+  onNavigate: (page: string) => void; setLogoutDialogOpen: (open: boolean) => void;
 }) {
   const navItems = getNavItems(portal);
   const initials = getInitials(user.name);
@@ -238,7 +248,7 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, onLogout }: {
             <p className="font-medium text-sm truncate">{user.name}</p>
             <p className="text-xs text-muted-foreground truncate">{userRole}</p>
           </div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={onLogout}>
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setLogoutDialogOpen(true)}>
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
@@ -248,9 +258,9 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, onLogout }: {
 }
 
 // ---- Mobile Drawer Content ----
-function MobileDrawerContent({ portal, activePage, user, onNavigate, onLogout, onClose }: {
+function MobileDrawerContent({ portal, activePage, user, onNavigate, setLogoutDialogOpen, onClose }: {
   portal: string; activePage: string; user: { name: string; email?: string; phone?: string };
-  onNavigate: (page: string) => void; onLogout: () => void; onClose: () => void;
+  onNavigate: (page: string) => void; setLogoutDialogOpen: (open: boolean) => void; onClose: () => void;
 }) {
   const navItems = getNavItems(portal);
   const initials = getInitials(user.name);
@@ -324,7 +334,7 @@ function MobileDrawerContent({ portal, activePage, user, onNavigate, onLogout, o
       {/* Logout */}
       <div className="border-t px-4 py-3 safe-area-bottom">
         <button
-          onClick={() => { onLogout(); onClose(); }}
+          onClick={() => { onNavigate('dashboard'); onClose(); setLogoutDialogOpen(true); }}
           className="touch-target w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
         >
           <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-destructive/10">
@@ -365,6 +375,9 @@ export function AppLayout() {
   const agentStore = useAgentStore();
   const adminStore = useAdminStore();
   const treasurerStore = useTreasurerStore();
+
+  // Logout confirmation dialog state
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   // Notification panel state (must be before any conditional return - Rules of Hooks)
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -482,7 +495,7 @@ export function AppLayout() {
           activePage={activePage}
           user={{ name: user.name, email: user.email }}
           onNavigate={handleNavigate}
-          onLogout={logout}
+          setLogoutDialogOpen={setLogoutDialogOpen}
         />
       </aside>
 
@@ -543,7 +556,7 @@ export function AppLayout() {
                   <Settings className="mr-2 h-4 w-4" />Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600 focus:text-red-600 dark:text-red-400">
+                <DropdownMenuItem onClick={() => setLogoutDialogOpen(true)} className="text-red-600 focus:text-red-600 dark:text-red-400">
                   <LogOut className="mr-2 h-4 w-4" />Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -645,10 +658,28 @@ export function AppLayout() {
           activePage={activePage}
           user={user}
           onNavigate={handleNavigate}
-          onLogout={logout}
+          setLogoutDialogOpen={setLogoutDialogOpen}
           onClose={() => setSidebarOpen(false)}
         />
       </MobileDrawer>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out of your {portalLabels[currentPortal]}? You will need to enter your phone and PIN to sign back in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={logout} className="bg-destructive text-white hover:bg-destructive/90">
+              Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
