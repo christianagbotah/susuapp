@@ -7,7 +7,9 @@ import type {
   SavingsGoal, Loan, LoanPayment, Transaction, Notification,
   Agent, CollectionRoute, AgentCommission, SystemStats,
   Branch, ComplianceReport, ActivityLog,
-  Referral, Transfer, Dispute
+  Referral, Transfer, Dispute,
+  CompanyDetails, PaymentGatewayConfig, PaymentGatewayId, PaymentGatewayCredential, PaymentGatewayStatus,
+  SMSProviderConfig, SMSProviderId, SMSCredential, SMSProviderStatus,
 } from '@/lib/types';
 import {
   currentUser, currentAgent, currentTreasurer, currentAdmin,
@@ -391,4 +393,190 @@ export const useTreasurerStore = create<TreasurerState>((set) => ({
       ),
     }));
   },
+}));
+
+// ---- Platform Configuration Store ----
+
+const defaultCompanyDetails: CompanyDetails = {
+  companyName: '',
+  tradingName: '',
+  registrationNumber: '',
+  taxIdentificationNumber: '',
+  companyType: 'limited_liability',
+  industry: 'Microfinance & Savings',
+  description: '',
+  website: '',
+  email: '',
+  phone: '',
+  address: '',
+  city: '',
+  region: 'Greater Accra',
+  digitalAddress: '',
+  primaryColor: '#2563EB',
+  secondaryColor: '#F59E0B',
+  currency: 'GHS',
+  dateFormat: 'DD/MM/YYYY',
+  timezone: 'Africa/Accra',
+  fiscalYearStart: 'January',
+  enableCustomerRegistration: true,
+  enableAgentRegistration: true,
+  defaultLanguage: 'en',
+  maxDailyTransactionLimit: 50000,
+  maxSingleTransactionLimit: 10000,
+  minSusuContribution: 1,
+  maxSusuContribution: 50000,
+};
+
+const defaultHubtelPayment: PaymentGatewayConfig = {
+  id: 'hubtel',
+  name: 'Hubtel',
+  description: 'Ghana\'s leading payment platform for mobile money, card, and bank transfer payments',
+  icon: 'H',
+  website: 'https://hubtel.com',
+  status: 'inactive',
+  credentials: { clientId: '', clientSecret: '', apiKey: '', merchantAccountNumber: '', webhookUrl: '', callbackUrl: '' },
+  supportedMethods: ['momo', 'card', 'bank_transfer', 'qr'],
+  enabledForDeposits: false,
+  enabledForWithdrawals: false,
+  enabledForLoanDisbursement: false,
+  enabledForSusuPayouts: false,
+  transactionFeePercent: 1.0,
+  flatFee: 0.50,
+};
+
+const defaultPaystackPayment: PaymentGatewayConfig = {
+  id: 'paystack',
+  name: 'Paystack',
+  description: 'Pan-African payment gateway supporting mobile money, card, and bank transfers',
+  icon: 'P',
+  website: 'https://paystack.com',
+  status: 'inactive',
+  credentials: { clientId: '', clientSecret: '', apiKey: '', webhookUrl: '', callbackUrl: '' },
+  supportedMethods: ['momo', 'card', 'bank_transfer'],
+  enabledForDeposits: false,
+  enabledForWithdrawals: false,
+  enabledForLoanDisbursement: false,
+  enabledForSusuPayouts: false,
+  transactionFeePercent: 1.5,
+  flatFee: 0.00,
+};
+
+const defaultHubtelSMS: SMSProviderConfig = {
+  id: 'hubtel',
+  name: 'Hubtel SMS',
+  description: 'Ghana\'s most reliable SMS gateway with OTP, notifications, and marketing SMS',
+  icon: 'H',
+  website: 'https://hubtel.com/sms',
+  status: 'inactive',
+  credentials: { apiKey: '', senderId: 'iSusuPro' },
+  enabledForOTP: false,
+  enabledForNotifications: false,
+  enabledForMarketing: false,
+  enabledForAlerts: false,
+  otpExpirySeconds: 300,
+  maxOTPRetry: 3,
+  smsPerDayLimit: 10000,
+};
+
+const defaultArkeselSMS: SMSProviderConfig = {
+  id: 'arkesel',
+  name: 'Arkesel',
+  description: 'Developer-friendly SMS API for OTP verification and bulk messaging in Ghana',
+  icon: 'A',
+  website: 'https://arkesel.com',
+  status: 'inactive',
+  credentials: { apiKey: '', senderId: 'iSusuPro' },
+  enabledForOTP: false,
+  enabledForNotifications: false,
+  enabledForMarketing: false,
+  enabledForAlerts: false,
+  otpExpirySeconds: 300,
+  maxOTPRetry: 3,
+  smsPerDayLimit: 50000,
+};
+
+interface ConfigState {
+  company: CompanyDetails;
+  paymentGateways: PaymentGatewayConfig[];
+  smsProviders: SMSProviderConfig[];
+  activePaymentGateway: PaymentGatewayId | null;
+  activeSMSProvider: SMSProviderId | null;
+
+  updateCompanyDetails: (details: Partial<CompanyDetails>) => void;
+  updatePaymentGateway: (id: PaymentGatewayId, updates: Partial<PaymentGatewayConfig>) => void;
+  updatePaymentCredentials: (id: PaymentGatewayId, creds: Partial<PaymentGatewayCredential>) => void;
+  setActivePaymentGateway: (id: PaymentGatewayId | null) => void;
+  testPaymentGateway: (id: PaymentGatewayId) => void;
+  updateSMSProvider: (id: SMSProviderId, updates: Partial<SMSProviderConfig>) => void;
+  updateSMSCredentials: (id: SMSProviderId, creds: Partial<SMSCredential>) => void;
+  setActiveSMSProvider: (id: SMSProviderId | null) => void;
+  testSMSProvider: (id: SMSProviderId) => void;
+}
+
+export const useConfigStore = create<ConfigState>((set) => ({
+  company: { ...defaultCompanyDetails },
+  paymentGateways: [{ ...defaultHubtelPayment }, { ...defaultPaystackPayment }],
+  smsProviders: [{ ...defaultHubtelSMS }, { ...defaultArkeselSMS }],
+  activePaymentGateway: null,
+  activeSMSProvider: null,
+
+  updateCompanyDetails: (details) => set((s) => ({
+    company: { ...s.company, ...details },
+  })),
+
+  updatePaymentGateway: (id, updates) => set((s) => ({
+    paymentGateways: s.paymentGateways.map(gw =>
+      gw.id === id ? { ...gw, ...updates } : gw
+    ),
+  })),
+
+  updatePaymentCredentials: (id, creds) => set((s) => ({
+    paymentGateways: s.paymentGateways.map(gw =>
+      gw.id === id ? { ...gw, credentials: { ...gw.credentials, ...creds } } : gw
+    ),
+  })),
+
+  setActivePaymentGateway: (id) => set((s) => ({
+    activePaymentGateway: id,
+    paymentGateways: s.paymentGateways.map(gw => ({
+      ...gw,
+      status: gw.id === id ? 'active' as PaymentGatewayStatus : 'inactive' as PaymentGatewayStatus,
+    })),
+  })),
+
+  testPaymentGateway: (id) => set((s) => ({
+    paymentGateways: s.paymentGateways.map(gw =>
+      gw.id === id
+        ? { ...gw, lastTested: new Date().toISOString(), testSuccessful: true }
+        : gw
+    ),
+  })),
+
+  updateSMSProvider: (id, updates) => set((s) => ({
+    smsProviders: s.smsProviders.map(p =>
+      p.id === id ? { ...p, ...updates } : p
+    ),
+  })),
+
+  updateSMSCredentials: (id, creds) => set((s) => ({
+    smsProviders: s.smsProviders.map(p =>
+      p.id === id ? { ...p, credentials: { ...p.credentials, ...creds } } : p
+    ),
+  })),
+
+  setActiveSMSProvider: (id) => set((s) => ({
+    activeSMSProvider: id,
+    smsProviders: s.smsProviders.map(p => ({
+      ...p,
+      status: p.id === id ? 'active' as SMSProviderStatus : 'inactive' as SMSProviderStatus,
+    })),
+  })),
+
+  testSMSProvider: (id) => set((s) => ({
+    smsProviders: s.smsProviders.map(p =>
+      p.id === id
+        ? { ...p, lastTested: new Date().toISOString(), testSuccessful: true }
+        : p
+    ),
+  })),
 }));

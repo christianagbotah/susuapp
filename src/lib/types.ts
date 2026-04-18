@@ -366,3 +366,105 @@ export interface ActivityLog {
   ip?: string;
   category: string;
 }
+
+// ---- COMPANY DETAILS ----
+export interface CompanyDetails {
+  companyName: string;
+  tradingName: string;
+  registrationNumber: string;
+  taxIdentificationNumber: string;
+  companyType: 'sole_proprietorship' | 'partnership' | 'limited_liability' | 'cooperative' | 'ngo';
+  industry: string;
+  description: string;
+  website: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  region: string;
+  digitalAddress: string;
+  logo?: string;
+  primaryColor: string;
+  secondaryColor: string;
+  currency: 'GHS' | 'USD';
+  dateFormat: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
+  timezone: string;
+  fiscalYearStart: string;
+  enableCustomerRegistration: boolean;
+  enableAgentRegistration: boolean;
+  defaultLanguage: 'en' | 'tw' | 'fa' | 'ga';
+  maxDailyTransactionLimit: number;
+  maxSingleTransactionLimit: number;
+  minSusuContribution: number;
+  maxSusuContribution: number;
+}
+
+// ---- PAYMENT GATEWAY CONFIGURATION ----
+export type PaymentGatewayId = 'hubtel' | 'paystack';
+export type PaymentGatewayStatus = 'active' | 'inactive' | 'test_mode';
+
+export interface PaymentGatewayCredential {
+  clientId: string;
+  clientSecret: string;
+  apiKey: string;
+  merchantAccountNumber?: string;
+  webhookUrl: string;
+  callbackUrl: string;
+}
+
+export interface PaymentGatewayConfig {
+  id: PaymentGatewayId;
+  name: string;
+  description: string;
+  icon: string;
+  website: string;
+  status: PaymentGatewayStatus;
+  credentials: PaymentGatewayCredential;
+  supportedMethods: ('momo' | 'card' | 'bank_transfer' | 'qr')[];
+  enabledForDeposits: boolean;
+  enabledForWithdrawals: boolean;
+  enabledForLoanDisbursement: boolean;
+  enabledForSusuPayouts: boolean;
+  transactionFeePercent: number;
+  flatFee: number;
+  lastTested?: string;
+  testSuccessful?: boolean;
+}
+
+// ---- SMS/OTP PROVIDER CONFIGURATION ----
+export type SMSProviderId = 'hubtel' | 'arkesel';
+export type SMSProviderStatus = 'active' | 'inactive' | 'test_mode';
+
+export interface SMSCredential {
+  apiKey: string;
+  senderId: string;
+  webhookUrl?: string;
+}
+
+export interface SMSProviderConfig {
+  id: SMSProviderId;
+  name: string;
+  description: string;
+  icon: string;
+  website: string;
+  status: SMSProviderStatus;
+  credentials: SMSCredential;
+  enabledForOTP: boolean;
+  enabledForNotifications: boolean;
+  enabledForMarketing: boolean;
+  enabledForAlerts: boolean;
+  otpExpirySeconds: number;
+  maxOTPRetry: number;
+  smsPerDayLimit: number;
+  lastTested?: string;
+  testSuccessful?: boolean;
+}
+
+// ---- PLATFORM CONFIGURATION (Combined) ----
+export interface PlatformConfig {
+  company: CompanyDetails;
+  paymentGateways: PaymentGatewayConfig[];
+  smsProviders: SMSProviderConfig[];
+  activePaymentGateway: PaymentGatewayId | null;
+  activeSMSProvider: SMSProviderId | null;
+}
