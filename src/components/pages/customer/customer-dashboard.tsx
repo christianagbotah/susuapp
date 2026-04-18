@@ -133,7 +133,9 @@ export function CustomerDashboard() {
     { label: 'Start Susu', icon: PiggyBank, color: 'text-emerald-600', bg: 'bg-emerald-50 hover:bg-emerald-100', page: 'susu' },
     { label: 'Apply for Loan', icon: Landmark, color: 'text-amber-600', bg: 'bg-amber-50 hover:bg-amber-100', page: 'loans' },
     { label: 'Deposit Money', icon: Wallet, color: 'text-blue-600', bg: 'bg-blue-50 hover:bg-blue-100', page: 'wallet' },
-    { label: 'View Statements', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-50 hover:bg-purple-100', page: 'transactions' },
+    { label: 'Send Money', icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50 hover:bg-purple-100', page: 'transfers' },
+    { label: 'Refer & Earn', icon: Users, color: 'text-teal-600', bg: 'bg-teal-50 hover:bg-teal-100', page: 'referrals' },
+    { label: 'View Statements', icon: CreditCard, color: 'text-slate-600', bg: 'bg-slate-50 hover:bg-slate-100', page: 'transactions' },
   ];
 
   // Recent transactions (last 5)
@@ -281,7 +283,7 @@ export function CustomerDashboard() {
           3. Quick Actions
           ============================== */}
       <motion.div variants={itemVariants}>
-        <div className="flex gap-3 overflow-x-auto flex-nowrap overscroll-x-contain scrollbar-none lg:grid lg:grid-cols-4 lg:overflow-visible">
+        <div className="flex gap-3 overflow-x-auto flex-nowrap overscroll-x-contain scrollbar-none lg:grid lg:grid-cols-6 lg:overflow-visible">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
