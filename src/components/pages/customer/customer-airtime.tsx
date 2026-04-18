@@ -171,7 +171,7 @@ export function CustomerAirtime() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 p-4 sm:p-6"
+      className="space-y-6"
     >
       {/* ==============================
           Page Header

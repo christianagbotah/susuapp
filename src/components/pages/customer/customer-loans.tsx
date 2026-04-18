@@ -16,9 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Slider } from '@/components/ui/slider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info, CreditCard } from 'lucide-react';
+import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info, CreditCard, ShieldCheck, TrendingDown, Zap, ArrowRight, PiggyBank } from 'lucide-react';
 import { SwipeableRow, FAB } from '@/components/shared/mobile-components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import type { LoanProduct } from '@/lib/types';
@@ -89,11 +90,86 @@ function getDurationOptions(product: LoanProduct) {
   return options;
 }
 
+// ---- Amortization schedule generator ----
+function generateAmortizationSchedule(
+  principal: number,
+  annualRate: number,
+  termMonths: number,
+  maxRows: number = 6,
+) {
+  const monthlyRate = annualRate / 100 / 12;
+  const monthlyPayment = calculateLoanPayment(principal, annualRate, termMonths);
+  const schedule: {
+    month: number;
+    payment: number;
+    principal: number;
+    interest: number;
+    remaining: number;
+  }[] = [];
+  let balance = principal;
+
+  const rowsToShow = Math.min(termMonths, maxRows);
+  for (let i = 1; i <= rowsToShow; i++) {
+    const interestPayment = balance * monthlyRate;
+    const principalPayment = monthlyPayment - interestPayment;
+    balance = Math.max(balance - principalPayment, 0);
+    schedule.push({
+      month: i,
+      payment: monthlyPayment,
+      principal: principalPayment,
+      interest: interestPayment,
+      remaining: balance,
+    });
+  }
+
+  return schedule;
+}
+
+// ---- Preset amounts generator ----
+function getPresetAmounts(min: number, max: number): number[] {
+  const candidates = [500, 1000, 2000, 3000, 5000, 10000, 15000, 20000, 30000, 50000];
+  const filtered = candidates.filter((c) => c >= min && c <= max);
+  if (filtered.length >= 2) return filtered.slice(0, 5);
+  if (filtered.length === 1) return [min, ...filtered, max];
+  return [min, Math.round((min + max) / 2), max];
+}
+
+// ---- Credit score tips ----
+const creditScoreTips = [
+  {
+    icon: Clock,
+    title: 'Make Timely Payments',
+    description: 'Pay your loans and susu contributions on time to build a strong repayment history.',
+    color: 'bg-emerald-100 text-emerald-600',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Complete KYC',
+    description: 'Full KYC verification boosts your trust score and unlocks higher loan limits.',
+    color: 'bg-blue-100 text-blue-600',
+  },
+  {
+    icon: PiggyBank,
+    title: 'Save Consistently',
+    description: 'Regular susu contributions demonstrate financial discipline to lenders.',
+    color: 'bg-amber-100 text-amber-600',
+  },
+  {
+    icon: TrendingDown,
+    title: 'Maintain Low Debt',
+    description: 'Keep your debt-to-income ratio low to qualify for better interest rates.',
+    color: 'bg-rose-100 text-rose-600',
+  },
+];
+
 // ============================================================
 // Main Component
 // ============================================================
 export function CustomerLoans() {
   const { myLoans, loanPayments } = useCustomerStore();
+
+  // ---- Tab state (controlled) ----
+  const [activeTab, setActiveTab] = useState('my-loans');
 
   // ---- Derived state ----
   const totalBorrowed = useMemo(() => myLoans.reduce((s, l) => s + l.amount, 0), [myLoans]);
@@ -105,6 +181,19 @@ export function CustomerLoans() {
       .sort((a, b) => new Date(a.nextPaymentDate).getTime() - new Date(b.nextPaymentDate).getTime());
     return activeLoans[0] ?? null;
   }, [myLoans]);
+
+  // ---- Credit score & pre-qualification ----
+  const userCreditScore = useMemo(() => {
+    if (myLoans.length === 0) return 72;
+    return Math.round(myLoans.reduce((s, l) => s + l.creditScore, 0) / myLoans.length);
+  }, [myLoans]);
+
+  const preQualifiedAmount = useMemo(() => {
+    const maxProductAmount = Math.max(...loanProducts.filter((p) => p.isActive).map((p) => p.maxAmount));
+    if (userCreditScore >= 75) return maxProductAmount;
+    if (userCreditScore >= 60) return Math.round(maxProductAmount * 0.6);
+    return Math.round(maxProductAmount * 0.3);
+  }, [userCreditScore]);
 
   // ---- Expanded row state ----
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
@@ -121,6 +210,21 @@ export function CustomerLoans() {
     guarantorName: '',
     guarantorPhone: '',
   });
+
+  // ---- Preset amounts for selected product ----
+  const presetAmounts = useMemo(() => {
+    if (!selectedProduct) return [];
+    return getPresetAmounts(selectedProduct.minAmount, selectedProduct.maxAmount);
+  }, [selectedProduct]);
+
+  // ---- Amortization schedule preview ----
+  const amortizationPreview = useMemo(() => {
+    if (!selectedProduct || !applicationForm.amount || !applicationForm.duration) return null;
+    const principal = parseFloat(applicationForm.amount);
+    const term = parseInt(applicationForm.duration);
+    if (isNaN(principal) || isNaN(term) || principal <= 0 || term <= 0) return null;
+    return generateAmortizationSchedule(principal, selectedProduct.interestRate, term);
+  }, [selectedProduct, applicationForm.amount, applicationForm.duration]);
 
   // ---- Calculator state ----
   const [calcAmount, setCalcAmount] = useState<string>('5000');
@@ -192,17 +296,76 @@ export function CustomerLoans() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 p-4 sm:p-6"
+      className="space-y-6"
     >
       {/* ==============================
-          Page Header
+          Instant Loan Hero Section (Fido-style)
           ============================== */}
       <motion.div variants={itemVariants}>
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Loans</h1>
-          <p className="text-sm text-slate-500">
-            Manage your loans, apply for new ones, and use the loan calculator to plan.
-          </p>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 p-6 sm:p-8">
+          {/* Decorative circles */}
+          <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute right-20 top-4 h-16 w-16 rounded-full bg-white/5" />
+
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            {/* Left side: Info */}
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-300" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-white/80">Instant Loan</span>
+              </div>
+              <h2 className="text-2xl font-bold leading-tight text-white sm:text-3xl">
+                You&apos;re pre-qualified for up to{' '}
+                <span className="text-yellow-300">{formatGHS(preQualifiedAmount)}</span>
+              </h2>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-white/90">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-white/70" />
+                  <span>Funds in under 5 minutes</span>
+                </div>
+                <div className="h-4 w-px bg-white/30" />
+                <div className="flex items-center gap-1.5">
+                  <Percent className="h-4 w-4 text-white/70" />
+                  <span>From 3% per month</span>
+                </div>
+              </div>
+              {/* Credit score badge */}
+              <div className="flex items-center gap-2">
+                <Badge
+                  className={`text-xs font-semibold border-0 ${
+                    userCreditScore >= 75
+                      ? 'bg-white/20 text-white'
+                      : userCreditScore >= 60
+                        ? 'bg-yellow-400/30 text-yellow-100'
+                        : 'bg-red-400/30 text-red-100'
+                  }`}
+                >
+                  <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+                  Credit Score: {userCreditScore}
+                  {userCreditScore >= 75
+                    ? ' — Excellent'
+                    : userCreditScore >= 60
+                      ? ' — Good'
+                      : ' — Fair'}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Right side: CTA */}
+            <div className="flex flex-col items-start gap-3 sm:items-end">
+              <Button
+                onClick={() => setActiveTab('apply')}
+                size="lg"
+                className="gap-2 rounded-full bg-white px-6 font-semibold text-emerald-700 shadow-lg shadow-emerald-900/20 hover:bg-white/90"
+              >
+                <Zap className="h-4 w-4" />
+                Get Instant Loan
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <p className="text-xs text-white/60">No paperwork required</p>
+            </div>
+          </div>
         </div>
       </motion.div>
 
@@ -210,7 +373,7 @@ export function CustomerLoans() {
           Main Tabs
           ============================== */}
       <motion.div variants={itemVariants}>
-        <Tabs defaultValue="my-loans" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="h-10 w-full rounded-lg bg-slate-100 p-1 sm:w-auto">
             <TabsTrigger
               value="my-loans"
@@ -323,10 +486,7 @@ export function CustomerLoans() {
                   Apply for a loan to get started with financing.
                 </p>
                 <Button
-                  onClick={() => {
-                    const tab = document.querySelector('[value="apply"]') as HTMLElement;
-                    tab?.click();
-                  }}
+                  onClick={() => setActiveTab('apply')}
                   className="mt-4 gap-2 bg-emerald-600 text-white hover:bg-emerald-700"
                   size="sm"
                 >
@@ -727,6 +887,39 @@ export function CustomerLoans() {
                 ))}
             </div>
 
+            {/* ==============================
+                Boost Your Credit Score Section
+                ============================== */}
+            <motion.div variants={itemVariants} className="space-y-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-base font-semibold text-slate-900">Boost Your Credit Score</h3>
+              </div>
+              <p className="text-sm text-slate-500">
+                Follow these tips to improve your credit score and unlock better loan terms.
+              </p>
+            </motion.div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {creditScoreTips.map((tip) => (
+                <motion.div
+                  key={tip.title}
+                  variants={itemVariants}
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+                    <CardContent className="p-4">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${tip.color}`}>
+                        <tip.icon className="h-5 w-5" />
+                      </div>
+                      <h4 className="mt-3 text-sm font-semibold text-slate-900">{tip.title}</h4>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-500">{tip.description}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
             {/* Apply Dialog */}
             <Dialog open={applyDialogOpen} onOpenChange={setApplyDialogOpen}>
               <DialogContent className="mx-4 sm:mx-0 sm:max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -752,29 +945,61 @@ export function CustomerLoans() {
                       />
                     </div>
 
-                    {/* Amount */}
-                    <div className="space-y-2">
-                      <Label htmlFor="apply-amount">Loan Amount (₵) *</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-                          ₵
+                    {/* ==============================
+                        Loan Amount Slider (Fido-style)
+                        ============================== */}
+                    <div className="space-y-3">
+                      <Label htmlFor="apply-amount">Loan Amount *</Label>
+
+                      {/* Prominent amount display */}
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-sm text-slate-400">₵</span>
+                        <span className="text-3xl font-bold text-emerald-600">
+                          {applicationForm.amount
+                            ? formatGHS(parseFloat(applicationForm.amount) || 0).replace('₵', '')
+                            : '0.00'}
                         </span>
-                        <Input
-                          id="apply-amount"
-                          type="number"
-                          inputMode="decimal"
-                          placeholder={`Min ${selectedProduct.minAmount}, Max ${selectedProduct.maxAmount}`}
-                          value={applicationForm.amount}
-                          onChange={(e) => setApplicationForm({ ...applicationForm, amount: e.target.value })}
-                          className="pl-12 h-12"
-                          min={selectedProduct.minAmount}
-                          max={selectedProduct.maxAmount}
-                          step="0.01"
-                        />
                       </div>
-                      <p className="text-xs text-slate-400">
-                        Range: {formatGHS(selectedProduct.minAmount)} — {formatGHS(selectedProduct.maxAmount)}
-                      </p>
+
+                      {/* Range Slider */}
+                      <Slider
+                        min={selectedProduct.minAmount}
+                        max={selectedProduct.maxAmount}
+                        step={50}
+                        value={[parseFloat(applicationForm.amount) || selectedProduct.minAmount]}
+                        onValueChange={([val]) =>
+                          setApplicationForm({ ...applicationForm, amount: String(val) })
+                        }
+                        className="w-full"
+                      />
+
+                      {/* Min / Max labels */}
+                      <div className="flex items-center justify-between text-xs text-slate-400">
+                        <span>{formatGHS(selectedProduct.minAmount)}</span>
+                        <span>{formatGHS(selectedProduct.maxAmount)}</span>
+                      </div>
+
+                      {/* Quick-select preset buttons */}
+                      {presetAmounts.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {presetAmounts.map((amt) => (
+                            <Button
+                              key={amt}
+                              type="button"
+                              variant={applicationForm.amount === String(amt) ? 'default' : 'outline'}
+                              size="sm"
+                              className={`h-8 text-xs ${
+                                applicationForm.amount === String(amt)
+                                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                  : 'text-slate-600 hover:text-emerald-600 hover:border-emerald-300'
+                              }`}
+                              onClick={() => setApplicationForm({ ...applicationForm, amount: String(amt) })}
+                            >
+                              {formatGHS(amt).replace('₵', '₵')}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Purpose */}
@@ -838,6 +1063,70 @@ export function CustomerLoans() {
                         onChange={(e) => setApplicationForm({ ...applicationForm, phoneNumber: e.target.value })}
                       />
                     </div>
+
+                    {/* ==============================
+                        Repayment Schedule Preview
+                        ============================== */}
+                    {amortizationPreview && amortizationPreview.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-3"
+                      >
+                        <Separator />
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <Calculator className="h-4 w-4 text-emerald-600" />
+                            <h4 className="text-sm font-semibold text-slate-900">
+                              Repayment Schedule Preview
+                            </h4>
+                          </div>
+                          <p className="mt-0.5 text-xs text-slate-400">
+                            Projected monthly payments at {selectedProduct.interestRate}% p.a.
+                          </p>
+                        </div>
+                        <div className="overflow-x-auto rounded-lg border border-slate-200">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-slate-50 hover:bg-slate-50">
+                                <TableHead className="text-[10px] font-semibold text-slate-500 px-3 py-2">Month</TableHead>
+                                <TableHead className="text-[10px] font-semibold text-slate-500 px-3 py-2 text-right">Payment</TableHead>
+                                <TableHead className="hidden text-[10px] font-semibold text-slate-500 px-3 py-2 text-right sm:table-cell">Principal</TableHead>
+                                <TableHead className="hidden text-[10px] font-semibold text-slate-500 px-3 py-2 text-right sm:table-cell">Interest</TableHead>
+                                <TableHead className="text-[10px] font-semibold text-slate-500 px-3 py-2 text-right">Balance</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {amortizationPreview.map((row) => (
+                                <TableRow key={row.month} className="border-slate-100">
+                                  <TableCell className="text-xs font-medium text-slate-700 px-3 py-2">
+                                    {row.month}
+                                  </TableCell>
+                                  <TableCell className="text-xs font-semibold text-slate-900 px-3 py-2 text-right">
+                                    {formatGHS(row.payment)}
+                                  </TableCell>
+                                  <TableCell className="hidden text-xs text-slate-600 px-3 py-2 text-right sm:table-cell">
+                                    {formatGHS(row.principal)}
+                                  </TableCell>
+                                  <TableCell className="hidden text-xs text-amber-600 px-3 py-2 text-right sm:table-cell">
+                                    {formatGHS(row.interest)}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-slate-600 px-3 py-2 text-right">
+                                    {formatGHS(row.remaining)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        {amortizationPreview.length < parseInt(applicationForm.duration) && (
+                          <p className="text-xs text-slate-400 text-center">
+                            Showing first {amortizationPreview.length} of {applicationForm.duration} months
+                          </p>
+                        )}
+                      </motion.div>
+                    )}
 
                     <Separator />
 

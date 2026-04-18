@@ -150,7 +150,7 @@ export function CustomerBills() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 p-4 lg:p-6"
+      className="space-y-6"
     >
       {/* ==============================
           1. Header

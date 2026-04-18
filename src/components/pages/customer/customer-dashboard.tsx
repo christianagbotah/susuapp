@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   PiggyBank, Landmark, Wallet, TrendingUp,
   ArrowUpRight, ArrowDownRight, Bell, Target, Users,
-  ChevronRight, DollarSign, CreditCard, Shield, CheckCircle2, Lightbulb,
+  ChevronRight, DollarSign, CreditCard, Shield, CheckCircle2, Lightbulb, Smartphone, Zap,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -136,6 +136,8 @@ export function CustomerDashboard() {
     { label: 'Send Money', icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50 hover:bg-purple-100', page: 'transfers' },
     { label: 'Refer & Earn', icon: Users, color: 'text-teal-600', bg: 'bg-teal-50 hover:bg-teal-100', page: 'referrals' },
     { label: 'View Statements', icon: CreditCard, color: 'text-slate-600', bg: 'bg-slate-50 hover:bg-slate-100', page: 'transactions' },
+    { label: 'Buy Airtime', icon: Smartphone, color: 'text-orange-600', bg: 'bg-orange-50 hover:bg-orange-100', page: 'airtime' },
+    { label: 'Pay Bills', icon: Zap, color: 'text-cyan-600', bg: 'bg-cyan-50 hover:bg-cyan-100', page: 'bills' },
   ];
 
   // Recent transactions (last 5)
@@ -190,7 +192,7 @@ export function CustomerDashboard() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 p-4 lg:p-6 overscroll-contain"
+      className="space-y-6 overscroll-contain"
     >
       {/* ==============================
           1. Welcome Banner
@@ -284,7 +286,7 @@ export function CustomerDashboard() {
           ============================== */}
       <motion.div variants={itemVariants}>
         <motion.div whileHover={{ y: -2 }}>
-          <Card className="border-slate-200/80 bg-white shadow-sm overflow-hidden">
+          <Card className="border-slate-200/80 bg-white shadow-sm overflow-hidden cursor-pointer" onClick={() => setActivePage('loans')}>
             <div className="bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/20">
               <CardContent className="p-4 lg:p-6">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
@@ -375,7 +377,7 @@ export function CustomerDashboard() {
           3. Quick Actions
           ============================== */}
       <motion.div variants={itemVariants}>
-        <div className="flex gap-3 overflow-x-auto flex-nowrap overscroll-x-contain scrollbar-none lg:grid lg:grid-cols-6 lg:overflow-visible">
+        <div className="flex gap-3 overflow-x-auto flex-nowrap overscroll-x-contain scrollbar-none lg:grid lg:grid-cols-4 lg:overflow-visible">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
@@ -517,6 +519,7 @@ export function CustomerDashboard() {
                       key={group.id}
                       whileHover={{ x: 2 }}
                       className="group flex cursor-pointer items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 transition-colors hover:border-emerald-200 hover:bg-emerald-50/40 mobile-card"
+                      onClick={() => setActivePage('susu')}
                     >
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
                         <Users className="h-5 w-5 text-emerald-600" />
@@ -733,7 +736,15 @@ export function CustomerDashboard() {
                     {upcomingPayouts.length} pending payout{upcomingPayouts.length !== 1 ? 's' : ''}
                   </CardDescription>
                 </div>
-                <DollarSign className="h-5 w-5 text-emerald-500" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                  onClick={() => setActivePage('susu')}
+                >
+                  View All
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -801,26 +812,31 @@ export function CustomerDashboard() {
                   emoji: '💡',
                   title: 'Save Automatically',
                   description: 'Set up automatic daily contributions to your susu group. Even small amounts add up significantly over time.',
+                  page: 'susu' as const,
                 },
                 {
                   emoji: '📈',
                   title: 'Track Your Progress',
                   description: 'Monitor your savings goals regularly. Members who track progress save 23% more on average.',
+                  page: null,
                 },
                 {
                   emoji: '🛡️',
                   title: 'Complete Your KYC',
                   description: 'Full KYC verification unlocks higher transaction limits and access to premium loan products.',
+                  page: 'settings' as const,
                 },
                 {
                   emoji: '💰',
                   title: 'Earn Referral Bonuses',
                   description: 'Refer friends to iSusuPro and earn ₵25 for each successful referral. No limit on earnings!',
+                  page: 'referrals' as const,
                 },
               ].map((tip) => (
                 <div
                   key={tip.title}
-                  className="min-w-[220px] shrink-0 rounded-xl border border-blue-100/60 bg-white/80 backdrop-blur-sm p-4 shadow-sm transition-shadow hover:shadow-md lg:min-w-0"
+                  className={`min-w-[220px] shrink-0 rounded-xl border border-blue-100/60 bg-white/80 backdrop-blur-sm p-4 shadow-sm transition-shadow hover:shadow-md lg:min-w-0${tip.page ? ' cursor-pointer' : ''}`}
+                  onClick={tip.page ? () => setActivePage(tip.page) : undefined}
                 >
                   <span className="text-2xl">{tip.emoji}</span>
                   <h4 className="mt-3 text-sm font-semibold text-slate-800">{tip.title}</h4>
