@@ -112,7 +112,7 @@ import { AdminTax } from '@/components/pages/admin/admin-tax';
 import { CustomerAirtime } from '@/components/pages/customer/customer-airtime';
 import { CustomerBills } from '@/components/pages/customer/customer-bills';
 import { CustomerBudgeting } from '@/components/pages/customer/customer-budgeting';
-import { NotificationPanel } from '@/components/shared/notification-panel';
+import { NotificationPanel, agentNotifications, adminNotifications, treasurerNotifications } from '@/components/shared/notification-panel';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -431,20 +431,17 @@ export function AppLayout() {
   // Bottom tabs (subset of nav for mobile tab bar)
   const bottomTabs = getBottomTabs(navItems, currentPortal);
 
-  // Notification count — agent/admin/treasurer mock data mirrors notification-panel.tsx
+  // Notification count — dynamically computed from exported notification arrays
   const notificationCount = (() => {
     switch (currentPortal) {
       case 'customer':
         return customerStore.notifications.filter(n => !n.read).length;
       case 'agent':
-        // Matches agentNotifications unread count in notification-panel.tsx
-        return 4; // n1,n2,n3,n5 are unread
+        return agentNotifications.filter(n => !n.read).length;
       case 'admin':
-        // Matches adminNotifications unread count in notification-panel.tsx
-        return 5; // n1,n2,n3,n5,n7 are unread
+        return adminNotifications.filter(n => !n.read).length;
       case 'treasurer':
-        // Matches treasurerNotifications unread count in notification-panel.tsx
-        return 4; // n1,n2,n3,n5 are unread
+        return treasurerNotifications.filter(n => !n.read).length;
       default: return 0;
     }
   })();

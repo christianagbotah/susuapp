@@ -300,7 +300,7 @@ export function TreasurerSettings() {
                     </div>
                     <div>
                       <p className="text-sm font-medium">Mobile Money (MoMo)</p>
-                      <p className="text-xs text-muted-foreground">MTN, Vodafone, AirtelTigo</p>
+                      <p className="text-xs text-muted-foreground">MTN, Telecel, AT Money</p>
                     </div>
                   </div>
                   <div

@@ -6,7 +6,7 @@
 export type PortalId = 'customer' | 'agent' | 'admin' | 'treasurer';
 export type CustomerPageId = 'dashboard' | 'susu' | 'loans' | 'wallet' | 'transactions' | 'settings' | 'transfers' | 'referrals' | 'airtime' | 'bills' | 'budgeting';
 export type AgentPageId = 'dashboard' | 'collections' | 'customers' | 'commissions' | 'settings';
-export type AdminPageId = 'dashboard' | 'users' | 'loans' | 'analytics' | 'compliance' | 'settings' | 'agents' | 'susu-groups' | 'payroll' | 'ssnit' | 'tax';
+export type AdminPageId = 'dashboard' | 'users' | 'loans' | 'analytics' | 'compliance' | 'settings' | 'agents' | 'susu-groups' | 'payroll' | 'ssnit' | 'tax' | 'kyc-verification';
 export type TreasurerPageId = 'dashboard' | 'groups' | 'payouts' | 'members' | 'reports' | 'settings';
 
 // Auth

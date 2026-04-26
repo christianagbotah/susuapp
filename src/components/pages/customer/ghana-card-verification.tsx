@@ -1406,7 +1406,7 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
             </h4>
             <div className="space-y-1.5">
               {[
-                'Higher transaction limits (up to GHS 50,000/day)',
+                'Higher transaction limits (up to ₵50,000/day)',
                 'Access to larger loan amounts',
                 'Priority customer support',
                 'Enhanced account security',

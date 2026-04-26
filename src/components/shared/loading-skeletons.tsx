@@ -96,7 +96,7 @@ export function ListSkeleton({ rows = 5 }: { rows?: number }) {
 
 export function CardGridSkeleton({ cols = 3, rows = 4 }: { cols?: number; rows?: number }) {
   return (
-    <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-${cols}`}>
+    <div className={cols === 2 ? 'grid grid-cols-1 gap-4 sm:grid-cols-2' : cols === 4 ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4' : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'}>
       {Array.from({ length: cols * rows }).map((_, i) => (
         <Card key={i}>
           <CardContent className="p-4 space-y-3">

@@ -120,66 +120,78 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       collectedByName: 'Self Payment',
       round: group?.currentRound || 1,
     };
-    const newTxn: Transaction = {
-      id: `txn-${Date.now()}`,
-      userId: 'usr-001',
-      type: 'susu_contribution',
-      amount,
-      currency: 'GHS',
-      status: 'completed',
-      date: new Date().toISOString(),
-      description: `Contribution to ${group?.name || 'susu group'}`,
-      reference: generateReference(),
-      category: 'Susu',
-      balanceAfter: 0,
-    };
-    set((s) => ({
-      mySusuContributions: [newContribution, ...s.mySusuContributions],
-      transactions: [newTxn, ...s.transactions],
-      wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: w.balance - amount } : w),
-    }));
+    set((s) => {
+      const mainWallet = s.wallets.find(w => w.type === 'main');
+      const newBalance = (mainWallet?.balance || 0) - amount;
+      const newTxn: Transaction = {
+        id: `txn-${Date.now()}`,
+        userId: 'usr-001',
+        type: 'susu_contribution',
+        amount,
+        currency: 'GHS',
+        status: 'completed',
+        date: new Date().toISOString(),
+        description: `Contribution to ${group?.name || 'susu group'}`,
+        reference: generateReference(),
+        category: 'Susu',
+        balanceAfter: newBalance,
+      };
+      return {
+        mySusuContributions: [newContribution, ...s.mySusuContributions],
+        transactions: [newTxn, ...s.transactions],
+        wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: newBalance } : w),
+      };
+    });
   },
 
   deposit: (walletId, amount, provider) => {
-    const newTxn: Transaction = {
-      id: `txn-${Date.now()}`,
-      userId: 'usr-001',
-      type: 'deposit',
-      amount,
-      currency: 'GHS',
-      status: 'completed',
-      date: new Date().toISOString(),
-      description: `Deposit via ${provider}`,
-      reference: generateReference(),
-      category: 'Wallet',
-      balanceAfter: 0,
-      counterpartName: provider,
-    };
-    set((s) => ({
-      transactions: [newTxn, ...s.transactions],
-      wallets: s.wallets.map(w => w.id === walletId ? { ...w, balance: w.balance + amount } : w),
-    }));
+    set((s) => {
+      const wallet = s.wallets.find(w => w.id === walletId);
+      const newBalance = (wallet?.balance || 0) + amount;
+      const newTxn: Transaction = {
+        id: `txn-${Date.now()}`,
+        userId: 'usr-001',
+        type: 'deposit',
+        amount,
+        currency: 'GHS',
+        status: 'completed',
+        date: new Date().toISOString(),
+        description: `Deposit via ${provider}`,
+        reference: generateReference(),
+        category: 'Wallet',
+        balanceAfter: newBalance,
+        counterpartName: provider,
+      };
+      return {
+        transactions: [newTxn, ...s.transactions],
+        wallets: s.wallets.map(w => w.id === walletId ? { ...w, balance: newBalance } : w),
+      };
+    });
   },
 
   withdraw: (walletId, amount, provider) => {
-    const newTxn: Transaction = {
-      id: `txn-${Date.now()}`,
-      userId: 'usr-001',
-      type: 'withdrawal',
-      amount,
-      currency: 'GHS',
-      status: 'completed',
-      date: new Date().toISOString(),
-      description: `Withdrawal to ${provider}`,
-      reference: generateReference(),
-      category: 'Wallet',
-      balanceAfter: 0,
-      counterpartName: provider,
-    };
-    set((s) => ({
-      transactions: [newTxn, ...s.transactions],
-      wallets: s.wallets.map(w => w.id === walletId ? { ...w, balance: w.balance - amount } : w),
-    }));
+    set((s) => {
+      const wallet = s.wallets.find(w => w.id === walletId);
+      const newBalance = (wallet?.balance || 0) - amount;
+      const newTxn: Transaction = {
+        id: `txn-${Date.now()}`,
+        userId: 'usr-001',
+        type: 'withdrawal',
+        amount,
+        currency: 'GHS',
+        status: 'completed',
+        date: new Date().toISOString(),
+        description: `Withdrawal to ${provider}`,
+        reference: generateReference(),
+        category: 'Wallet',
+        balanceAfter: newBalance,
+        counterpartName: provider,
+      };
+      return {
+        transactions: [newTxn, ...s.transactions],
+        wallets: s.wallets.map(w => w.id === walletId ? { ...w, balance: newBalance } : w),
+      };
+    });
   },
 
   markNotificationRead: (id) => set((s) => ({
@@ -211,43 +223,49 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       reference: generateReference(),
       note,
     };
-    const newTxn: Transaction = {
-      id: `txn-${Date.now()}`,
-      userId: 'usr-001',
-      type: 'transfer',
-      amount,
-      currency: 'GHS',
-      status: 'completed',
-      date: new Date().toISOString(),
-      description: `Transfer to ${recipientPhone}${note ? ` - ${note}` : ''}`,
-      reference: newTransfer.reference,
-      category: 'Transfer',
-      balanceAfter: 0,
-      counterpartName: recipientPhone,
-    };
-    set((s) => ({
-      recentTransfers: [newTransfer, ...s.recentTransfers],
-      transactions: [newTxn, ...s.transactions],
-      wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: w.balance - amount } : w),
-    }));
+    set((s) => {
+      const mainWallet = s.wallets.find(w => w.type === 'main');
+      const newBalance = (mainWallet?.balance || 0) - amount;
+      const newTxn: Transaction = {
+        id: `txn-${Date.now()}`,
+        userId: 'usr-001',
+        type: 'transfer',
+        amount,
+        currency: 'GHS',
+        status: 'completed',
+        date: new Date().toISOString(),
+        description: `Transfer to ${recipientPhone}${note ? ` - ${note}` : ''}`,
+        reference: newTransfer.reference,
+        category: 'Transfer',
+        balanceAfter: newBalance,
+        counterpartName: recipientPhone,
+      };
+      return {
+        recentTransfers: [newTransfer, ...s.recentTransfers],
+        transactions: [newTxn, ...s.transactions],
+        wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: newBalance } : w),
+      };
+    });
   },
 
   fileDispute: (transactionId, type, description) => {
-    const txn = transactions.find(t => t.id === transactionId);
-    const newDispute: Dispute = {
-      id: `dsp-${Date.now()}`,
-      transactionId,
-      userId: 'usr-001',
-      type: type as Dispute['type'],
-      description,
-      amount: txn?.amount || 0,
-      status: 'open',
-      date: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    set((s) => ({
-      disputes: [newDispute, ...s.disputes],
-    }));
+    set((s) => {
+      const txn = s.transactions.find(t => t.id === transactionId);
+      const newDispute: Dispute = {
+        id: `dsp-${Date.now()}`,
+        transactionId,
+        userId: 'usr-001',
+        type: type as Dispute['type'],
+        description,
+        amount: txn?.amount || 0,
+        status: 'open',
+        date: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      return {
+        disputes: [newDispute, ...s.disputes],
+      };
+    });
   },
 
   markDisputeResolved: (disputeId, resolution) => {
@@ -1237,6 +1255,9 @@ export const useCustomerExtendedStore = create<CustomerExtendedState>((set) => (
   purchaseAirtime: (provider, phone, productId) => {
     const product = mockAirtimeProducts.find(p => p.id === productId);
     if (!product) return;
+    const customerState = useCustomerStore.getState();
+    const mainWallet = customerState.wallets.find(w => w.type === 'main');
+    const newBalance = (mainWallet?.balance || 0) - product.price;
     const newTxn: AirtimeTransaction = {
       id: `att-${Date.now()}`,
       userId: 'usr-001',
@@ -1248,8 +1269,9 @@ export const useCustomerExtendedStore = create<CustomerExtendedState>((set) => (
       status: 'completed',
       reference: `ATT-${Date.now()}`,
       date: new Date().toISOString(),
-      balanceAfter: 0,
+      balanceAfter: newBalance,
     };
+    useCustomerStore.setState({ wallets: customerState.wallets.map(w => w.type === 'main' ? { ...w, balance: newBalance } : w) });
     set((s) => ({ airtimeTransactions: [newTxn, ...s.airtimeTransactions] }));
   },
 
@@ -1257,6 +1279,10 @@ export const useCustomerExtendedStore = create<CustomerExtendedState>((set) => (
     const biller = mockBillers.find(b => b.id === billerId);
     if (!biller) return;
     const fee = amount * 0.015;
+    const totalAmount = amount + fee;
+    const customerState = useCustomerStore.getState();
+    const mainWallet = customerState.wallets.find(w => w.type === 'main');
+    const newBalance = (mainWallet?.balance || 0) - totalAmount;
     const newPayment: BillPayment = {
       id: `bp-${Date.now()}`,
       userId: 'usr-001',
@@ -1267,13 +1293,14 @@ export const useCustomerExtendedStore = create<CustomerExtendedState>((set) => (
       customerName,
       amount,
       fee,
-      totalAmount: amount + fee,
+      totalAmount,
       status: 'completed',
       reference: `BILL-${Date.now()}`,
       date: new Date().toISOString(),
       token: biller.category === 'electricity' ? `${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}` : undefined,
-      balanceAfter: 0,
+      balanceAfter: newBalance,
     };
+    useCustomerStore.setState({ wallets: customerState.wallets.map(w => w.type === 'main' ? { ...w, balance: newBalance } : w) });
     set((s) => ({ billPayments: [newPayment, ...s.billPayments] }));
   },
 

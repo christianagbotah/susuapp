@@ -66,7 +66,7 @@ function getNotificationTypeConfig(type: Notification['type']): NotificationType
 
 // ---- Portal-specific mock notification data ----
 
-const agentNotifications: Notification[] = [
+export const agentNotifications: Notification[] = [
   {
     id: 'agent-n1',
     title: 'Collection Reminder — Nima Route',
@@ -132,7 +132,7 @@ const agentNotifications: Notification[] = [
   },
 ];
 
-const adminNotifications: Notification[] = [
+export const adminNotifications: Notification[] = [
   {
     id: 'admin-n1',
     title: 'Loan Approval Pending — ₵5,000.00',
@@ -207,7 +207,7 @@ const adminNotifications: Notification[] = [
   },
 ];
 
-const treasurerNotifications: Notification[] = [
+export const treasurerNotifications: Notification[] = [
   {
     id: 'tres-n1',
     title: 'Payout Processing — Makola Queens',

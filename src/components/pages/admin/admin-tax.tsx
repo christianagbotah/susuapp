@@ -92,13 +92,13 @@ const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b
 
 // Ghana PAYE Tax Bands 2024
 const PAYE_BANDS = [
-  { min: 0, max: 5880, rate: 0, label: 'First GHS 5,880' },
-  { min: 5881, max: 7200, rate: 5, label: 'GHS 5,881 – 7,200' },
-  { min: 7201, max: 8760, rate: 10, label: 'GHS 7,201 – 8,760' },
-  { min: 8761, max: 46764, rate: 17.5, label: 'GHS 8,761 – 46,764' },
-  { min: 46765, max: 238764, rate: 25, label: 'GHS 46,765 – 238,764' },
-  { min: 238765, max: 605004, rate: 30, label: 'GHS 238,765 – 605,004' },
-  { min: 605005, max: Infinity, rate: 35, label: 'Above GHS 605,004' },
+  { min: 0, max: 5880, rate: 0, label: 'First ₵ 5,880' },
+  { min: 5881, max: 7200, rate: 5, label: '₵ 5,881 – 7,200' },
+  { min: 7201, max: 8760, rate: 10, label: '₵ 7,201 – 8,760' },
+  { min: 8761, max: 46764, rate: 17.5, label: '₵ 8,761 – 46,764' },
+  { min: 46765, max: 238764, rate: 25, label: '₵ 46,765 – 238,764' },
+  { min: 238765, max: 605004, rate: 30, label: '₵ 238,765 – 605,004' },
+  { min: 605005, max: Infinity, rate: 35, label: 'Above ₵ 605,004' },
 ];
 
 const fadeUp = {
@@ -728,7 +728,7 @@ export function AdminTax() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="paye-income">Annual Taxable Income (GHS)</Label>
+                    <Label htmlFor="paye-income">Annual Taxable Income (₵)</Label>
                     <Input
                       id="paye-income"
                       type="number"

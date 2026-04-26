@@ -7,7 +7,6 @@ import {
   Search,
   X,
   ChevronRight,
-  Plus,
 } from 'lucide-react';
 
 // ---- Bottom Tab Bar ----

@@ -1093,8 +1093,8 @@ export function CustomerLoans() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="mtn">MTN MoMo</SelectItem>
-                          <SelectItem value="vodafone">Vodafone Cash</SelectItem>
-                          <SelectItem value="airteltigo">AirtelTigo Money</SelectItem>
+                          <SelectItem value="telecel">Telecel Cash</SelectItem>
+                          <SelectItem value="at">AT Money</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
