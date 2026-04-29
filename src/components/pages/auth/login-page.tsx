@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useNavigationStore } from '@/store/app-store';
+import { HydrationGuard } from '@/components/shared/hydration-fix';
 import { toast } from 'sonner';
 import type { PortalId } from '@/lib/types';
 
@@ -131,6 +132,7 @@ export function LoginPage() {
   };
 
   return (
+    <HydrationGuard>
     <div className="flex min-h-screen w-full">
       {/* ===== LEFT PANEL — Ghana-inspired brand (hidden on mobile) ===== */}
       <div className="relative hidden flex-col items-center justify-center overflow-hidden lg:flex lg:w-[480px] xl:w-[520px]">
@@ -455,5 +457,6 @@ export function LoginPage() {
         </motion.div>
       </div>
     </div>
+    </HydrationGuard>
   );
 }
