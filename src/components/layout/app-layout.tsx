@@ -1,10 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomerStore, useAgentStore, useAdminStore, useTreasurerStore, useNavigationStore } from '@/store/app-store';
 import { getInitials } from '@/lib/formatters';
+
+// Login page loaded with SSR disabled to prevent hydration mismatch from browser extensions
+const LoginPage = dynamic(
+  () => import('@/components/pages/auth/login-page').then(m => ({ default: m.LoginPage })),
+  { ssr: false }
+);
 
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -76,7 +83,6 @@ import {
 } from 'lucide-react';
 
 // Page component imports
-import { LoginPage } from '@/components/pages/auth/login-page';
 import { CustomerDashboard } from '@/components/pages/customer/customer-dashboard';
 import { CustomerSusu } from '@/components/pages/customer/customer-susu';
 import { CustomerLoans } from '@/components/pages/customer/customer-loans';
