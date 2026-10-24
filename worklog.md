@@ -421,3 +421,25 @@ Stage Summary:
 - Brand consistency improved (telco rebranding, currency symbol standardization)
 - Type safety improved (AdminPageId type completed)
 - All changes committed: 3145abd
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Remodernize iSusuPro — NestJS backend, advanced AI features, cross-platform architecture
+
+Work Log:
+- Built NestJS backend (mini-services/isusu-api): 8 modules (Auth/Users/Wallets/Transactions/Susu/Loans/Notifications/Health), custom JwtAuthGuard + RolesGuard RBAC, class-validator DTOs, Swagger at /api/v1/docs, in-memory repository-pattern store with seed
+- Solved sandbox process supervision: /api/backend bootstrap route spawns NestJS from the persistent dev server; /api/nest/* catch-all proxy routes API calls server-side (works from every origin); system supervisor auto-starts API on reboot
+- AI layer via z-ai SDK (server-only): /api/ai/chat (Susu AI assistant), /api/ai/insights (spending analysis), /api/ai/loan-assessment (credit risk engine) — all with strict-JSON prompts
+- AI frontend: Susu AI floating chat widget (portal-aware, spring animations, typing indicator, suggestion chips) mounted in AppLayout; AI Financial Insights card on customer dashboard; AI Risk Assessment dialog + AI Check buttons on admin loans
+- Login page now authenticates via NestJS JWT (bcrypt PIN), self-heals via bootstrap, falls back to demo mode gracefully
+- ARCHITECTURE.md: cross-platform blueprint (Web PWA / Tauri Win+macOS / Expo Android+iOS / shared OpenAPI SDK, monorepo target, security roadmap)
+- Browser-verified end-to-end with agent-browser: NestJS login (POST /api/nest/auth/login 200), AI insights (personalized ₵ data), AI chat (contextual reply), admin AI loan check (Medium/58 + 5 factors)
+- Lint clean for all new code (3 pre-existing errors in untouched files remain)
+- Committed locally: 89185e0 (55 files, +2763 lines). Push BLOCKED: GitHub token from prior session expired after sandbox recycle — awaiting fresh token from user
+
+Stage Summary:
+- NestJS backend live on port 4000 with Swagger; frontend authenticated against it for the first time
+- 3 AI features shipped and verified; portal-aware Susu AI available in all 4 portals
+- Cross-platform architecture documented (Tauri desktop, Expo mobile, shared SDK)
+- Pending: git push once user provides a valid GitHub PAT
