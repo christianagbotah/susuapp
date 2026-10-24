@@ -66,7 +66,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' },
+    transition: { duration: 0.4, ease: 'easeOut' as const },
   },
 };
 
@@ -79,7 +79,7 @@ const productCardVariants = {
     transition: {
       delay: i * 0.05,
       duration: 0.35,
-      ease: 'easeOut',
+      ease: 'easeOut' as const,
     },
   }),
 };
@@ -206,7 +206,7 @@ export function CustomerAirtime() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3">
-              {(Object.entries(providerConfig) as [TelcoProvider, typeof providerConfig[TelcoProvider]][]).map(
+              {(Object.entries(providerConfig) as [keyof typeof providerConfig, (typeof providerConfig)[keyof typeof providerConfig]][]).map(
                 ([key, config]) => {
                   const isSelected = selectedProvider === key;
                   return (

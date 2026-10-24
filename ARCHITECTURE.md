@@ -140,37 +140,39 @@ All prompts enforce **strict JSON** responses (parsed with fence-stripping + fai
 
 ---
 
-## 5. Frontend Modernization (shipped)
+## 5. Frontend — 10 Fully-Developed Portals (shipped)
 
-- **Susu AI floating widget** — spring-animated FAB + panel, typing indicator, portal-aware suggestions, bold-aware message rendering, above bottom-nav on mobile (`bottom-20`) and docked on desktop (`lg:bottom-6`).
-- **AI Financial Insights card** — gradient identity, skeleton-while-thinking, staggered insight reveal with tone icons.
-- **AI loan risk dialog** — risk badge, score bar, factor chips, one-click "Continue to Approval".
-- **Real authentication path** — login tries the NestJS API (JWT), self-heals via `/api/backend`, falls back to demo mode with an informative toast; 401 surfaces "Demo PIN: 123456".
+| Portal | Role | Key modules |
+|---|---|---|
+| Customer | Susu saver / borrower | Susu groups, wallet, MoMo transfers, loans, airtime, bills (ECG/Water/DSTV), budgeting, referrals, **USSD *713# simulator**, Ghana Card KYC |
+| Agent | Field collector | Daily collection routes, customer onboarding, KYC initiation, commissions |
+| Field Supervisor | Agent oversight | Live agent status, route reassignment, stop-level collection verification, spot checks (receipt & cash discipline) |
+| Teller / Cashier | Counter operations | Queue management, walk-in deposits/withdrawals, cash-note counting, EOD reconciliation with variance flags, vault & bank transfers (dual control) |
+| Branch Manager | Branch P&L | Staff directory & status, high-value loan approval queue (with LO recommendation + audit trail), branch target setting & KPI tracking |
+| Loan Officer | Credit desk | Origination pipeline (5-stage funnel), 5C appraisal scoring (Character/Capacity/Capital/Collateral/Conditions with grades A–E), BoG-classified portfolio with PAR 30 |
+| Group Treasurer | Community susu | Group books, payout rotation, member records, reports |
+| Accountant | Finance | Double-entry journal posting/reversal, chart of accounts, financial statements (SoFP, Income Statement, Trial Balance, Cash Flow), bank & MoMo float reconciliation (GCB, Ecobank, MTN/Telecel/AT floats) |
+| Compliance Officer | AML/CFT | AML alert triage (structuring, rapid movement, sanctions screening), STR filing to FIC (Act 874/1044), BoG NBFRI 3/8/15 returns with completion tracking |
+| System Admin | Platform | Users, agents, integrations (Hubtel/Paystack, Hubtel SMS/Arkesel), payroll, SSNIT, GRA tax, analytics, KYC review |
 
-## 6. Cross-Platform Client Strategy
+**RBAC** — `src/lib/rbac.ts` is the single source of truth: 35+ granular permissions
+(`loans.approve`, `cash.handle_drawer`, `aml.file_str`, `bog.file_returns`, ...) mapped to
+all 10 roles, mirrored by the NestJS `RolesGuard`. Portal settings pages render each
+role's effective permission set.
 
-### Web (live today)
-Next.js 16 + Tailwind 4 + shadcn/ui + Zustand. PWA manifest + theme-color already configured → installable on Android/desktop Chrome.
+## 6. Cross-Platform Delivery (shipped)
 
-### Windows & macOS (Tauri)
-```
-tauri.conf.json → { build: { frontendDist: '../web/out' }, app: { windows: [{ title: 'iSusuPro', width: 1280, height: 800 }] } }
-```
-- Reuses the web build 1:1 (static export or `devUrl` pointing at the hosted portal).
-- Rust sidecar can hold the API base URL + secure token storage (keychain/credential manager).
-- Native auto-updater via Tauri's updater plugin.
+| Platform | Mechanism | Build |
+|---|---|---|
+| **Web** | Next.js 16 PWA | `bun run dev` / `bun run build && bun run start` |
+| **Android / iOS** | PWA install (banner + `beforeinstallprompt`) **or** Capacitor shell | `bun run cap:sync && bun run cap:open:android` → AAB/IPA |
+| **Windows / macOS / Linux** | PWA install (Chrome/Edge) **or** Tauri shell | `bun run tauri:build:windows` / `tauri:build:macos` → MSI/NSIS/DMG |
+| **Feature phones** | USSD gateway (*713#) | Simulator in-app; production via telco USSD APIs |
 
-### Android & iOS (Expo)
-- `packages/sdk` (OpenAPI-generated) + TanStack Query for server state.
-- Offline-first: queue susu collections locally (agents work in low-connectivity markets), sync when online.
-- Expo SecureStore for JWT; push notifications via Expo Notifications (payout reminders, loan due dates).
-- Biometric login (Face ID/fingerprint) mapping to the same phone+PIN credentials on first run.
-
-### Shared SDK flow
-```
-NestJS decorators ──Swagger──▶ /api/v1/docs-json ──openapi-typescript──▶ packages/sdk
-                                                                     ▲ web · mobile · desktop
-```
+PWA v2 assets: `public/sw.js` (offline-first shell caching, SWR for static assets,
+network-only for financial APIs), `public/offline.html`, `manifest.json` (shortcuts,
+maskable icons), `src/components/shared/pwa-provider.tsx` (SW registration, install
+banner with platform detection, update prompt; auto-suppressed inside Capacitor/Tauri).
 
 ## 7. Security Roadmap
 

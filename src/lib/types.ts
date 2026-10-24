@@ -2,12 +2,47 @@
 // iSusuPro Ghana - Enterprise Type Definitions
 // ============================================
 
-// Portal & Navigation
-export type PortalId = 'customer' | 'agent' | 'admin' | 'treasurer';
-export type CustomerPageId = 'dashboard' | 'susu' | 'loans' | 'wallet' | 'transactions' | 'settings' | 'transfers' | 'referrals' | 'airtime' | 'bills' | 'budgeting';
+// Portal & Navigation — 10 fully-developed portals
+export type PortalId =
+  | 'customer' | 'agent' | 'admin' | 'treasurer'
+  | 'branch-manager' | 'loan-officer' | 'teller' | 'field-supervisor'
+  | 'accountant' | 'compliance-officer';
+export type CustomerPageId = 'dashboard' | 'susu' | 'loans' | 'wallet' | 'transactions' | 'settings' | 'transfers' | 'referrals' | 'airtime' | 'bills' | 'budgeting' | 'ussd';
 export type AgentPageId = 'dashboard' | 'collections' | 'customers' | 'commissions' | 'settings';
 export type AdminPageId = 'dashboard' | 'users' | 'loans' | 'analytics' | 'compliance' | 'settings' | 'agents' | 'susu-groups' | 'payroll' | 'ssnit' | 'tax' | 'kyc-verification';
 export type TreasurerPageId = 'dashboard' | 'groups' | 'payouts' | 'members' | 'reports' | 'settings';
+export type BranchManagerPageId = 'dashboard' | 'staff' | 'loan-approvals' | 'targets' | 'settings';
+export type LoanOfficerPageId = 'dashboard' | 'pipeline' | 'appraisals' | 'portfolio' | 'settings';
+export type TellerPageId = 'dashboard' | 'counter' | 'reconciliation' | 'vault' | 'settings';
+export type FieldSupervisorPageId = 'dashboard' | 'agents' | 'routes' | 'spot-checks' | 'settings';
+export type AccountantPageId = 'dashboard' | 'ledger' | 'statements' | 'reconciliation' | 'settings';
+export type ComplianceOfficerPageId = 'dashboard' | 'aml-alerts' | 'str-reports' | 'bog-returns' | 'settings';
+
+// Local language (Ghana) preference
+export type GhanaLanguage = 'en' | 'tw' | 'ga' | 'ee' | 'ha' | 'dag';
+
+// ---- RBAC ----
+export type Permission =
+  | 'susu.contribute' | 'susu.manage_groups' | 'susu.approve_payout'
+  | 'loans.apply' | 'loans.recommend' | 'loans.approve' | 'loans.disburse' | 'loans.writeoff'
+  | 'wallet.deposit' | 'wallet.withdraw' | 'wallet.transfer'
+  | 'kyc.initiate' | 'kyc.review' | 'kyc.approve'
+  | 'aml.monitor' | 'aml.file_str' | 'bog.file_returns'
+  | 'cash.handle_drawer' | 'cash.eod_reconcile' | 'cash.vault_transfer'
+  | 'ledger.post' | 'ledger.close_period' | 'reports.financial'
+  | 'agents.onboard' | 'agents.supervise' | 'agents.verify_collections'
+  | 'staff.manage' | 'branch.targets_manage' | 'payroll.process'
+  | 'users.manage' | 'config.manage' | 'analytics.view_all' | 'audit.view'
+  | 'ussd.manage' | 'ai.use';
+
+export type RoleId = PortalId;
+export interface RoleDefinition {
+  id: RoleId;
+  label: string;
+  group: 'field' | 'operations' | 'finance' | 'governance' | 'customer';
+  description: string;
+  permissions: Permission[];
+}
 
 // Auth
 export interface User {
@@ -877,4 +912,271 @@ export interface Expense {
   location?: string;
   recurring: boolean;
   recurringFrequency?: 'daily' | 'weekly' | 'monthly';
+}
+
+// ============================================
+// STAFF PORTALS — Branch Manager, Loan Officer,
+// Teller, Field Supervisor, Accountant, Compliance
+// ============================================
+
+// ---- BRANCH MANAGER ----
+export interface StaffMember {
+  id: string;
+  name: string;
+  role: 'Loan Officer' | 'Teller' | 'Field Supervisor' | 'Agent' | 'Accountant' | 'Compliance Officer';
+  phone: string;
+  email: string;
+  branch: string;
+  status: 'active' | 'on_leave' | 'suspended';
+  joinedDate: string;
+  avatarColor: string;
+  performance: number; // 0-100
+  pendingApprovals?: number;
+}
+
+export interface LoanApprovalRequest {
+  id: string;
+  applicantName: string;
+  applicantId: string;
+  productName: string;
+  amount: number;
+  tenorMonths: number;
+  interestRate: number;
+  officerRecommendation: 'approve' | 'reject' | 'review';
+  officerName: string;
+  appraisalScore: number; // 0-100
+  creditGrade: 'A' | 'B' | 'C' | 'D' | 'E';
+  status: 'pending_bm' | 'approved' | 'rejected' | 'disbursed';
+  requestDate: string;
+  purpose: string;
+  monthlyDeduction: number;
+}
+
+export interface BranchTarget {
+  id: string;
+  metric: string;
+  period: 'October 2026' | 'Q4 2026' | 'FY 2026';
+  target: number;
+  achieved: number;
+  unit: 'currency' | 'count' | 'percent';
+  owner: string;
+}
+
+// ---- LOAN OFFICER ----
+export interface LoanApplication {
+  id: string;
+  applicantName: string;
+  phone: string;
+  productName: string;
+  amount: number;
+  tenorMonths: number;
+  purpose: string;
+  stage: 'new' | 'documents_pending' | 'field_visit' | 'appraisal' | 'recommended' | 'approved' | 'rejected' | 'disbursed';
+  submittedDate: string;
+  branch: string;
+  dailyRate?: number; // susu-linked daily savings
+}
+
+export interface LoanAppraisal {
+  id: string;
+  applicationId: string;
+  applicantName: string;
+  character: number; // 1-5
+  capacity: number;
+  capital: number;
+  collateral: number;
+  conditions: number;
+  fieldVisitDate: string;
+  businessLocation: string;
+  notes: string;
+  recommendation: 'approve' | 'reject' | 'reduce_amount';
+  recommendedAmount: number;
+  officerName: string;
+}
+
+export interface PortfolioLoan {
+  id: string;
+  customerName: string;
+  productName: string;
+  principal: number;
+  outstanding: number;
+  arrearsDays: number;
+  classification: 'current' | 'watch' | 'substandard' | 'doubtful' | 'loss';
+  lastPaymentDate: string;
+  branch: string;
+}
+
+// ---- TELLER ----
+export interface TellerDrawer {
+  tellerId: string;
+  tellerName: string;
+  openingFloat: number;
+  cashIn: number;
+  cashOut: number;
+  expectedBalance: number;
+  countedBalance: number;
+  variance: number;
+  currencyNotes: { note: number; count: number }[];
+  status: 'open' | 'balanced' | 'variance_pending';
+  date: string;
+}
+
+export interface CounterTransaction {
+  id: string;
+  queueNo: number;
+  customerName: string;
+  customerPhone: string;
+  type: 'deposit' | 'withdrawal' | 'susu_collection' | 'loan_repayment' | 'bill_payment';
+  amount: number;
+  channel: 'cash' | 'momo_mtn' | 'momo_telecel' | 'momo_at' | 'cheque';
+  status: 'waiting' | 'processing' | 'completed' | 'cancelled';
+  time: string;
+  reference: string;
+}
+
+export interface VaultTransfer {
+  id: string;
+  direction: 'to_vault' | 'from_vault' | 'to_bank' | 'from_bank';
+  amount: number;
+  bank?: string;
+  requestedBy: string;
+  approvedBy?: string;
+  status: 'requested' | 'approved' | 'in_transit' | 'completed';
+  date: string;
+  note?: string;
+}
+
+export interface EODReconciliationLine {
+  id: string;
+  category: 'cash' | 'momo_mtn' | 'momo_telecel' | 'momo_at' | 'cheque' | 'float';
+  systemTotal: number;
+  countedTotal: number;
+  variance: number;
+  txCount: number;
+}
+
+// ---- FIELD SUPERVISOR ----
+export interface SupervisedAgent {
+  id: string;
+  name: string;
+  agentCode: string;
+  area: string;
+  customers: number;
+  todayCollections: number;
+  expectedToday: number;
+  collectionRate: number;
+  status: 'in_field' | 'at_office' | 'offline';
+  lastSync: string;
+  floatBalance: number;
+  pendingVerify: number;
+}
+
+export interface SupervisorRoute {
+  id: string;
+  name: string;
+  area: string;
+  agentId: string;
+  agentName: string;
+  customers: number;
+  dailyTarget: number;
+  collectedToday: number;
+  status: 'assigned' | 'in_progress' | 'completed' | 'unassigned';
+  stops: { customerName: string; area: string; amount: number; status: 'pending' | 'collected' | 'missed' }[];
+}
+
+export interface SpotCheck {
+  id: string;
+  agentId: string;
+  agentName: string;
+  date: string;
+  customersChecked: number;
+  receiptsIssued: number;
+  cashMatched: boolean;
+  issuesFound: string[];
+  rating: 'excellent' | 'good' | 'needs_improvement' | 'poor';
+  notes: string;
+  verifiedBy: string;
+}
+
+// ---- ACCOUNTANT ----
+export interface LedgerEntry {
+  id: string;
+  date: string;
+  reference: string;
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  narration: string;
+  postedBy: string;
+  status: 'posted' | 'draft' | 'reversed';
+}
+
+export interface ChartOfAccount {
+  code: string;
+  name: string;
+  type: 'asset' | 'liability' | 'equity' | 'income' | 'expense';
+  balance: number;
+  momChange: number;
+}
+
+export interface FinancialStatement {
+  id: string;
+  name: 'Statement of Financial Position' | 'Income Statement' | 'Trial Balance' | 'Cash Flow Statement';
+  period: string;
+  status: 'draft' | 'final' | 'submitted';
+  preparedBy: string;
+  totalAssets?: number;
+  totalLiabilities?: number;
+  totalEquity?: number;
+  revenue?: number;
+  expenses?: number;
+  netIncome?: number;
+}
+
+export interface BankReconciliation {
+  id: string;
+  source: string;
+  bookBalance: number;
+  statementBalance: number;
+  unmatchedItems: { date: string; description: string; amount: number; type: 'debit' | 'credit' }[];
+  status: 'in_progress' | 'reconciled' | 'variance';
+  period: string;
+}
+
+// ---- COMPLIANCE OFFICER ----
+export interface AMLAlert {
+  id: string;
+  rule: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  customerName: string;
+  customerId: string;
+  description: string;
+  amount: number;
+  triggeredDate: string;
+  status: 'open' | 'investigating' | 'escalated' | 'closed_false_positive' | 'closed_str_filed';
+  assignedTo?: string;
+}
+
+export interface STRReport {
+  id: string;
+  alertId: string;
+  subjectName: string;
+  suspiciousActivity: string;
+  amountInvolved: number;
+  filedWith: 'Financial Intelligence Centre (FIC)' | 'Bank of Ghana';
+  filedDate: string;
+  status: 'draft' | 'filed' | 'acknowledged' | 'under_review';
+  reference: string;
+}
+
+export interface BOGReturn {
+  id: string;
+  return: 'NBFRI 3 (Capital Adequacy)' | 'NBFRI 8 (Liquid Assets)' | 'NBFRI 15 (Large Exposures)' | 'Monthly Susu Returns' | 'AML/CFT Return';
+  period: string;
+  dueDate: string;
+  status: 'not_started' | 'in_progress' | 'submitted' | 'late';
+  completion: number;
+  preparedBy: string;
+  notes: string;
 }

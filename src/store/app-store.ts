@@ -17,7 +17,7 @@ import type {
   PayrollEmployee, Payslip, PayrollRun,
   SSNITContribution, SSNITFiling,
   TAXFiling, TAXPayment, TAXCalendarItem,
-  AirtimeProduct, AirtimeTransaction,
+  AirtimeProduct, AirtimeTransaction, TelcoProvider,
   Biller, BillPayment,
   Budget, Expense,
 } from '@/lib/types';

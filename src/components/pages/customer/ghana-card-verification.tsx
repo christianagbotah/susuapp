@@ -337,7 +337,7 @@ export function GhanaCardVerification({ onComplete, onCancel }: GhanaCardVerific
       <div className="flex justify-center">
         <motion.div
           animate={{ scale: [1, 1.05, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' as const }}
           className="relative"
         >
           <div className="w-48 h-30 rounded-xl bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 p-[2px] shadow-lg">

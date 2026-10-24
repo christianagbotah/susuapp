@@ -6,6 +6,7 @@ import { useCustomerStore } from '@/store/app-store';
 import { MobileDrawer } from '@/components/shared/mobile-components';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatTimeAgo } from '@/lib/formatters';
+import { staffNotifications } from '@/lib/staff-data';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -292,7 +293,8 @@ function getInitialNotifications(portal: string): Notification[] {
     case 'treasurer':
       return treasurerNotifications;
     default:
-      return [];
+      // Staff portals (branch-manager, loan-officer, teller, field-supervisor, accountant, compliance-officer)
+      return staffNotifications[portal] ?? [];
   }
 }
 
@@ -368,6 +370,12 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
       agent: 'Agent',
       admin: 'Admin',
       treasurer: 'Treasurer',
+      'branch-manager': 'Branch Manager',
+      'loan-officer': 'Loan Officer',
+      teller: 'Teller',
+      'field-supervisor': 'Field Supervisor',
+      accountant: 'Accountant',
+      'compliance-officer': 'Compliance',
     };
     return labels[portal] ?? portal;
   }, [portal]);

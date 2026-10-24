@@ -38,7 +38,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' },
+    transition: { duration: 0.4, ease: 'easeOut' as const },
   },
 };
 
@@ -183,7 +183,7 @@ export function CustomerLoans() {
   }, [myLoans]);
 
   // ---- Credit score & pre-qualification (Fido-style dynamic) ----
-  const creditScoreResult = useMemo(() => calculateCreditScore(), [myLoans, loanPayments]);
+  const creditScoreResult = useMemo(() => calculateCreditScore(), [calculateCreditScore, myLoans, loanPayments]);
   const userCreditScore = creditScoreResult.score;
 
   const preQualifiedAmount = useMemo(() => {
@@ -290,7 +290,7 @@ export function CustomerLoans() {
       purpose,
       term: parseInt(duration),
       termUnit: selectedProduct.termUnit,
-      disbursementMethod,
+      disbursementMethod: disbursementMethod as 'momo' | 'bank',
       disbursementNumber: phoneNumber,
       interestRate: selectedProduct.interestRate,
     });

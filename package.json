@@ -10,7 +10,17 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "pwa:icons": "python3 scripts/gen-icons.py",
+    "cap:add:android": "capacitor add android",
+    "cap:add:ios": "capacitor add ios",
+    "cap:sync": "bun run build && capacitor sync",
+    "cap:open:android": "capacitor open android",
+    "cap:open:ios": "capacitor open ios",
+    "tauri:dev": "tauri dev",
+    "tauri:build:windows": "tauri build --target x86_64-pc-windows-msvc",
+    "tauri:build:macos": "tauri build --target aarch64-apple-darwin",
+    "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

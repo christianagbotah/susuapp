@@ -151,9 +151,12 @@ export function BottomSheet({ open, onClose, title, children, className = '' }: 
     currentDragY.current = 0;
   }, [close]);
 
-  // Reset drag offset when closed
+  // Reset drag offset when closed (deferred to next frame — avoids sync setState in effect)
   useEffect(() => {
-    if (!open) setDragOffset(0);
+    if (!open) {
+      const raf = requestAnimationFrame(() => setDragOffset(0));
+      return () => cancelAnimationFrame(raf);
+    }
   }, [open]);
 
   return (
@@ -450,12 +453,14 @@ export function SwipeableRow({
   const currentX = useRef(0);
   const isDragging = useRef(false);
   const [translateX, setTranslateX] = useState(0);
+  const [isDraggingUi, setIsDraggingUi] = useState(false);
 
   const maxLeft = leftActions.length * 70;
   const maxRight = rightActions.length * 70;
 
   const handleDragStart = useCallback((e: React.PointerEvent) => {
     isDragging.current = true;
+    setIsDraggingUi(true);
     startX.current = e.clientX;
     currentX.current = translateX;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -477,6 +482,7 @@ export function SwipeableRow({
 
   const handleDragEnd = useCallback(() => {
     isDragging.current = false;
+    setIsDraggingUi(false);
     // Snap logic
     if (translateX > threshold) {
       setTranslateX(maxLeft);
@@ -544,7 +550,7 @@ export function SwipeableRow({
         className="relative z-10 bg-background"
         style={{
           transform: `translateX(${translateX}px)`,
-          transition: isDragging.current ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+          transition: isDraggingUi ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
           touchAction: 'pan-y',
         }}
         onPointerDown={handleDragStart}

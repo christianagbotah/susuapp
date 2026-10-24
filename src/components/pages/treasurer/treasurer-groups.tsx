@@ -54,7 +54,7 @@ export function TreasurerGroups() {
     const uniqueMembers = Array.from(new Set(contributions.map(c => c.memberId)));
 
     // Combine unique members from contributions and fill remaining with mock data
-    const members = [];
+    const members: { id: string; name: string; phone: string; status: 'active' | 'overdue'; contributionsCount: number; totalContributed: number; lastContribution: string | null }[] = [];
     const usedNames = new Set<string>();
 
     for (let i = 0; i < memberCount; i++) {

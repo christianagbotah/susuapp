@@ -5,6 +5,10 @@ import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomerStore, useAgentStore, useAdminStore, useTreasurerStore, useNavigationStore } from '@/store/app-store';
+import {
+  useBranchManagerStore, useLoanOfficerStore, useTellerStore,
+  useFieldSupervisorStore, useAccountantStore, useComplianceStore,
+} from '@/store/staff-stores';
 import { getInitials } from '@/lib/formatters';
 
 // Login page loaded with SSR disabled to prevent hydration mismatch from browser extensions
@@ -80,6 +84,21 @@ import {
   Smartphone,
   Zap,
   PieChart,
+  // Staff portal icons
+  ClipboardCheck,
+  ClipboardList,
+  UserSearch,
+  Briefcase,
+  Target,
+  UserCog,
+  Scale,
+  BookOpen,
+  FileSpreadsheet,
+  Vault,
+  FileWarning,
+  Landmark as LandmarkIcon,
+  Radio,
+  Route as RouteIcon,
 } from 'lucide-react';
 
 // Page component imports
@@ -118,8 +137,37 @@ import { AdminTax } from '@/components/pages/admin/admin-tax';
 import { CustomerAirtime } from '@/components/pages/customer/customer-airtime';
 import { CustomerBills } from '@/components/pages/customer/customer-bills';
 import { CustomerBudgeting } from '@/components/pages/customer/customer-budgeting';
+import { CustomerUssd } from '@/components/pages/customer/customer-ussd';
+// Staff portals
+import { BranchManagerDashboard } from '@/components/pages/branch-manager/branch-manager-dashboard';
+import { BranchManagerStaff } from '@/components/pages/branch-manager/branch-manager-staff';
+import { BranchManagerLoanApprovals } from '@/components/pages/branch-manager/branch-manager-loan-approvals';
+import { BranchManagerTargets } from '@/components/pages/branch-manager/branch-manager-targets';
+import { LoanOfficerDashboard } from '@/components/pages/loan-officer/loan-officer-dashboard';
+import { LoanOfficerPipeline } from '@/components/pages/loan-officer/loan-officer-pipeline';
+import { LoanOfficerAppraisals } from '@/components/pages/loan-officer/loan-officer-appraisals';
+import { LoanOfficerPortfolio } from '@/components/pages/loan-officer/loan-officer-portfolio';
+import { TellerDashboard } from '@/components/pages/teller/teller-dashboard';
+import { TellerCounter } from '@/components/pages/teller/teller-counter';
+import { TellerReconciliation } from '@/components/pages/teller/teller-reconciliation';
+import { TellerVault } from '@/components/pages/teller/teller-vault';
+import { FieldSupervisorDashboard } from '@/components/pages/field-supervisor/field-supervisor-dashboard';
+import { FieldSupervisorAgents } from '@/components/pages/field-supervisor/field-supervisor-agents';
+import { FieldSupervisorRoutes } from '@/components/pages/field-supervisor/field-supervisor-routes';
+import { FieldSupervisorSpotChecks } from '@/components/pages/field-supervisor/field-supervisor-spot-checks';
+import { AccountantDashboard } from '@/components/pages/accountant/accountant-dashboard';
+import { AccountantLedger } from '@/components/pages/accountant/accountant-ledger';
+import { AccountantStatements } from '@/components/pages/accountant/accountant-statements';
+import { AccountantReconciliation } from '@/components/pages/accountant/accountant-reconciliation';
+import { ComplianceDashboard } from '@/components/pages/compliance-officer/compliance-dashboard';
+import { ComplianceAmlAlerts } from '@/components/pages/compliance-officer/compliance-aml-alerts';
+import { ComplianceStrReports } from '@/components/pages/compliance-officer/compliance-str-reports';
+import { ComplianceBogReturns } from '@/components/pages/compliance-officer/compliance-bog-returns';
 import { NotificationPanel, agentNotifications, adminNotifications, treasurerNotifications } from '@/components/shared/notification-panel';
 import { SusuAiChat } from '@/components/shared/susu-ai-chat';
+import { StaffSettings } from '@/components/shared/staff-settings';
+import { staffNotifications } from '@/lib/staff-data';
+import { PwaProvider } from '@/components/shared/pwa-provider';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -140,6 +188,7 @@ const customerNavItems: NavItem[] = [
   { id: 'budgeting', label: 'Budget', icon: PieChart },
   { id: 'airtime', label: 'Airtime', icon: Smartphone },
   { id: 'bills', label: 'Bills', icon: Zap },
+  { id: 'ussd', label: 'USSD *713#', icon: Calculator },
   { id: 'referrals', label: 'Refer', icon: UserPlus },
   { id: 'transactions', label: 'History', icon: ArrowLeftRight },
   { id: 'settings', label: 'Settings', icon: Settings },
@@ -177,11 +226,65 @@ const treasurerNavItems: NavItem[] = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
+const branchManagerNavItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'staff', label: 'Staff', icon: UserCog },
+  { id: 'loan-approvals', label: 'Approvals', icon: ClipboardCheck },
+  { id: 'targets', label: 'Targets', icon: Target },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
+const loanOfficerNavItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'pipeline', label: 'Pipeline', icon: ClipboardList },
+  { id: 'appraisals', label: 'Appraisals', icon: UserSearch },
+  { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
+const tellerNavItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'counter', label: 'Counter', icon: Users },
+  { id: 'reconciliation', label: 'Reconcile', icon: Scale },
+  { id: 'vault', label: 'Vault', icon: Vault },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
+const fieldSupervisorNavItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'agents', label: 'Agents', icon: Radio },
+  { id: 'routes', label: 'Routes', icon: RouteIcon },
+  { id: 'spot-checks', label: 'Spot Checks', icon: ClipboardCheck },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
+const accountantNavItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'ledger', label: 'Ledger', icon: BookOpen },
+  { id: 'statements', label: 'Statements', icon: FileSpreadsheet },
+  { id: 'reconciliation', label: 'Reconcile', icon: Scale },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
+const complianceNavItems: NavItem[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'aml-alerts', label: 'AML Alerts', icon: ShieldAlert },
+  { id: 'str-reports', label: 'STR Register', icon: FileWarning },
+  { id: 'bog-returns', label: 'BoG Returns', icon: LandmarkIcon },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
+
 const portalLabels: Record<string, string> = {
   customer: 'Customer Portal',
   agent: 'Agent Portal',
   admin: 'Admin Portal',
   treasurer: 'Treasurer Portal',
+  'branch-manager': 'Branch Manager Portal',
+  'loan-officer': 'Loan Officer Portal',
+  teller: 'Teller Portal',
+  'field-supervisor': 'Field Supervisor Portal',
+  accountant: 'Accountant Portal',
+  'compliance-officer': 'Compliance Portal',
 };
 
 const portalRoles: Record<string, string> = {
@@ -189,11 +292,17 @@ const portalRoles: Record<string, string> = {
   agent: 'Field Agent',
   admin: 'System Admin',
   treasurer: 'Group Treasurer',
+  'branch-manager': 'Branch Manager',
+  'loan-officer': 'Loan Officer',
+  teller: 'Teller / Cashier',
+  'field-supervisor': 'Field Supervisor',
+  accountant: 'Accountant',
+  'compliance-officer': 'Compliance Officer',
 };
 
 // Bottom tabs: first N items shown in bottom bar, rest in "More" drawer
 function getBottomTabs(navItems: NavItem[], portal: string): BottomTabItem[] {
-  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 6 : 5;
+  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 5 : 4;
   return navItems.slice(0, maxTabs).map(item => ({
     id: item.id,
     label: item.label,
@@ -202,7 +311,7 @@ function getBottomTabs(navItems: NavItem[], portal: string): BottomTabItem[] {
 }
 
 function getDrawerOnlyItems(navItems: NavItem[], portal: string): NavItem[] {
-  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 6 : 5;
+  const maxTabs = portal === 'admin' ? 4 : portal === 'customer' ? 5 : 4;
   return navItems.slice(maxTabs);
 }
 
@@ -213,6 +322,12 @@ function getNavItems(portal: string): NavItem[] {
     case 'agent': return agentNavItems;
     case 'admin': return adminNavItems;
     case 'treasurer': return treasurerNavItems;
+    case 'branch-manager': return branchManagerNavItems;
+    case 'loan-officer': return loanOfficerNavItems;
+    case 'teller': return tellerNavItems;
+    case 'field-supervisor': return fieldSupervisorNavItems;
+    case 'accountant': return accountantNavItems;
+    case 'compliance-officer': return complianceNavItems;
     default: return [];
   }
 }
@@ -387,7 +502,7 @@ function PageTransition({ children, pageKey }: { children: React.ReactNode; page
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -6 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
+        transition={{ duration: 0.2, ease: 'easeOut' as const }}
         className="h-full"
       >
         {children}
@@ -406,6 +521,12 @@ export function AppLayout() {
   const agentStore = useAgentStore();
   const adminStore = useAdminStore();
   const treasurerStore = useTreasurerStore();
+  const branchManagerStore = useBranchManagerStore();
+  const loanOfficerStore = useLoanOfficerStore();
+  const tellerStore = useTellerStore();
+  const fieldSupervisorStore = useFieldSupervisorStore();
+  const accountantStore = useAccountantStore();
+  const complianceStore = useComplianceStore();
 
   // Logout confirmation dialog state
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -422,13 +543,20 @@ export function AppLayout() {
   }
 
   // Store resolution
-  const storeMap = {
+  const storeMap: Record<string, { activePage: string; user: { name: string; email?: string; phone?: string; branch?: string }; setActivePage: (page: string) => void }> = {
     customer: customerStore,
     agent: agentStore,
     admin: adminStore,
     treasurer: treasurerStore,
+    'branch-manager': branchManagerStore,
+    'loan-officer': loanOfficerStore,
+    teller: tellerStore,
+    'field-supervisor': fieldSupervisorStore,
+    accountant: accountantStore,
+    'compliance-officer': complianceStore,
   };
   const store = storeMap[currentPortal];
+  if (!store) return <LoginPage />;
   const activePage = store.activePage;
   const user = store.user;
   const initials = getInitials(user.name);
@@ -449,18 +577,14 @@ export function AppLayout() {
         return adminNotifications.filter(n => !n.read).length;
       case 'treasurer':
         return treasurerNotifications.filter(n => !n.read).length;
-      default: return 0;
+      default:
+        return (staffNotifications[currentPortal] ?? []).filter(n => !n.read).length;
     }
   })();
 
   // Navigation handler
   const handleNavigate = (page: string) => {
-    switch (currentPortal) {
-      case 'customer': customerStore.setActivePage(page); break;
-      case 'agent': agentStore.setActivePage(page); break;
-      case 'admin': adminStore.setActivePage(page); break;
-      case 'treasurer': treasurerStore.setActivePage(page); break;
-    }
+    store.setActivePage(page);
     setSidebarOpen(false);
   };
 
@@ -477,6 +601,7 @@ export function AppLayout() {
           case 'bills': return <CustomerBills />;
           case 'transfers': return <CustomerTransfers />;
           case 'budgeting': return <CustomerBudgeting />;
+          case 'ussd': return <CustomerUssd />;
           case 'referrals': return <CustomerReferrals />;
           case 'transactions': return <CustomerTransactions />;
           case 'settings': return <CustomerSettings />;
@@ -516,6 +641,60 @@ export function AppLayout() {
           case 'reports': return <TreasurerReports />;
           case 'settings': return <TreasurerSettings />;
           default: return <TreasurerDashboard />;
+        }
+      case 'branch-manager':
+        switch (activePage) {
+          case 'dashboard': return <BranchManagerDashboard />;
+          case 'staff': return <BranchManagerStaff />;
+          case 'loan-approvals': return <BranchManagerLoanApprovals />;
+          case 'targets': return <BranchManagerTargets />;
+          case 'settings': return <StaffSettings portal={currentPortal} userName={user.name} userEmail={user.email ?? ''} userPhone={user.phone ?? ''} branch={user.branch ?? ''} />;
+          default: return <BranchManagerDashboard />;
+        }
+      case 'loan-officer':
+        switch (activePage) {
+          case 'dashboard': return <LoanOfficerDashboard />;
+          case 'pipeline': return <LoanOfficerPipeline />;
+          case 'appraisals': return <LoanOfficerAppraisals />;
+          case 'portfolio': return <LoanOfficerPortfolio />;
+          case 'settings': return <StaffSettings portal={currentPortal} userName={user.name} userEmail={user.email ?? ''} userPhone={user.phone ?? ''} branch={user.branch ?? ''} />;
+          default: return <LoanOfficerDashboard />;
+        }
+      case 'teller':
+        switch (activePage) {
+          case 'dashboard': return <TellerDashboard />;
+          case 'counter': return <TellerCounter />;
+          case 'reconciliation': return <TellerReconciliation />;
+          case 'vault': return <TellerVault />;
+          case 'settings': return <StaffSettings portal={currentPortal} userName={user.name} userEmail={user.email ?? ''} userPhone={user.phone ?? ''} branch={user.branch ?? ''} />;
+          default: return <TellerDashboard />;
+        }
+      case 'field-supervisor':
+        switch (activePage) {
+          case 'dashboard': return <FieldSupervisorDashboard />;
+          case 'agents': return <FieldSupervisorAgents />;
+          case 'routes': return <FieldSupervisorRoutes />;
+          case 'spot-checks': return <FieldSupervisorSpotChecks />;
+          case 'settings': return <StaffSettings portal={currentPortal} userName={user.name} userEmail={user.email ?? ''} userPhone={user.phone ?? ''} branch={user.branch ?? ''} />;
+          default: return <FieldSupervisorDashboard />;
+        }
+      case 'accountant':
+        switch (activePage) {
+          case 'dashboard': return <AccountantDashboard />;
+          case 'ledger': return <AccountantLedger />;
+          case 'statements': return <AccountantStatements />;
+          case 'reconciliation': return <AccountantReconciliation />;
+          case 'settings': return <StaffSettings portal={currentPortal} userName={user.name} userEmail={user.email ?? ''} userPhone={user.phone ?? ''} branch={user.branch ?? ''} />;
+          default: return <AccountantDashboard />;
+        }
+      case 'compliance-officer':
+        switch (activePage) {
+          case 'dashboard': return <ComplianceDashboard />;
+          case 'aml-alerts': return <ComplianceAmlAlerts />;
+          case 'str-reports': return <ComplianceStrReports />;
+          case 'bog-returns': return <ComplianceBogReturns />;
+          case 'settings': return <StaffSettings portal={currentPortal} userName={user.name} userEmail={user.email ?? ''} userPhone={user.phone ?? ''} branch={user.branch ?? ''} />;
+          default: return <ComplianceDashboard />;
         }
       default: return <LoginPage />;
     }
@@ -741,6 +920,9 @@ export function AppLayout() {
 
       {/* Susu AI — floating intelligent assistant (all portals) */}
       <SusuAiChat />
+
+      {/* PWA — service worker, install banner & update prompt (suppressed inside Capacitor/Tauri) */}
+      <PwaProvider />
     </div>
   );
 }

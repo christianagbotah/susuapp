@@ -23,6 +23,30 @@ const PORTAL_CONFIG: Record<string, { greeting: string; suggestions: string[] }>
     greeting: 'Welcome! I\'m Susu AI 👋 Ask me about portfolio risk, compliance, payroll or growing the loan book.',
     suggestions: ['Summarize portfolio risk', 'Reduce loan defaults', 'Improve compliance', 'Grow susu adoption'],
   },
+  'branch-manager': {
+    greeting: 'Welcome, Branch Manager! I\'m Susu AI 👋 Ask about branch targets, staff performance or high-value approvals.',
+    suggestions: ['Which loans should I approve today?', 'How is my branch tracking?', 'Coach an underperforming agent', 'PAR 30 improvement ideas'],
+  },
+  'loan-officer': {
+    greeting: 'Hello! I\'m Susu AI 👋 Your credit desk assistant — appraisals, 5C scoring and portfolio follow-up.',
+    suggestions: ['Review my pipeline', 'Tips for 5C appraisals', 'How to structure a follow-up call?', 'Spot early warning signs'],
+  },
+  teller: {
+    greeting: 'Hello! I\'m Susu AI 👋 Here to help with counter flows, drawer balancing and vault procedures.',
+    suggestions: ['Steps for EOD reconciliation', 'Handle a cash variance', 'Vault transfer rules', 'Spot a counterfeit note'],
+  },
+  'field-supervisor': {
+    greeting: 'Hello! I\'m Susu AI 👋 Your field ops assistant — agents, routes and spot checks.',
+    suggestions: ['Improve agent collection rates', 'Plan a route reassignment', 'Run a great spot check', 'Motivate offline agents'],
+  },
+  accountant: {
+    greeting: 'Hello! I\'m Susu AI 👋 Your books assistant — journal entries, reconciliations and statements.',
+    suggestions: ['Explain today\'s variances', 'Best loan-loss provision level?', 'Prepare for month-end close', 'SSNIT & PAYE deadlines'],
+  },
+  'compliance-officer': {
+    greeting: 'Welcome, Compliance Officer! I\'m Susu AI 👋 Ask about AML typologies, STR filing or BoG NBFRI returns.',
+    suggestions: ['Review open AML alerts', 'Typologies for structuring', 'NBFRI 3 checklist', 'When must I file an STR?'],
+  },
 };
 
 interface Message {

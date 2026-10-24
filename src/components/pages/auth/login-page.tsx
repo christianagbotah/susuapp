@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Users, LayoutDashboard, PiggyBank, Building2,
   Phone, Lock, ArrowRight, Landmark, Wallet, Eye, EyeOff,
+  UserCog, ClipboardCheck, Scale, Radio, BookOpen, FileWarning, Calculator,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import { apiFetch, ensureBackendStarted } from '@/lib/api-client';
 import { toast } from 'sonner';
 import type { PortalId } from '@/lib/types';
 
-// ---- Portal card data ----
+// ---- Portal card data (10 portals, grouped like a real branch structure) ----
 const portals: {
   id: PortalId;
   title: string;
@@ -31,7 +32,7 @@ const portals: {
   {
     id: 'customer',
     title: 'Customer Portal',
-    description: 'Manage your susu, loans, and wallet',
+    description: 'Susu, loans, wallet, bills & USSD',
     icon: Wallet,
     iconColor: 'text-emerald-600',
     iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
@@ -40,29 +41,83 @@ const portals: {
   {
     id: 'agent',
     title: 'Agent Portal',
-    description: 'Collect contributions and manage customers',
+    description: 'Daily collections & customer onboarding',
     icon: Building2,
     iconColor: 'text-blue-600',
     iconBg: 'bg-blue-100 dark:bg-blue-900/30',
     hoverBorder: 'hover:border-blue-300',
   },
   {
-    id: 'admin',
-    title: 'Admin Portal',
-    description: 'System administration and analytics',
-    icon: LayoutDashboard,
+    id: 'field-supervisor',
+    title: 'Field Supervisor',
+    description: 'Agents, routes & collection spot checks',
+    icon: Radio,
+    iconColor: 'text-lime-600',
+    iconBg: 'bg-lime-100 dark:bg-lime-900/30',
+    hoverBorder: 'hover:border-lime-300',
+  },
+  {
+    id: 'teller',
+    title: 'Teller / Cashier',
+    description: 'Counter queue, drawer & vault transfers',
+    icon: Scale,
+    iconColor: 'text-cyan-600',
+    iconBg: 'bg-cyan-100 dark:bg-cyan-900/30',
+    hoverBorder: 'hover:border-cyan-300',
+  },
+  {
+    id: 'branch-manager',
+    title: 'Branch Manager',
+    description: 'Staff, targets & loan approvals',
+    icon: UserCog,
+    iconColor: 'text-indigo-600',
+    iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
+    hoverBorder: 'hover:border-indigo-300',
+  },
+  {
+    id: 'loan-officer',
+    title: 'Loan Officer',
+    description: 'Pipeline, 5C appraisals & portfolio',
+    icon: ClipboardCheck,
     iconColor: 'text-amber-600',
     iconBg: 'bg-amber-100 dark:bg-amber-900/30',
     hoverBorder: 'hover:border-amber-300',
   },
   {
     id: 'treasurer',
-    title: 'Treasurer Portal',
-    description: 'Manage group susu and payouts',
+    title: 'Group Treasurer',
+    description: 'Community susu books & payout rotation',
     icon: PiggyBank,
     iconColor: 'text-purple-600',
     iconBg: 'bg-purple-100 dark:bg-purple-900/30',
     hoverBorder: 'hover:border-purple-300',
+  },
+  {
+    id: 'accountant',
+    title: 'Accountant',
+    description: 'Ledger, statements & reconciliation',
+    icon: BookOpen,
+    iconColor: 'text-teal-600',
+    iconBg: 'bg-teal-100 dark:bg-teal-900/30',
+    hoverBorder: 'hover:border-teal-300',
+  },
+  {
+    id: 'compliance-officer',
+    title: 'Compliance Officer',
+    description: 'AML alerts, FIC STRs & BoG returns',
+    icon: FileWarning,
+    iconColor: 'text-rose-600',
+    iconBg: 'bg-rose-100 dark:bg-rose-900/30',
+    hoverBorder: 'hover:border-rose-300',
+  },
+  {
+    id: 'admin',
+    title: 'System Admin',
+    description: 'Users, integrations & analytics',
+    icon: LayoutDashboard,
+    iconColor: 'text-slate-600',
+    iconBg: 'bg-slate-100 dark:bg-slate-900/30',
+    hoverBorder: 'hover:border-slate-300',
   },
 ];
 
@@ -80,7 +135,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' },
+    transition: { duration: 0.4, ease: 'easeOut' as const },
   },
 };
 
@@ -90,7 +145,7 @@ const formFieldVariants = {
   visible: (i: number) => ({
     opacity: 1,
     x: 0,
-    transition: { delay: 0.15 + i * 0.08, duration: 0.35, ease: 'easeOut' },
+    transition: { delay: 0.15 + i * 0.08, duration: 0.35, ease: 'easeOut' as const },
   }),
 };
 
@@ -199,7 +254,7 @@ export function LoginPage() {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
+            transition={{ duration: 0.6, ease: 'easeOut' as const }}
             className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 shadow-lg backdrop-blur-sm"
           >
             <Landmark className="h-10 w-10 text-white" />
@@ -257,7 +312,7 @@ export function LoginPage() {
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
+              transition={{ duration: 0.5, ease: 'easeOut' as const }}
               className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/30"
             >
               <Landmark className="h-8 w-8 text-white" />
@@ -438,7 +493,7 @@ export function LoginPage() {
             </div>
 
             {/* Portal Cards Grid */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {portals.map((portal) => {
                 const Icon = portal.icon;
                 return (

@@ -22,7 +22,7 @@ import {
   Building2, CreditCard, MessageSquare, CheckCircle2, XCircle, Zap,
   ExternalLink, Info, ChevronRight, Radio, QrCode, Wallet,
   Landmark, Mail, Phone, MapPin, FileText, Palette, Languages,
-  Send, AlertOctagon, Megaphone, ShieldCheck
+  Send, AlertOctagon, Megaphone, ShieldCheck, Gift
 } from 'lucide-react';
 
 // =============================================

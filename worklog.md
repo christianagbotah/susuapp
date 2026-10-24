@@ -443,3 +443,38 @@ Stage Summary:
 - 3 AI features shipped and verified; portal-aware Susu AI available in all 4 portals
 - Cross-platform architecture documented (Tauri desktop, Expo mobile, shared SDK)
 - Pending: git push once user provides a valid GitHub PAT
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Onboard all remaining user roles with fully developed portals + cross-platform (mobile & desktop) delivery
+
+Work Log:
+- Extended types.ts: PortalId now has 10 roles; added staff domain types (StaffMember, LoanApprovalRequest, BranchTarget, LoanApplication, LoanAppraisal, PortfolioLoan, TellerDrawer, CounterTransaction, VaultTransfer, EODReconciliationLine, SupervisedAgent, SupervisorRoute (renamed from duplicate CollectionRoute), SpotCheck, LedgerEntry, ChartOfAccount, FinancialStatement, BankReconciliation, AMLAlert, STRReport, BOGReturn)
+- Created src/lib/rbac.ts: central RBAC registry — 35+ permissions mapped across 10 roles, grouped (customer/field/operations/finance/governance)
+- Created src/lib/staff-data.ts: Ghana-tailored mock data (Makola/Tema Station/Kaneshie markets, GCB/Ecobank banking, FIC STR refs, BoG NBFRI returns, MTN/Telecel/AT floats)
+- Created src/store/staff-stores.ts: 6 persisted Zustand stores with full action sets
+- Built 6 new portals (~24 pages):
+  * Branch Manager: dashboard (KPIs vs targets), staff directory (status mgmt), loan approvals (review/approve/reject with audit reason), targets (create + tracking)
+  * Loan Officer: dashboard (origination funnel + PAR), pipeline (stage advancement), 5C appraisals (interactive scoring A-E grades), portfolio (BoG classification, follow-up logging)
+  * Teller: dashboard (channel splits), counter queue (call/complete + walk-in posting), EOD reconciliation (note-by-note cash counting, variance flags, sign-off), vault transfers (dual-control workflow)
+  * Field Supervisor: dashboard (live collection progress), agents (status, float, ping), routes (stop-level collect/miss, reassignment), spot checks (logging with issues)
+  * Accountant: dashboard (ledger snapshot, P&L), journal entries (post/reverse, balanced check), statements (finalize + live balances), bank/MoMo reconciliation (match & post)
+  * Compliance Officer: dashboard (critical alerts), AML alerts (investigate/escalate/file STR), STR register (FIC/BoG lifecycle), BoG NBFRI returns (slider progress + calendar)
+- Created shared StaffSettings component (role-aware permissions display, language selector: English/Twi/Ga/Ewe/Hausa/Dagbani, biometric, theme)
+- Wired app-layout.tsx: 10 portal navs + routing; login page shows 10 grouped portal cards
+- Extended notification-panel (staffNotifications) + Susu AI chat (portal-aware prompts for all 10 roles)
+- NEW: Customer USSD *713# simulator page — interactive feature-phone UI (dial, menus, amount entry, success log) + short-code reference table
+- Cross-platform: manifest.json v2 (shortcuts, maskable icons, id/scope), public/sw.js offline-first service worker + offline.html, PwaProvider (SW registration, install banner with iOS/Android/Windows/macOS detection, update prompt, suppressed in native shells), GetAppButtons
+- Generated PWA PNG icons (192/512/maskable/apple-touch) via scripts/gen-icons.py
+- Native shells: capacitor.config.ts (Android/iOS, splash/push config), src-tauri/tauri.conf.json (MSI/NSIS/DMG/AppImage bundles, tray, updater), npm scripts (cap:*, tauri:*)
+- ARCHITECTURE.md updated: 10-portal table, RBAC summary, platform build matrix
+- Browser-verified with agent-browser: all 10 portals launch, 24 staff pages render with zero errors, BM approval flow (5→4 pending), teller complete flow (toast receipt), reconciliation Match & Post, USSD full contribution flow (₵50 success), mobile viewport (390px) no overflow, SW registered, all PWA assets 200
+- Fixed during verification: duplicate ShieldAlert import, staff Notification shape mismatch ('action' type crash), USSD submitAmount wrong state var, accountant-reconciliation missing useState import, duplicate CollectionRoute interface (renamed SupervisorRoute), missing Gift icon import in admin-settings, framer-motion ease typing (global as const), tsconfig excludes for mini-services/examples/capacitor
+- Lint: zero errors project-wide (incl. fixing 2 pre-existing mobile-components errors + creditScore memo deps). tsc --noEmit: clean for all app code
+
+Stage Summary:
+- iSusuPro now has 10 fully-developed portals covering the complete Ghanaian susu/microfinance org structure
+- RBAC registry drives permissions across UI; NestJS RolesGuard mirrors it server-side
+- PWA v2 + Capacitor + Tauri configs cover Web, Android, iOS, Windows, macOS, Linux + USSD for feature phones
+- All verification passed; ready for commit

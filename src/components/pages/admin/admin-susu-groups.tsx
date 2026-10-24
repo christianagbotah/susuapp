@@ -37,7 +37,7 @@ const fadeUp = {
 function getGroupMembers(group: SusuGroup) {
   const customers = allUsers.filter(u => u.role === 'customer');
   const memberCount = Math.min(group.members, customers.length);
-  const members = [];
+  const members: { name: string; phone: string; email: string; kycLevel: 'none' | 'basic' | 'full'; role: 'Treasurer' | 'Member'; joinedDate: string; contributions: number; status: 'active' | 'inactive' }[] = [];
   // Use treasurer as first member
   const treasurer = allUsers.find(u => u.id === group.treasurerId);
   if (treasurer) {

@@ -125,7 +125,7 @@ const container = {
 
 const item = {
   hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' as const } },
 };
 
 // ---- Custom Tooltip ----
@@ -457,9 +457,9 @@ export function CustomerBudgeting() {
                         <div className="flex items-center gap-3">
                           <div
                             className="flex h-10 w-10 items-center justify-center rounded-lg"
-                            style={{ backgroundColor: `${budget.color}18` }}
+                            style={{ backgroundColor: `${budget.color}18`, color: budget.color }}
                           >
-                            <IconComp className="h-5 w-5" style={{ color: budget.color }} />
+                            <IconComp className="h-5 w-5" />
                           </div>
                           <div>
                             <p className="font-semibold text-sm">{budget.categoryName}</p>

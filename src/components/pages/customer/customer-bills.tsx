@@ -55,7 +55,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' },
+    transition: { duration: 0.4, ease: 'easeOut' as const },
   },
 };
 
@@ -228,7 +228,7 @@ export function CustomerBills() {
                             key={biller.id}
                             initial={{ opacity: 0, scale: 0.96 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.3, ease: 'easeOut' }}
+                            transition={{ duration: 0.3, ease: 'easeOut' as const }}
                           >
                             <Card className="group h-full border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md hover:border-slate-300/80">
                               <CardContent className="flex flex-col justify-between gap-4 p-4">
