@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAdminStore } from '@/store/app-store';
 import {
   formatGHS, formatDate, formatDuration, getStatusColor,
@@ -14,6 +14,7 @@ import {
   User, Phone, MapPin, Shield, Search, Download, ArrowRight,
   FileText, TrendingUp, TrendingDown, Send, Banknote, Building2,
   Wallet, ArrowUpRight, Sparkles, Loader2, ShieldCheck, ShieldAlert, Lightbulb,
+  RefreshCw, Smartphone,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,8 +34,23 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import type { Loan, RepaymentScheduleEntry, CreditScoreFactors } from '@/lib/types';
+import { normalizeGhanaPhone } from '@/lib/payments/types';
+import type { PaymentIntent } from '@/lib/payments/types';
+import { usePaymentsStore } from '@/store/payments-store';
 
 const ITEMS_PER_PAGE = 8;
+
+/** Ghana bank list for the disbursement picker (matches the server list
+ *  in /api/payments/disburse — codes resolve live from Paystack /bank). */
+const GHANA_BANKS = [
+  'Absa Bank Ghana', 'Access Bank Ghana', 'Agricultural Development Bank (ADB)',
+  'Bank of Africa Ghana (BOA)', 'CalBank', 'Consolidated Bank Ghana (CBG)',
+  'Ecobank Ghana', 'Fidelity Bank Ghana', 'First National Bank', 'GCB Bank',
+  'Guaranty Trust Bank (GTBank) Ghana', 'Prudential Bank', 'Republic Bank (HFC)',
+  'Societe Generale Ghana', 'Stanbic Bank Ghana', 'Standard Chartered Ghana',
+  'United Bank for Africa (UBA) Ghana', 'Zenith Bank Ghana',
+  'Rural / Community Bank', 'Savings & Loans / Microfinance Institution',
+];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -85,6 +101,11 @@ export function AdminLoans() {
   const [disburseDialog, setDisburseDialog] = useState<Loan | null>(null);
   const [disburseMethod, setDisburseMethod] = useState('momo');
   const [disburseNumber, setDisburseNumber] = useState('');
+  const [disbursePhase, setDisbursePhase] = useState<'form' | 'processing' | 'success' | 'failed' | 'timeout'>('form');
+  const [disburseIntent, setDisburseIntent] = useState<PaymentIntent | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [bankName, setBankName] = useState('');
+  const [accountName, setAccountName] = useState('');
 
   // ---- AI Risk Assessment ----
   interface AiFactor { factor: string; impact: 'positive' | 'negative' | 'neutral'; note: string; }
@@ -188,23 +209,104 @@ export function AdminLoans() {
     }
   };
 
-  const handleDisburse = () => {
-    if (disburseDialog) {
-      if (!disburseNumber.trim()) {
-        toast.error('Please enter recipient number/account');
+  /** Disburse an approved loan through the live gateway (Hubtel Send Money /
+   *  Paystack Transfer) — MoMo push or Ghana bank transfer, with polling. */
+  const submitDisbursement = async () => {
+    if (!disburseDialog) return;
+    if (disburseMethod === 'momo') {
+      if (!normalizeGhanaPhone(disburseNumber)) {
+        toast.error('Enter a valid Ghana MoMo number (e.g. 024 123 4567)');
         return;
       }
-      disburseLoan(
-        disburseDialog.id,
-        disburseMethod as 'momo' | 'bank',
-        disburseNumber,
-      );
-      toast.success(`₵${disburseDialog.amount.toLocaleString()} disbursed to ${disburseDialog.applicantName} via ${disburseMethod === 'momo' ? 'Mobile Money' : 'Bank Transfer'}`);
-      setDisburseDialog(null);
-      setDisburseNumber('');
-      setDisburseMethod('momo');
+    } else {
+      if (!accountName.trim()) { toast.error('Enter the account name as held at the bank'); return; }
+      if (!bankName) { toast.error('Pick the recipient bank'); return; }
+      if (!/^\d{10,17}$/.test(disburseNumber.replace(/\s/g, ''))) { toast.error('Account number must be 10–17 digits'); return; }
+    }
+    setDisbursePhase('processing');
+    setElapsed(0);
+    try {
+      const res = await fetch('/api/payments/disburse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          purpose: 'loan_disbursement',
+          channel: disburseMethod,
+          amount: disburseDialog.amount,
+          phone: disburseMethod === 'momo' ? normalizeGhanaPhone(disburseNumber) : undefined,
+          recipientName: disburseDialog.applicantName,
+          description: `Loan disbursement — ${disburseDialog.type.replace('-', ' ')} loan for ${disburseDialog.applicantName}`,
+          metadata: { loanId: disburseDialog.id, applicant: disburseDialog.applicantName, branch: disburseDialog.branch },
+          bank: disburseMethod === 'bank'
+            ? { accountName, accountNumber: disburseNumber.replace(/\s/g, ''), bankName }
+            : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'The gateway rejected the disbursement'); setDisbursePhase('form'); return; }
+      const intent = data.intent as PaymentIntent;
+      setDisburseIntent(intent);
+      usePaymentsStore.getState().upsertIntent(intent);
+      if (intent.status === 'failed') setDisbursePhase('failed');
+    } catch {
+      toast.error('Network error — could not reach the payment gateway');
+      setDisbursePhase('form');
     }
   };
+
+  const resetDisburse = () => {
+    setDisburseDialog(null);
+    setDisburseNumber('');
+    setDisburseMethod('momo');
+    setDisbursePhase('form');
+    setDisburseIntent(null);
+    setElapsed(0);
+    setBankName('');
+    setAccountName('');
+  };
+
+  // New dialog session → reset phase tracking
+  useEffect(() => {
+    setDisbursePhase('form');
+    setDisburseIntent(null);
+    setElapsed(0);
+  }, [disburseDialog?.id]);
+
+  // Poll the gateway until the transfer settles
+  useEffect(() => {
+    if (disbursePhase !== 'processing' || !disburseIntent) return;
+    let polls = 0;
+    const tick = setInterval(() => setElapsed(e => e + 1), 1000);
+    const poll = setInterval(async () => {
+      polls += 1;
+      if (polls > 30) { clearInterval(poll); clearInterval(tick); setDisbursePhase('timeout'); return; }
+      try {
+        const res = await fetch(`/api/payments/status?reference=${encodeURIComponent(disburseIntent.reference)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const current = data.intent as PaymentIntent;
+        if (!current || current.status === disburseIntent.status) return;
+        setDisburseIntent(current);
+        usePaymentsStore.getState().upsertIntent(current);
+        if (current.status === 'success') {
+          clearInterval(poll); clearInterval(tick);
+          setDisbursePhase('success');
+          if (disburseDialog) {
+            disburseLoan(
+              disburseDialog.id,
+              current.channel,
+              current.channel === 'momo' ? (current.phone ?? disburseNumber) : (current.bank?.accountNumber ?? disburseNumber),
+            );
+            toast.success(`₵${disburseDialog.amount.toLocaleString()} sent to ${disburseDialog.applicantName} via ${current.channel === 'momo' ? 'Mobile Money' : 'Bank Transfer'}`);
+          }
+        } else if (current.status === 'failed' || current.status === 'cancelled') {
+          clearInterval(poll); clearInterval(tick);
+          setDisbursePhase('failed');
+        }
+      } catch { /* transient — keep polling */ }
+    }, 2000);
+    return () => { clearInterval(poll); clearInterval(tick); };
+  }, [disbursePhase, disburseIntent?.reference, disburseDialog?.id]);
 
   const handleExport = () => {
     toast.success('Loan report exported successfully');
@@ -792,15 +894,23 @@ export function AdminLoans() {
       </Dialog>
 
       {/* E. Quick Disburse Dialog */}
-      <Dialog open={!!disburseDialog} onOpenChange={() => { setDisburseDialog(null); setDisburseNumber(''); setDisburseMethod('momo'); }}>
+      <Dialog open={!!disburseDialog} onOpenChange={(open) => { if (!open && disbursePhase !== 'processing') resetDisburse(); }}>
         <DialogContent className="max-w-md mx-4 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-600">
               <Send className="h-5 w-5" /> Disburse Loan
             </DialogTitle>
-            <DialogDescription>Confirm disbursement details for this approved loan</DialogDescription>
+            <DialogDescription>
+              {disbursePhase === 'form' && 'Send the approved funds to the borrower via the live gateway'}
+              {disbursePhase === 'processing' && 'Transfer in flight — the network is processing it'}
+              {disbursePhase === 'success' && 'Funds delivered — the loan is now active'}
+              {disbursePhase === 'failed' && 'The transfer did not go through'}
+              {disbursePhase === 'timeout' && 'Still waiting on the network'}
+            </DialogDescription>
           </DialogHeader>
-          {disburseDialog && (
+
+          {/* ══════════ FORM ══════════ */}
+          {disburseDialog && disbursePhase === 'form' && (
             <div className="space-y-4">
               <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Applicant</span><span className="font-medium">{disburseDialog.applicantName}</span></div>
@@ -819,7 +929,7 @@ export function AdminLoans() {
                     <SelectContent>
                       <SelectItem value="momo">
                         <span className="flex items-center gap-2">
-                          <Wallet className="h-4 w-4" /> Mobile Money
+                          <Smartphone className="h-4 w-4" /> Mobile Money (Hubtel / Paystack)
                         </span>
                       </SelectItem>
                       <SelectItem value="bank">
@@ -831,37 +941,174 @@ export function AdminLoans() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>{disburseMethod === 'momo' ? 'Mobile Money Number' : 'Bank Account Number'}</Label>
-                  <Input
-                    placeholder={disburseMethod === 'momo' ? 'e.g. 024 123 4567' : 'e.g. 0123456789012'}
-                    value={disburseNumber}
-                    onChange={e => setDisburseNumber(e.target.value)}
-                  />
-                </div>
+                {disburseMethod === 'momo' ? (
+                  <div className="space-y-2">
+                    <Label>Mobile Money Number</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-10 items-center rounded-lg border bg-muted px-3 text-sm font-semibold">+233</span>
+                      <Input
+                        placeholder="24 123 4567"
+                        value={disburseNumber}
+                        onChange={e => setDisburseNumber(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      A payment push is sent to this number — the borrower approves it on their handset.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Account Name</Label>
+                    <Input
+                      placeholder="e.g. Ama Mensah"
+                      value={accountName}
+                      onChange={e => setAccountName(e.target.value)}
+                    />
+                    <Label>Bank</Label>
+                    <Select value={bankName} onValueChange={setBankName}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select bank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GHANA_BANKS.map(b => (
+                          <SelectItem key={b} value={b}>{b}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Label>Account Number</Label>
+                    <Input
+                      placeholder="10–17 digits"
+                      inputMode="numeric"
+                      value={disburseNumber}
+                      onChange={e => setDisburseNumber(e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-900/10 dark:border-blue-800 p-3 text-sm">
                 <div className="flex items-start gap-2">
                   <Banknote className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                   <div>
-                    <p className="font-medium text-blue-800 dark:text-blue-400">Confirm Disbursement</p>
+                    <p className="font-medium text-blue-800 dark:text-blue-400">Gateway rails</p>
                     <p className="text-xs text-blue-600 dark:text-blue-400/70 mt-0.5">
-                      {formatGHS(disburseDialog.amount)} will be sent to {disburseDialog.applicantName} via{' '}
-                      {disburseMethod === 'momo' ? 'Mobile Money' : 'Bank Transfer'}.
+                      {formatGHS(disburseDialog.amount)} will be pushed to {disburseDialog.applicantName} via{' '}
+                      {disburseMethod === 'momo' ? 'Mobile Money' : 'Bank Transfer'} through Hubtel / Paystack.
+                      Without provider keys it runs in test mode (no real money moves).
                     </p>
                   </div>
                 </div>
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => { setDisburseDialog(null); setDisburseNumber(''); setDisburseMethod('momo'); }}>
-                  Cancel
-                </Button>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleDisburse}>
-                  <Send className="mr-1 h-4 w-4" /> Confirm Disbursement
+                <Button variant="outline" onClick={resetDisburse}>Cancel</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700" onClick={submitDisbursement}>
+                  <Send className="mr-1 h-4 w-4" /> Send {formatGHS(disburseDialog.amount)}
                 </Button>
               </DialogFooter>
+            </div>
+          )}
+
+          {/* ══════════ PROCESSING ══════════ */}
+          {disbursePhase === 'processing' && disburseIntent && (
+            <div className="space-y-5 py-2">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="relative">
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-blue-400/30"
+                    animate={{ scale: [1, 1.35, 1], opacity: [0.6, 0, 0.6] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-blue-500/20 border-t-blue-600 animate-[spin_1.2s_linear_infinite]" />
+                  <Send className="absolute inset-0 m-auto h-8 w-8 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold">Transfer in flight</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {disburseIntent.channel === 'momo'
+                      ? `${disburseIntent.network === 'MTN' ? 'MTN MoMo' : disburseIntent.network === 'TELECEL' ? 'Telecel Cash' : 'AT Money'} is pushing ₵${disburseIntent.amount.toLocaleString()} to ${disburseIntent.phone}`
+                      : `${disburseIntent.bank?.bankName} account ${disburseIntent.bank?.accountNumber} is being credited`}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg border p-2">
+                  <p className="text-[10px] text-muted-foreground">Amount</p>
+                  <p className="text-sm font-bold">{formatGHS(disburseIntent.amount)}</p>
+                </div>
+                <div className="rounded-lg border p-2">
+                  <p className="text-[10px] text-muted-foreground">Reference</p>
+                  <p className="text-xs font-mono font-semibold">{disburseIntent.reference.slice(0, 14)}…</p>
+                </div>
+                <div className="rounded-lg border p-2">
+                  <p className="text-[10px] text-muted-foreground">Elapsed</p>
+                  <p className="text-sm font-bold tabular-nums">{elapsed}s</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+                <Clock className="h-4 w-4 shrink-0 animate-pulse text-blue-600" />
+                Waiting for the network… transfers usually land in under 20 seconds.
+              </div>
+            </div>
+          )}
+
+          {/* ══════════ SUCCESS ══════════ */}
+          {disbursePhase === 'success' && disburseIntent && (
+            <div className="space-y-4 py-2 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+                className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40"
+              >
+                <CheckCircle className="h-11 w-11 text-blue-600" />
+              </motion.div>
+              <div>
+                <p className="text-lg font-bold">Funds delivered</p>
+                <p className="text-sm text-muted-foreground">
+                  The loan is active and repayment starts next month.
+                </p>
+              </div>
+              <div className="space-y-1.5 rounded-xl border bg-muted/40 p-3 text-left text-xs">
+                <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{formatGHS(disburseIntent.amount)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Channel</span><span className="font-semibold">{disburseIntent.channel === 'momo' ? `${disburseIntent.network} MoMo` : disburseIntent.bank?.bankName}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Gateway</span><span className="font-semibold">{disburseIntent.provider === 'hubtel' ? 'Hubtel' : 'Paystack'} · {disburseIntent.mode === 'live' ? 'live' : 'test'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Reference</span><span className="font-mono">{disburseIntent.reference}</span></div>
+              </div>
+              <Button className="w-full h-11 font-semibold" onClick={resetDisburse}>Done</Button>
+            </div>
+          )}
+
+          {/* ══════════ FAILED / TIMEOUT ══════════ */}
+          {(disbursePhase === 'failed' || disbursePhase === 'timeout') && (
+            <div className="space-y-4 py-2 text-center">
+              <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full ${disbursePhase === 'failed' ? 'bg-red-100 dark:bg-red-900/40' : 'bg-amber-100 dark:bg-amber-900/40'}`}>
+                {disbursePhase === 'failed'
+                  ? <XCircle className="h-11 w-11 text-red-600" />
+                  : <AlertTriangle className="h-11 w-11 text-amber-600" />}
+              </div>
+              <div>
+                <p className="text-lg font-bold">{disbursePhase === 'failed' ? 'Transfer failed' : 'No confirmation yet'}</p>
+                <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
+                  {disbursePhase === 'failed'
+                    ? (disburseIntent?.message ?? 'The network rejected the transfer. No money has left the platform.')
+                    : 'The network has not confirmed the transfer. If it settles late, the loan will activate automatically — check the ledger in a minute.'}
+                </p>
+              </div>
+              {disburseIntent && (
+                <div className="rounded-xl border bg-muted/40 p-3 text-left text-xs space-y-1">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Reference</span><span className="font-mono">{disburseIntent.reference}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{formatGHS(disburseIntent.amount)}</span></div>
+                </div>
+              )}
+              <div className="flex gap-2">
+                {disbursePhase === 'failed' && (
+                  <Button variant="outline" className="flex-1 h-11" onClick={() => setDisbursePhase('form')}>
+                    <RefreshCw className="mr-1 h-4 w-4" /> Try again
+                  </Button>
+                )}
+                <Button className="flex-1 h-11 font-semibold" onClick={resetDisburse}>Close</Button>
+              </div>
             </div>
           )}
         </DialogContent>

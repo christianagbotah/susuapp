@@ -23,6 +23,9 @@ import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, D
 import { SwipeableRow, FAB } from '@/components/shared/mobile-components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import type { LoanProduct, RepaymentScheduleEntry } from '@/lib/types';
+import { MomoPaymentDialog } from '@/components/shared/momo-payment-dialog';
+import { detectNetworkFromPhone } from '@/lib/payments/types';
+import type { PaymentIntent } from '@/lib/payments/types';
 
 // ---- Animation variants ----
 const containerVariants = {
@@ -166,7 +169,7 @@ const creditScoreTips = [
 // Main Component
 // ============================================================
 export function CustomerLoans() {
-  const { myLoans, loanPayments, applyForLoan, makeLoanPayment, calculateCreditScore } = useCustomerStore();
+  const { user, myLoans, loanPayments, applyForLoan, makeLoanPayment, calculateCreditScore } = useCustomerStore();
 
   // ---- Tab state (controlled) ----
   const [activeTab, setActiveTab] = useState('my-loans');
@@ -232,6 +235,7 @@ export function CustomerLoans() {
   const [payDialogLoan, setPayDialogLoan] = useState<import('@/lib/types').Loan | null>(null);
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState('momo');
+  const [momoOpen, setMomoOpen] = useState(false);
 
   // ---- Calculator memo ----
   const calculatorResult = useMemo(() => {
@@ -311,6 +315,16 @@ export function CustomerLoans() {
 
   function toggleExpand(loanId: string) {
     setExpandedLoanId((prev) => (prev === loanId ? null : loanId));
+  }
+
+  /** Loan repayment settled over the live MoMo rails. */
+  function handleLoanPaymentSettled(intent: PaymentIntent) {
+    if (!payDialogLoan) return;
+    makeLoanPayment(payDialogLoan.id, intent.amount, 'momo');
+    toast.success('Loan repayment received!', {
+      description: `${formatGHS(intent.amount)} towards your ${payDialogLoan.type.replace('-', ' ')} loan (ref ${intent.reference}).`,
+    });
+    setPayAmount('');
   }
 
   return (
@@ -1452,7 +1466,7 @@ export function CustomerLoans() {
       </motion.div>
 
       {/* ---- Loan Payment Dialog ---- */}
-      <Dialog open={!!payDialogLoan} onOpenChange={(open) => { if (!open) setPayDialogLoan(null); }}>
+      <Dialog open={!!payDialogLoan && !momoOpen} onOpenChange={(open) => { if (!open) setPayDialogLoan(null); }}>
         {payDialogLoan && (
           <DialogContent className="mx-4 sm:mx-0 sm:max-w-md">
             <DialogHeader>
@@ -1556,6 +1570,12 @@ export function CustomerLoans() {
                     toast.error(`Amount cannot exceed outstanding balance of ${formatGHS(payDialogLoan.remainingBalance)}`);
                     return;
                   }
+                  if (payMethod === 'momo') {
+                    // Live rails: the customer approves on their handset via
+                    // Hubtel / Paystack — never a fake in-app confirmation.
+                    setMomoOpen(true);
+                    return;
+                  }
                   makeLoanPayment(payDialogLoan.id, amt, payMethod);
                   toast.success('Payment successful!', {
                     description: `${formatGHS(amt)} has been paid towards your loan.`,
@@ -1566,12 +1586,31 @@ export function CustomerLoans() {
                 className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-none"
               >
                 <CheckCircle className="mr-1.5 h-4 w-4" />
-                Pay Now
+                {payMethod === 'momo' ? 'Pay via MoMo' : 'Pay Now'}
               </Button>
             </DialogFooter>
           </DialogContent>
         )}
       </Dialog>
+
+      {/* ---- MoMo Gateway Payment (loan repayment) ---- */}
+      <MomoPaymentDialog
+        open={momoOpen}
+        onOpenChange={(next) => {
+          setMomoOpen(next);
+          if (!next) { setPayDialogLoan(null); setPayAmount(''); }
+        }}
+        purpose="loan_repayment"
+        title="Repay your loan"
+        subtitle="Approve the prompt on your phone when it arrives."
+        customerName={user.name}
+        customerPhone={user.phone}
+        customerEmail={user.email}
+        fixedAmount={parseFloat(payAmount) || undefined}
+        initialNetwork={detectNetworkFromPhone(user.phone) ?? undefined}
+        metadata={{ loanId: payDialogLoan?.id, loanType: payDialogLoan?.type }}
+        onSettled={handleLoanPaymentSettled}
+      />
     </motion.div>
   );
 }

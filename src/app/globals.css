@@ -415,3 +415,37 @@ input, textarea, select {
     #006B3F 66.66%, #006B3F 100%
   );
 }
+
+/* ============================================================
+   UNIFORM CARD SIZING (all 10 portals)
+   ------------------------------------------------------------
+   Problem: CSS grid rows stretch their children by default,
+   but the animated wrappers (framer-motion <motion.div>) used
+   around every dashboard card broke the height chain — the
+   wrapper stretched, the Card inside it did not, so sibling
+   cards in the same row rendered at different content-driven
+   heights.
+
+   Fix: any Card ([data-slot="card"]) whose parent is a direct
+   child of a grid now fills the full grid-cell height. Every
+   card in a row is exactly as tall as the tallest one,
+   regardless of its own content. Cards that are direct grid
+   children are already stretched by the grid itself
+   (align-items: stretch), so no rule is needed for them.
+
+   Vertical (space-y) stacks and full-width cards are
+   intentionally untouched — the rule only targets grid rows.
+   ============================================================ */
+.grid > * > [data-slot="card"] {
+  height: 100%;
+}
+
+/* Inside a stretched card, keep the content block pinned to
+   the top and let any trailing footer sit at the bottom, so
+   longer cards distribute their content cleanly instead of
+   leaving a gap at the bottom edge of the border. */
+.grid > * > [data-slot="card"] > [data-slot="card-content"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}

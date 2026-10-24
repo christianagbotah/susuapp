@@ -16,8 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { PiggyBank, Users, Target, Plus, Clock, CheckCircle, AlertCircle, Calendar, ArrowRight, DollarSign, Gift, Sparkles, ChevronRight } from 'lucide-react';
+import { PiggyBank, Users, Target, Plus, Clock, CheckCircle, AlertCircle, Calendar, ArrowRight, DollarSign, Gift, Sparkles, ChevronRight, Smartphone, Wallet } from 'lucide-react';
 import { QuickActionsGrid } from '@/components/shared/mobile-components';
+import { MomoPaymentDialog } from '@/components/shared/momo-payment-dialog';
+import { detectNetworkFromPhone } from '@/lib/payments/types';
+import type { PaymentIntent } from '@/lib/payments/types';
 
 // ---- Animation variants ----
 const containerVariants = {
@@ -57,6 +60,7 @@ function getFrequencyLabel(freq: string) {
 // ============================================================
 export function CustomerSusu() {
   const {
+    user,
     susuGroups: myGroups,
     savingsGoals,
     wallets,
@@ -82,6 +86,7 @@ export function CustomerSusu() {
   const [contributeDialogOpen, setContributeDialogOpen] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [contributionAmount, setContributionAmount] = useState('');
+  const [momoOpen, setMomoOpen] = useState(false);
 
   const [addFundsDialogOpen, setAddFundsDialogOpen] = useState(false);
   const [addFundsGoalId, setAddFundsGoalId] = useState('');
@@ -131,6 +136,29 @@ export function CustomerSusu() {
     setSelectedGroupId(groupId);
     setContributionAmount('');
     setContributeDialogOpen(true);
+  }
+
+  /** Route the contribution through the live MoMo rails
+   *  (Hubtel / Paystack) instead of an instant wallet debit. */
+  function handlePayWithMomo() {
+    const amount = parseFloat(contributionAmount);
+    if (!selectedGroupId || isNaN(amount) || amount <= 0) {
+      toast.error('Enter a valid amount first');
+      return;
+    }
+    setContributeDialogOpen(false);
+    setMomoOpen(true);
+  }
+
+  function handleContributionSettled(intent: PaymentIntent) {
+    if (!selectedGroupId) return;
+    const group = myGroups.find((g) => g.id === selectedGroupId);
+    makeContribution(selectedGroupId, intent.amount);
+    toast.success('Contribution received!', {
+      description: `${formatGHS(intent.amount)} for ${group?.name ?? 'your susu group'} via MoMo (ref ${intent.reference}).`,
+    });
+    setContributionAmount('');
+    setSelectedGroupId('');
   }
 
   function handleAddFunds() {
@@ -455,7 +483,7 @@ export function CustomerSusu() {
                     Make Contribution
                   </DialogTitle>
                   <DialogDescription>
-                    Contribute to your susu group. The amount will be deducted from your wallet.
+                    Contribute to your susu group — pay instantly from your wallet, or remotely via mobile money (Hubtel / Paystack rails).
                   </DialogDescription>
                 </DialogHeader>
 
@@ -516,11 +544,19 @@ export function CustomerSusu() {
                     Cancel
                   </Button>
                   <Button
+                    variant="outline"
                     onClick={handleContribute}
+                    className="flex-1 border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 sm:flex-none"
+                  >
+                    <Wallet className="mr-1.5 h-4 w-4" />
+                    From Wallet
+                  </Button>
+                  <Button
+                    onClick={handlePayWithMomo}
                     className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-none"
                   >
-                    <CheckCircle className="mr-1.5 h-4 w-4" />
-                    Confirm Contribution
+                    <Smartphone className="mr-1.5 h-4 w-4" />
+                    Pay with MoMo
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1036,6 +1072,27 @@ export function CustomerSusu() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ==============================
+          MoMo Gateway Payment — susu contribution
+          ============================== */}
+      <MomoPaymentDialog
+        open={momoOpen}
+        onOpenChange={setMomoOpen}
+        purpose="susu_contribution"
+        title="Susu contribution"
+        subtitle="Approve the prompt on your phone when it arrives."
+        customerName={user.name}
+        customerPhone={user.phone}
+        customerEmail={user.email}
+        fixedAmount={parseFloat(contributionAmount) || undefined}
+        initialNetwork={detectNetworkFromPhone(user.phone) ?? undefined}
+        metadata={{
+          groupId: selectedGroupId,
+          groupName: myGroups.find((g) => g.id === selectedGroupId)?.name,
+        }}
+        onSettled={handleContributionSettled}
+      />
     </motion.div>
   );
 }

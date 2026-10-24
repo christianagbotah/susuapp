@@ -15,8 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Wallet, ArrowDownLeft, ArrowUpRight, Plus, Smartphone, Building2, QrCode, Copy, Check, Shield, Info, CreditCard, Banknote, TrendingUp } from 'lucide-react';
+import { Wallet, ArrowDownLeft, ArrowUpRight, Plus, Smartphone, Building2, QrCode, Copy, Check, Shield, Info, CreditCard, Banknote, TrendingUp, Landmark } from 'lucide-react';
 import { MobileFabWithLabel } from '@/components/shared/mobile-components';
+import { MomoPaymentDialog } from '@/components/shared/momo-payment-dialog';
+import type { PaymentIntent } from '@/lib/payments/types';
 
 // ---- Animation variants ----
 const containerVariants = {
@@ -87,7 +89,7 @@ function getWalletTypeBg(type: string) {
 // Main Component
 // ============================================================
 export function CustomerWallet() {
-  const { wallets, transactions, deposit, withdraw } = useCustomerStore();
+  const { user, wallets, transactions, deposit, withdraw } = useCustomerStore();
 
   // ---- Computed values ----
   const totalBalance = wallets.reduce((sum, w) => sum + w.balance, 0);
@@ -102,7 +104,7 @@ export function CustomerWallet() {
   const [depositProviderId, setDepositProviderId] = useState('');
   const [depositPhone, setDepositPhone] = useState(mainWallet?.accountNumber ?? '');
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositPin, setDepositPin] = useState('');
+  const [momoOpen, setMomoOpen] = useState(false);
 
   // ---- Withdraw state ----
   const [withdrawWalletId, setWithdrawWalletId] = useState('');
@@ -131,31 +133,26 @@ export function CustomerWallet() {
       : (parseFloat(withdrawAmount) || 0) * 0.02;
   const withdrawNet = (parseFloat(withdrawAmount) || 0) - withdrawFee;
 
-  // ---- Deposit fee calculation ----
-  const depositFeeAmount = (() => {
-    const amt = parseFloat(depositAmount) || 0;
-    if (amt < 5000) return 0;
-    if (amt <= 10000) return 2.5;
-    return amt * 0.0025;
-  })();
-
   // ---- Handlers ----
   function handleDepositSubmit() {
     const amount = parseFloat(depositAmount);
     if (!depositWalletId) { toast.error('Please select a wallet'); return; }
-    if (!depositProviderId) { toast.error('Please select a mobile money provider'); return; }
+    if (!depositProviderId) { toast.error('Please select your mobile money network'); return; }
     if (!depositPhone || depositPhone.length < 10) { toast.error('Please enter a valid phone number'); return; }
     if (!amount || amount <= 0) { toast.error('Please enter a valid amount'); return; }
-    if (!depositPin || depositPin.length < 4) { toast.error('Please enter your MoMo PIN'); return; }
+    // Hand off to the live gateway flow — the PIN is entered on the
+    // payer's handset, never in the app (Hubtel / Paystack rails).
+    setMomoOpen(true);
+  }
 
-    const provider = mobileMoneyProviders.find((p) => p.id === depositProviderId);
-    setConfirmDialog({
-      open: true,
-      type: 'deposit',
-      walletId: depositWalletId,
-      amount,
-      providerName: provider?.name ?? '',
-    });
+  function handleDepositSettled(intent: PaymentIntent) {
+    const providerName = intent.network === 'MTN'
+      ? 'MTN Mobile Money'
+      : intent.network === 'TELECEL' ? 'Telecel Cash' : 'AT Money';
+    deposit(depositWalletId, intent.amount, providerName);
+    toast.success(`Wallet topped up with ${formatGHS(intent.amount)} via ${providerName}`);
+    setDepositAmount('');
+    setDepositProviderId('');
   }
 
   function handleWithdrawSubmit() {
@@ -188,7 +185,6 @@ export function CustomerWallet() {
       deposit(walletId, amount, providerName);
       toast.success(`Deposit of ${formatGHS(amount)} via ${providerName} is processing!`);
       setDepositAmount('');
-      setDepositPin('');
       setDepositProviderId('');
     } else {
       withdraw(walletId, amount, providerName);
@@ -569,46 +565,15 @@ export function CustomerWallet() {
                             </div>
                           </div>
 
-                          {/* MoMo PIN */}
-                          <div className="space-y-2">
-                            <Label htmlFor="deposit-pin">MoMo PIN</Label>
-                            <div className="relative">
-                              <Shield className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                              <Input
-                                id="deposit-pin"
-                                type="password"
-                                inputMode="numeric"
-                                placeholder="Enter your PIN"
-                                value={depositPin}
-                                onChange={(e) => setDepositPin(e.target.value)}
-                                className="pl-10"
-                                maxLength={6}
-                              />
-                            </div>
+                          {/* Gateway note — the real fee comes from the
+                              active provider and is confirmed in the payment dialog */}
+                          <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+                            <Landmark className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                              Processed over the <span className="font-semibold">Hubtel / Paystack</span> rails. You'll approve the
+                              payment on your handset — never enter your MoMo PIN in the app. The exact fee is shown before you confirm.
+                            </p>
                           </div>
-
-                          {/* Fee info */}
-                          {parseFloat(depositAmount) > 0 && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 5 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="rounded-lg bg-slate-50 p-3"
-                            >
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">Amount</span>
-                                <span className="font-semibold text-slate-800">{formatGHS(parseFloat(depositAmount))}</span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-between text-sm">
-                                <span className="text-slate-600">Fee</span>
-                                <span className="font-medium text-slate-500">{formatGHS(depositFeeAmount)}</span>
-                              </div>
-                              <Separator className="my-2" />
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="font-semibold text-slate-800">You deposit</span>
-                                <span className="font-bold text-emerald-600">{formatGHS(parseFloat(depositAmount) - depositFeeAmount)}</span>
-                              </div>
-                            </motion.div>
-                          )}
 
                           {/* Deposit Button */}
                           <Button
@@ -617,7 +582,7 @@ export function CustomerWallet() {
                             size="lg"
                           >
                             <ArrowDownLeft className="mr-2 h-4 w-4" />
-                            Deposit Funds
+                            Deposit via Mobile Money
                           </Button>
                         </motion.div>
                       )}
@@ -643,23 +608,15 @@ export function CustomerWallet() {
                       <div className="flex items-start gap-2">
                         <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                         <p className="text-sm text-slate-700 leading-relaxed">
-                          <span className="font-semibold">₵0.00</span> for amounts under ₵5,000
+                          Gateway fees are set by the active provider — <span className="font-semibold">Hubtel (1% + ₵0.50)</span> or <span className="font-semibold">Paystack (1.5%)</span> — and shown before you confirm.
                         </p>
                       </div>
                     </div>
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                       <div className="flex items-start gap-2">
-                        <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                        <Shield className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
                         <p className="text-sm text-slate-700 leading-relaxed">
-                          <span className="font-semibold">₵2.50</span> for amounts ₵5,000 – ₵10,000
-                        </p>
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-start gap-2">
-                        <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-                        <p className="text-sm text-slate-700 leading-relaxed">
-                          <span className="font-semibold">0.25%</span> for amounts above ₵10,000
+                          Your MoMo PIN is entered on your handset only — iSusuPro never asks for it.
                         </p>
                       </div>
                     </div>
@@ -1047,7 +1004,26 @@ export function CustomerWallet() {
       />
 
       {/* ==============================
-          Confirmation Dialog
+          MoMo Gateway Payment (live Hubtel/Paystack rails)
+          ============================== */}
+      <MomoPaymentDialog
+        open={momoOpen}
+        onOpenChange={setMomoOpen}
+        purpose="wallet_deposit"
+        title="Top up your wallet"
+        subtitle="Approve the payment on your phone when the prompt arrives."
+        customerName={user.name}
+        customerPhone={depositPhone}
+        customerEmail={user.email}
+        fixedAmount={parseFloat(depositAmount) || undefined}
+        initialNetwork={depositProviderId === 'mtn' ? 'MTN' : depositProviderId === 'telecel' ? 'TELECEL' : depositProviderId === 'at' ? 'AT' : undefined}
+        amountPresets={[50, 100, 200, 500]}
+        metadata={{ walletId: depositWalletId, walletType: wallets.find((w) => w.id === depositWalletId)?.type }}
+        onSettled={handleDepositSettled}
+      />
+
+      {/* ==============================
+          Confirmation Dialog (withdrawals)
           ============================== */}
       <Dialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}>
         <DialogContent className="sm:max-w-md">

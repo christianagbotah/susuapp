@@ -478,3 +478,25 @@ Stage Summary:
 - RBAC registry drives permissions across UI; NestJS RolesGuard mirrors it server-side
 - PWA v2 + Capacitor + Tauri configs cover Web, Android, iOS, Windows, macOS, Linux + USSD for feature phones
 - All verification passed; ready for commit
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Uniform dashboard cards + real Hubtel/Paystack payment integration (MoMo collections & disbursements)
+
+Work Log:
+- Uniform card sizing (all 10 portals): added a global CSS rule in globals.css — `.grid > * > [data-slot="card"] { height: 100% }` (+ flex content distribution). Root cause: framer-motion wrappers broke the grid stretch chain, so cards collapsed to content height. Browser-measured after fix: admin stat cards 6 x 157px, two-column section 2 x 436px, customer dashboard 4 x 232px — all uniform.
+- Payment engine (src/lib/payments/): types.ts (domain types, Ghana phone normalisation, prefix→network detection, fee math), server-config.ts (env vars > .data/payment-gateways.json > simulation), ledger.ts (in-memory intent + webhook-event store), simulator.ts (deterministic per-reference outcomes: 91% success collections / 95% disbursements, 2.5–7s), providers/hubtel.ts (collect-money + send-money v2 APIs, Basic auth, mtn-gh/telecel-gh/at-gh channels), providers/paystack.ts (charge, transferrecipient, transfer, verify; mobile_money mtn/vod/atl; HMAC-SHA512 webhook signature; live /bank?currency=GHS resolution), gateway.ts (facade: chargeMomo, disburse, verifyIntent, handleWebhook).
+- API routes: /api/payments/{charge,disburse,status,config,webhook/hubtel,webhook/paystack} — validation (Ghana numbers, 10–17 digit accounts, purpose whitelists), masked-key config API, signed webhook handling.
+- Client store: payments-store.ts (persisted mirror + gateway status cache).
+- Reusable MomoPaymentDialog (shared component): form → approve-on-handset processing (elapsed timer, poll every 2s) → success/failed/timeout; network picker with Ghana brand colours; live/test-mode badge; fee breakdown from the active provider.
+- Integrated flows: customer wallet deposit (removed fake in-app MoMo PIN — real handset approval only), susu contribution (dual buttons: From Wallet / Pay with MoMo), loan repayment (momo routes through gateway; bank/agent unchanged), admin loan disbursement (new phased dialog: MoMo push or Ghana bank transfer with bank picker + account validation, polls until settled, then disburseLoan store action).
+- Admin Settings → Payments: save/test/activate now sync to the server engine (POST /api/payments/config); honest LIVE/TEST MODE badges + env-var guidance; Paystack field mapping (Client Secret → secret key, API Key → public key).
+- Fixed during browser verification: MomoPaymentDialog reset effect was firing on fixedAmount prop changes (parent clears amount in onSettled) and stomping the success view — now resets only on the closed→open transition; success copy derives from the intent, not mutable parent state; poll loop only advances on real status changes (no silent poll-counter resets); removed obsolete successMessage prop from all call sites.
+- Verification (agent-browser + curl): login via NestJS (demo PIN 123456), wallet deposit ₵100 & ₵200 (fee ₵1.50/₵2.50 → totals ₵101.50/₵202.50, wallet balance credited, success view holds), susu contribution ₵50 (Makola Market Women), loan approval → bank disbursement ₵3,000 to GCB Bank (form → in-flight → funds delivered; loan turned active; ledger recorded), forged Paystack webhook rejected (no secret configured), unknown Hubtel reference safely unmatched, forged signature test 401.
+- tsc --noEmit clean (app code), eslint clean on all touched files, `bun run build` passes with all 6 payment routes registered.
+
+Stage Summary:
+- Uniform cards: fixed globally with one surgical CSS rule — applies to all 10 portals incl. future pages.
+- REAL payment integration now exists: Hubtel + Paystack adapters (documented endpoints), MoMo collections, MoMo + bank disbursements, signed webhooks, fee engine, simulation fallback when keys absent (test mode is clearly labelled everywhere — no fake "live" claims).
+- Honest status communicated to user: web portal fully functional in sandbox; PWA installable; Android/iOS + Windows/macOS are config shells only (need deployed API + native toolchains); nothing production-ready yet (in-memory data, simulated auth).

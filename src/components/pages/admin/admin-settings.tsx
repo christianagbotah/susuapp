@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAdminStore, useConfigStore } from '@/store/app-store';
 import { getInitials, formatPhoneGH, formatDate, formatGHS } from '@/lib/formatters';
 import { GHANA_REGIONS } from '@/lib/formatters';
@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { PaymentGatewayId, SMSProviderId } from '@/lib/types';
+import { usePaymentsStore, refreshGatewayStatus, type GatewayStatusClient } from '@/store/payments-store';
 import {
   User, Shield, Bell, Lock, Smartphone, Camera, Eye, EyeOff,
   Fingerprint, Globe, Settings, History, Key, AlertTriangle, Copy, RefreshCw,
@@ -695,6 +696,12 @@ function PaymentGatewaysTab() {
   const [expandedGateway, setExpandedGateway] = useState<string | null>(null);
   const [showCreds, setShowCreds] = useState<Record<string, boolean>>({});
   const [credForms, setCredForms] = useState<Record<string, Record<string, string>>>({});
+  const [serverStatus, setServerStatus] = useState<GatewayStatusClient | null>(null);
+
+  // Sync the client view with the server-side gateway engine state
+  useEffect(() => {
+    refreshGatewayStatus().then(setServerStatus);
+  }, []);
 
   const toggleExpand = (id: string) => {
     setExpandedGateway(prev => prev === id ? null : id);
@@ -715,32 +722,89 @@ function PaymentGatewaysTab() {
     }));
   };
 
-  const saveCredentials = (gwId: string) => {
-    if (credForms[gwId]) {
-      updatePaymentCredentials(gwId as PaymentGatewayId, credForms[gwId]);
-      toast.success('Credentials saved', {
-        description: `${paymentGateways.find(g => g.id === gwId)?.name} credentials have been updated.`,
+  const saveCredentials = async (gwId: string) => {
+    if (!credForms[gwId]) return;
+    updatePaymentCredentials(gwId as PaymentGatewayId, credForms[gwId]);
+    const gwName = paymentGateways.find(g => g.id === gwId)?.name ?? gwId;
+    // Persist server-side so the payment engine actually uses these keys.
+    // Paystack mapping: Client Secret → secret key, API Key → public key.
+    try {
+      const res = await fetch('/api/payments/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credentials: gwId === 'hubtel'
+            ? {
+                hubtel: {
+                  clientId: credForms[gwId].clientId ?? '',
+                  clientSecret: credForms[gwId].clientSecret ?? '',
+                  apiKey: credForms[gwId].apiKey ?? '',
+                },
+              }
+            : {
+                paystack: {
+                  secretKey: credForms[gwId].clientSecret ?? '',
+                  publicKey: credForms[gwId].apiKey ?? '',
+                },
+              },
+        }),
       });
+      const status = res.ok ? (await res.json()) as GatewayStatusClient : null;
+      if (status) { setServerStatus(status); usePaymentsStore.getState().setGateway(status); }
+      const mode = status?.[gwId as 'hubtel' | 'paystack']?.mode;
+      if (mode === 'live') {
+        toast.success(`${gwName} is LIVE`, {
+          description: 'Real payments will now be processed over the provider rails.',
+        });
+      } else {
+        toast.warning(`${gwName} saved — still in TEST MODE`, {
+          description: 'The engine needs a complete key set (or matching env vars) before it switches to live. No real money moves yet.',
+        });
+      }
+    } catch {
+      toast.error('Could not sync credentials with the payment engine');
     }
   };
 
-  const handleActivate = (id: PaymentGatewayId) => {
-    setActivePaymentGateway(activePaymentGateway === id ? null : id);
+  const handleActivate = async (id: PaymentGatewayId) => {
+    const next = activePaymentGateway === id ? null : id;
+    setActivePaymentGateway(next);
+    try {
+      const res = await fetch('/api/payments/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activateProvider: next }),
+      });
+      const status = res.ok ? (await res.json()) as GatewayStatusClient : null;
+      if (status) { setServerStatus(status); usePaymentsStore.getState().setGateway(status); }
+    } catch { /* offline — client store already updated */ }
     toast.success(
-      activePaymentGateway === id ? 'Payment gateway deactivated' : 'Payment gateway activated',
+      next ? 'Payment gateway activated' : 'Payment gateway deactivated',
       {
-        description: activePaymentGateway === id
-          ? 'No payment gateway is currently active.'
-          : `${paymentGateways.find(g => g.id === id)?.name} is now the active payment gateway.`,
-      }
+        description: next
+          ? `${paymentGateways.find(g => g.id === id)?.name} now handles all charges and disbursements.`
+          : 'Payments fall back to the first configured provider, or test mode.',
+      },
     );
   };
 
-  const handleTest = (id: PaymentGatewayId) => {
+  const handleTest = async (id: PaymentGatewayId) => {
     testPaymentGateway(id);
-    toast.success('Connection test successful', {
-      description: `Successfully connected to ${paymentGateways.find(g => g.id === id)?.name}.`,
-    });
+    const gwName = paymentGateways.find(g => g.id === id)?.name ?? id;
+    try {
+      const status = await refreshGatewayStatus();
+      if (status) { setServerStatus(status); }
+      const mode = status?.[id]?.mode;
+      if (mode === 'live') {
+        toast.success(`${gwName} connection verified — LIVE mode`);
+      } else {
+        toast.warning(`${gwName} is running in TEST MODE`, {
+          description: 'Keys are incomplete or env vars are not set — payments are simulated, no real money moves.',
+        });
+      }
+    } catch {
+      toast.error('Could not reach the payment engine');
+    }
   };
 
   const gatewayIcons: Record<string, { bg: string; text: string; color: string }> = {
@@ -761,8 +825,23 @@ function PaymentGatewaysTab() {
               <h4 className="font-semibold text-sm">Active Payment Gateway</h4>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {activePaymentGateway
-                  ? `${paymentGateways.find(g => g.id === activePaymentGateway)?.name} is processing all payments.`
-                  : 'No payment gateway is currently active. Payments will not be processed.'}
+                  ? `${paymentGateways.find(g => g.id === activePaymentGateway)?.name} is processing all charges and disbursements.`
+                  : 'No gateway is active — charges fall back to the first configured provider, or run in test mode.'}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <Badge variant="outline" className={serverStatus?.activeMode === 'live'
+                  ? 'border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400'
+                  : 'border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400'}>
+                  {serverStatus?.activeMode === 'live' ? 'LIVE MODE' : 'TEST MODE (simulated)'}
+                </Badge>
+                {serverStatus?.hubtel.mode === 'live' && <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700">Hubtel live</Badge>}
+                {serverStatus?.paystack.mode === 'live' && <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700">Paystack live</Badge>}
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">
+                Server keys are resolved from env vars first (HUBTEL_CLIENT_ID / HUBTEL_CLIENT_SECRET /
+                PAYSTACK_SECRET_KEY), then from credentials saved here. Without a complete key set the
+                engine stays in test mode — every charge, contribution and disbursement is simulated
+                with realistic outcomes. In production, prefer env vars or a secrets vault.
               </p>
             </div>
             {activePaymentGateway && (
