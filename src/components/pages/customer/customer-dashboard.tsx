@@ -767,11 +767,11 @@ export function CustomerDashboard() {
                   <p className="mt-1 text-xs text-slate-400">Your next payout will appear here</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
                   {upcomingPayouts.map((payout) => (
                     <div
                       key={payout.id}
-                      className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-teal-50/40 p-4"
+                      className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-teal-50/40 p-4 h-full"
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">

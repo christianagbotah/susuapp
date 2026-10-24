@@ -82,18 +82,18 @@ export function AdminDashboard() {
       <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {statCards.map((s, i) => (
           <motion.div key={s.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
-              <CardContent className="p-3 lg:p-4">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
+              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center gap-2">
                   <div className={`flex h-8 w-8 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
                     <s.icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[10px] lg:text-xs text-muted-foreground">{s.label}</p>
-                    <p className="text-xs lg:text-sm font-semibold leading-tight">{s.value}</p>
+                    <p className="text-xs lg:text-sm font-semibold leading-tight truncate">{s.value}</p>
                   </div>
                 </div>
-                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">{s.change}</p>
+                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium truncate">{s.change}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -217,9 +217,9 @@ export function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 items-stretch">
               {topAgents.map((agent, idx) => (
-                <div key={agent.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation">
+                <div key={agent.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors touch-manipulation h-full">
                   <div className="relative">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 text-xs font-semibold">

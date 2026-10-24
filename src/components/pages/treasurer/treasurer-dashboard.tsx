@@ -124,14 +124,14 @@ export function TreasurerDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
-              <CardContent className="p-3 lg:p-4">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
+              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs lg:text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-xs lg:text-sm text-muted-foreground truncate">{stat.title}</p>
+                    <p className="text-2xl font-bold truncate">{stat.value}</p>
                   </div>
-                  <div className={`rounded-lg p-3 ${stat.bg}`}>
+                  <div className={`shrink-0 rounded-lg p-3 ${stat.bg}`}>
                     <stat.icon className={`h-6 w-6 ${stat.color}`} />
                   </div>
                 </div>
@@ -155,25 +155,25 @@ export function TreasurerDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
               {/* Total Collected */}
-              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-1">
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-1 flex flex-col">
                 <p className="text-xs font-medium text-muted-foreground">Total Collected</p>
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">₵3,200.00</span>
                   <ArrowUpRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400">+12% from yesterday</p>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-auto">+12% from yesterday</p>
               </div>
 
               {/* Members Paid */}
-              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 space-y-1">
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-4 space-y-1 flex flex-col">
                 <p className="text-xs font-medium text-muted-foreground">Members Paid</p>
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold">28</span>
                   <span className="text-sm text-muted-foreground">/45</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 mt-auto">
                   <div className="h-2 w-full rounded-full bg-blue-200 dark:bg-blue-800 overflow-hidden">
                     <div className="h-full rounded-full bg-blue-600 dark:bg-blue-400" style={{ width: '62%' }} />
                   </div>
@@ -182,13 +182,13 @@ export function TreasurerDashboard() {
               </div>
 
               {/* Pending */}
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 space-y-1">
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 space-y-1 flex flex-col">
                 <p className="text-xs font-medium text-muted-foreground">Pending</p>
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold text-amber-700 dark:text-amber-300">17</span>
                   <span className="text-sm text-muted-foreground">members</span>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-auto">
                   <ArrowDownRight className="h-3 w-3" />
                   Needs follow-up
                 </p>
@@ -232,7 +232,7 @@ export function TreasurerDashboard() {
               View All <ArrowRight className="ml-1 h-3 w-3" />
             </Button>
           </div>
-          <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2 items-stretch">
             {managedGroups.map((group, i) => {
               const collection = getGroupCollectionProgress(group.id, group.members);
               const progress = collection.total > 0 ? Math.round((collection.paid / collection.total) * 100) : 0;
@@ -245,7 +245,7 @@ export function TreasurerDashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.08 }}
                 >
-                  <Card className="hover:shadow-md transition-shadow touch-manipulation">
+                  <Card className="hover:shadow-md transition-shadow touch-manipulation h-full">
                     <CardContent className="p-3 lg:p-4 space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">

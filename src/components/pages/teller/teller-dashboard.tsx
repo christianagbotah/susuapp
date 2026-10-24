@@ -57,8 +57,8 @@ export function TellerDashboard() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {statsCards.map((stat, i) => (
           <motion.div key={stat.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.1 }}>
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
-              <CardContent className="p-3 lg:p-4">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
+              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 space-y-1">
                     <p className="truncate text-xs text-muted-foreground lg:text-sm">{stat.title}</p>

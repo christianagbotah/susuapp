@@ -145,14 +145,14 @@ export function AgentDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.1 }}
           >
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
-              <CardContent className="p-3 lg:p-4">
+            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
+              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
                 <div className="flex items-center justify-between gap-2">
                   <div className="space-y-0.5 lg:space-y-1 min-w-0">
                     <p className="text-xs lg:text-sm text-muted-foreground truncate">{stat.title}</p>
-                    <p className="text-xl font-bold lg:text-2xl">{stat.value}</p>
+                    <p className="text-xl font-bold lg:text-2xl truncate">{stat.value}</p>
                   </div>
-                  <div className={`rounded-lg p-2 lg:p-3 ${stat.bg}`}>
+                  <div className={`shrink-0 rounded-lg p-2 lg:p-3 ${stat.bg}`}>
                     <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
                   </div>
                 </div>
@@ -348,9 +348,9 @@ export function AgentDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 items-stretch">
               {/* Collection Rate */}
-              <div className="flex flex-col gap-2 rounded-lg border p-3">
+              <div className="flex flex-col gap-2 rounded-lg border p-3 h-full">
                 <div className="flex items-center gap-2">
                   <div className="rounded-lg bg-emerald-100 p-1.5 dark:bg-emerald-900/30">
                     <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -363,7 +363,7 @@ export function AgentDashboard() {
               </div>
 
               {/* Customer Retention */}
-              <div className="flex flex-col gap-2 rounded-lg border p-3">
+              <div className="flex flex-col gap-2 rounded-lg border p-3 h-full">
                 <div className="flex items-center gap-2">
                   <div className="rounded-lg bg-emerald-100 p-1.5 dark:bg-emerald-900/30">
                     <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -376,7 +376,7 @@ export function AgentDashboard() {
               </div>
 
               {/* New Customers */}
-              <div className="flex flex-col gap-2 rounded-lg border p-3">
+              <div className="flex flex-col gap-2 rounded-lg border p-3 h-full">
                 <div className="flex items-center gap-2">
                   <div className="rounded-lg bg-blue-100 p-1.5 dark:bg-blue-900/30">
                     <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -393,7 +393,7 @@ export function AgentDashboard() {
               </div>
 
               {/* On-time Rate */}
-              <div className="flex flex-col gap-2 rounded-lg border p-3">
+              <div className="flex flex-col gap-2 rounded-lg border p-3 h-full">
                 <div className="flex items-center gap-2">
                   <div className="rounded-lg bg-amber-100 p-1.5 dark:bg-amber-900/30">
                     <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
