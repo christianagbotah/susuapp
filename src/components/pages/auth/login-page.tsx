@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useNavigationStore } from '@/store/app-store';
+import { apiFetch, ensureBackendStarted } from '@/lib/api-client';
 import { toast } from 'sonner';
 import type { PortalId } from '@/lib/types';
 
@@ -104,11 +105,53 @@ export function LoginPage() {
 
   const handleLogin = async () => {
     setIsLoading(true);
-    // Simulate login — default to customer portal
-    setTimeout(() => {
+    const digits = phone.replace(/\D/g, '');
+    const normalizedPhone = digits.length === 9 && !digits.startsWith('0') ? `0${digits}` : digits;
+
+    const demoLogin = async (offline: boolean) => {
+      await new Promise((r) => setTimeout(r, 600));
       setPortal('customer');
       setIsLoading(false);
-    }, 800);
+      if (offline) toast.info('Signed in to demo mode — NestJS API not reachable in this session.');
+    };
+
+    try {
+      // 1) Try the NestJS backend directly
+      const data = await apiFetch<{ accessToken: string; user: { name: string } }>('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: normalizedPhone, pin }),
+      });
+      setPortal('customer');
+      setIsLoading(false);
+      toast.success(`Welcome back, ${data.user.name}! · Authenticated via iSusuPro API`);
+    } catch (err: unknown) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401) {
+        setIsLoading(false);
+        toast.error('Invalid phone number or PIN. Demo PIN: 123456');
+        return;
+      }
+      // 2) Network failure → ask the dev server to boot the API, then retry once
+      try {
+        const started = await ensureBackendStarted();
+        if (started) {
+          const data = await apiFetch<{ accessToken: string; user: { name: string } }>('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: normalizedPhone, pin }),
+          });
+          setPortal('customer');
+          setIsLoading(false);
+          toast.success(`Welcome back, ${data.user.name}! · Authenticated via iSusuPro API`);
+          return;
+        }
+      } catch {
+        /* fall through to demo */
+      }
+      // 3) Offline → demo mode
+      await demoLogin(true);
+    }
   };
 
   const handlePortalLaunch = (portalId: PortalId) => {

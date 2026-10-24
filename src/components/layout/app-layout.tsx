@@ -119,6 +119,7 @@ import { CustomerAirtime } from '@/components/pages/customer/customer-airtime';
 import { CustomerBills } from '@/components/pages/customer/customer-bills';
 import { CustomerBudgeting } from '@/components/pages/customer/customer-budgeting';
 import { NotificationPanel, agentNotifications, adminNotifications, treasurerNotifications } from '@/components/shared/notification-panel';
+import { SusuAiChat } from '@/components/shared/susu-ai-chat';
 
 import type { LucideIcon } from 'lucide-react';
 
@@ -737,6 +738,9 @@ export function AppLayout() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Susu AI — floating intelligent assistant (all portals) */}
+      <SusuAiChat />
     </div>
   );
 }

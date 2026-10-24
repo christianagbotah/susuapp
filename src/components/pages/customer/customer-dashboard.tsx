@@ -18,7 +18,8 @@ import {
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { useCustomerStore } from '@/store/app-store';
+import { useCustomerStore, useCustomerExtendedStore } from '@/store/app-store';
+import { AiInsightsCard } from '@/components/pages/customer/ai-insights-card';
 import { formatGHS, formatDate, formatCompactNumber, getStatusColor, getInitials } from '@/lib/formatters';
 import { monthlyRevenueData } from '@/lib/mock-data';
 
@@ -74,6 +75,7 @@ export function CustomerDashboard() {
   const {
     user, wallets, susuGroups: mySusuGroups, myLoans, transactions, savingsGoals, susuPayouts, notifications, setActivePage,
   } = useCustomerStore();
+  const { budgets } = useCustomerExtendedStore();
 
   // ---- Computed stats ----
   const unreadNotifications = notifications.filter((n) => !n.read).length;
@@ -237,6 +239,13 @@ export function CustomerDashboard() {
             </div>
           </div>
         </Card>
+      </motion.div>
+
+      {/* ==============================
+          1b. AI Financial Insights
+          ============================== */}
+      <motion.div variants={itemVariants}>
+        <AiInsightsCard transactions={transactions} wallets={wallets} budgets={budgets} />
       </motion.div>
 
       {/* ==============================

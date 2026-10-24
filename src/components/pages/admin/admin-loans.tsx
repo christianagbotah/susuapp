@@ -13,7 +13,7 @@ import {
   Eye, Filter, ChevronLeft, ChevronRight, CreditCard, Calendar,
   User, Phone, MapPin, Shield, Search, Download, ArrowRight,
   FileText, TrendingUp, TrendingDown, Send, Banknote, Building2,
-  Wallet, ArrowUpRight,
+  Wallet, ArrowUpRight, Sparkles, Loader2, ShieldCheck, ShieldAlert, Lightbulb,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,6 +85,49 @@ export function AdminLoans() {
   const [disburseDialog, setDisburseDialog] = useState<Loan | null>(null);
   const [disburseMethod, setDisburseMethod] = useState('momo');
   const [disburseNumber, setDisburseNumber] = useState('');
+
+  // ---- AI Risk Assessment ----
+  interface AiFactor { factor: string; impact: 'positive' | 'negative' | 'neutral'; note: string; }
+  interface AiAssessment { riskLevel: 'low' | 'medium' | 'high'; score: number; recommendation: string; factors: AiFactor[]; }
+  const [aiLoan, setAiLoan] = useState<Loan | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<AiAssessment | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  const runAiAssessment = async (loan: Loan) => {
+    setAiLoan(loan);
+    setAiResult(null);
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/ai/loan-assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicantName: loan.applicantName,
+          type: loan.type,
+          amount: loan.amount,
+          termMonths: loan.term,
+          purpose: loan.purpose,
+          creditScore: loan.creditScore,
+          interestRate: loan.interestRate,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setAiResult(data);
+    } catch {
+      setAiError('The AI risk engine is unavailable right now. Please try again shortly.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const riskStyles: Record<string, { badge: string; icon: React.ElementType; color: string }> = {
+    low: { badge: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400', icon: ShieldCheck, color: 'text-emerald-600' },
+    medium: { badge: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400', icon: AlertTriangle, color: 'text-amber-600' },
+    high: { badge: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-400', icon: ShieldAlert, color: 'text-rose-600' },
+  };
 
   // Computed stats
   const stats = useMemo(() => {
@@ -379,6 +422,10 @@ export function AdminLoans() {
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                           {(loan.status === 'pending' || loan.status === 'under_review') && (
                             <>
+                              <Button size="sm" className="h-7 px-2 text-xs bg-violet-600 hover:bg-violet-700 text-white"
+                                onClick={() => runAiAssessment(loan)}>
+                                <Sparkles className="mr-1 h-3 w-3" /> AI Check
+                              </Button>
                               <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
                                 onClick={() => setDetailLoan(loan)}>
                                 <CheckCircle className="mr-1 h-3 w-3" /> Approve
@@ -817,6 +864,115 @@ export function AdminLoans() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Risk Assessment Dialog */}
+      <Dialog open={!!aiLoan} onOpenChange={(open) => { if (!open) { setAiLoan(null); setAiResult(null); setAiError(null); } }}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white">
+                <Sparkles className="h-4 w-4" />
+              </span>
+              AI Risk Assessment
+            </DialogTitle>
+            <DialogDescription>
+              {aiLoan && <>Susu AI credit analysis for <span className="font-medium text-foreground">{aiLoan.applicantName}</span> — {formatGHS(aiLoan.amount)} {aiLoan.type.replace('-', ' ')} loan</>}
+            </DialogDescription>
+          </DialogHeader>
+
+          {aiLoading && (
+            <div className="space-y-3 py-4">
+              <div className="flex items-center gap-3 rounded-xl border bg-violet-50 dark:bg-violet-950/20 p-4">
+                <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+                <div>
+                  <p className="text-sm font-medium">Susu AI is evaluating this application…</p>
+                  <p className="text-xs text-muted-foreground">Reviewing credit profile, amount, purpose and term.</p>
+                </div>
+              </div>
+              {[0, 1, 2].map(i => (
+                <div key={i} className="flex items-start gap-3 rounded-xl border p-3">
+                  <div className="h-8 w-8 animate-pulse rounded-lg bg-muted" />
+                  <div className="flex-1 space-y-1.5 py-1">
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-4/5 animate-pulse rounded bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!aiLoading && aiError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-950/30 p-4 text-sm text-rose-700 dark:text-rose-300">
+              {aiError}
+            </div>
+          )}
+
+          {!aiLoading && aiResult && (
+            <div className="space-y-4">
+              {/* Risk level + score */}
+              <div className="flex items-center justify-between gap-3 rounded-xl border p-4">
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const style = riskStyles[aiResult.riskLevel] || riskStyles.medium;
+                    const Icon = style.icon;
+                    return (
+                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl border-2 ${style.badge}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    );
+                  })()}
+                  <div>
+                    <p className="text-xs text-muted-foreground">Risk Level</p>
+                    <p className="text-lg font-bold capitalize">{aiResult.riskLevel}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">AI Score</p>
+                  <p className="text-2xl font-bold tabular-nums">{aiResult.score}<span className="text-sm text-muted-foreground">/100</span></p>
+                </div>
+              </div>
+
+              {/* Score bar */}
+              <Progress value={aiResult.score} className="h-2" />
+
+              {/* Recommendation */}
+              <div className="rounded-xl border bg-muted/40 p-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><Lightbulb className="h-3.5 w-3.5 text-amber-500" /> Recommendation</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{aiResult.recommendation}</p>
+              </div>
+
+              {/* Factors */}
+              <div className="space-y-2">
+                {aiResult.factors.map((f, i) => (
+                  <div key={i} className="flex items-start gap-2.5 rounded-lg border p-2.5">
+                    <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
+                      f.impact === 'positive' ? 'bg-emerald-500' : f.impact === 'negative' ? 'bg-rose-500' : 'bg-slate-400'
+                    }`} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold">{f.factor}</p>
+                      <p className="text-xs text-muted-foreground">{f.note}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setAiLoan(null); setAiResult(null); setAiError(null); }}>
+              Close
+            </Button>
+            {aiResult && aiLoan && (
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => { setAiLoan(null); setAiResult(null); setDetailLoan(aiLoan); }}
+              >
+                Continue to Approval
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
