@@ -527,17 +527,17 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-[2px]"
+                className="fixed inset-0 z-[70] bg-black/50"
                 onClick={() => setSelectedNotification(null)}
               />
               {/* Modal panel */}
               <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 pointer-events-none">
                 <motion.div
                   key="notif-modal"
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
                   className="pointer-events-auto w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-xl border bg-background shadow-2xl dark:bg-card dark:border-white/10"
                   role="dialog"
                   aria-modal="true"

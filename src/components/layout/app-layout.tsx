@@ -77,6 +77,8 @@ import {
   SendHorizontal,
   UserPlus,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
   // New module icons
   Banknote,
   Receipt,
@@ -333,9 +335,10 @@ function getNavItems(portal: string): NavItem[] {
 }
 
 // ---- Desktop Sidebar Content ----
-function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogOpen }: {
+function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogOpen, collapsed, onToggleCollapse }: {
   portal: string; activePage: string; user: { name: string; email?: string };
   onNavigate: (page: string) => void; setLogoutDialogOpen: (open: boolean) => void;
+  collapsed: boolean; onToggleCollapse: () => void;
 }) {
   const navItems = getNavItems(portal);
   const initials = getInitials(user.name);
@@ -343,18 +346,22 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogO
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-center gap-3 px-6 h-16 border-b safe-area-top shrink-0">
-        <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10">
+      {/* Logo header */}
+      <div className={`flex items-center gap-3 h-16 border-b safe-area-top shrink-0 ${collapsed ? 'px-3 justify-center' : 'px-6'}`}>
+        <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10 shrink-0">
           <Landmark className="h-5 w-5 text-primary" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="font-bold text-lg leading-tight tracking-tight">iSusuPro</h1>
-          <p className="text-[11px] text-muted-foreground">{portalLabels[portal]}</p>
-        </div>
+        {!collapsed && (
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <h1 className="font-bold text-lg leading-tight tracking-tight">iSusuPro</h1>
+            <p className="text-[11px] text-muted-foreground">{portalLabels[portal]}</p>
+          </div>
+        )}
       </div>
 
+      {/* Nav items */}
       <ScrollArea className="flex-1 min-h-0">
-        <nav className="p-3 space-y-0.5">
+        <nav className={`space-y-0.5 ${collapsed ? 'p-2' : 'p-3'}`}>
           {navItems.map((item) => {
             const isActive = activePage === item.id;
             const Icon = item.icon;
@@ -363,17 +370,19 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogO
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => onNavigate(item.id)}
-                    className={`touch-target relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 cursor-pointer ${
+                    className={`touch-target relative w-full flex items-center gap-3 py-2.5 rounded-lg text-sm transition-all duration-150 cursor-pointer ${
+                      collapsed ? 'px-0 justify-center' : 'px-3'
+                    } ${
                       isActive
                         ? 'bg-primary/10 text-primary font-medium'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                   >
-                    {isActive && (
+                    {isActive && !collapsed && (
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
                     )}
                     <Icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'stroke-[2.2px]' : ''}`} />
-                    <span>{item.label}</span>
+                    {!collapsed && <span>{item.label}</span>}
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
@@ -385,19 +394,63 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogO
         </nav>
       </ScrollArea>
 
-      <div className="p-3 border-t shrink-0">
-        <div className="flex items-center gap-3 px-3 py-2">
-          <Avatar className="h-9 w-9">
+      {/* Collapse toggle + User footer */}
+      <div className={`border-t shrink-0 ${collapsed ? 'p-2' : 'p-3'}`}>
+        {/* Collapse/expand toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onToggleCollapse}
+              className={`touch-target w-full flex items-center gap-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer ${
+                collapsed ? 'px-0 justify-center' : 'px-3'
+              }`}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {collapsed
+                ? <PanelLeftOpen className="h-[18px] w-[18px] shrink-0" />
+                : <>
+                    <PanelLeftClose className="h-[18px] w-[18px] shrink-0" />
+                    <span>Collapse</span>
+                  </>
+              }
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          </TooltipContent>
+        </Tooltip>
+
+        {/* User info */}
+        <div className={`flex items-center gap-3 py-2 ${collapsed ? 'px-0 justify-center' : 'px-3'}`}>
+          <Avatar className="h-9 w-9 shrink-0">
             <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{initials}</AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">{user.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{userRole}</p>
-          </div>
-          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setLogoutDialogOpen(true)}>
-            <LogOut className="h-4 w-4" />
-          </Button>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{user.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{userRole}</p>
+            </div>
+          )}
+          {!collapsed && (
+            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setLogoutDialogOpen(true)}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          )}
         </div>
+        {collapsed && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setLogoutDialogOpen(true)}
+                className="touch-target w-full flex items-center justify-center py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer"
+                aria-label="Sign out"
+              >
+                <LogOut className="h-[18px] w-[18px]" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>Sign out</TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </div>
   );
@@ -536,6 +589,31 @@ export function AppLayout() {
 
   // Notification panel state (must be before any conditional return - Rules of Hooks)
   const [notificationOpen, setNotificationOpen] = useState(false);
+
+  // Desktop sidebar collapse state (persisted to localStorage)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('sidebar_collapsed') === 'true'; } catch { return false; }
+  });
+  const toggleSidebarCollapse = React.useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('sidebar_collapsed', String(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  // Keyboard shortcut: Ctrl+B / Cmd+B toggles sidebar collapse
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebarCollapse();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [toggleSidebarCollapse]);
 
   // Login state
   if (!currentPortal) {
@@ -706,13 +784,19 @@ export function AppLayout() {
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-background">
       {/* ============ Desktop Sidebar (lg+) ============ */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 border-r bg-sidebar shrink-0">
+      <aside
+        className={`hidden lg:flex lg:flex-col border-r bg-sidebar shrink-0 transition-[width] duration-200 ease-linear ${
+          sidebarCollapsed ? 'lg:w-16 xl:w-16' : 'lg:w-64 xl:w-72'
+        }`}
+      >
         <DesktopSidebar
           portal={currentPortal}
           activePage={activePage}
           user={{ name: user.name, email: user.email }}
           onNavigate={handleNavigate}
           setLogoutDialogOpen={setLogoutDialogOpen}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={toggleSidebarCollapse}
         />
       </aside>
 

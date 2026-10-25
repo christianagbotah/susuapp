@@ -133,17 +133,17 @@ export function ConfirmDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[80] bg-black/50"
             onClick={dismiss}
           />
           {/* Panel */}
           <div className="fixed inset-0 z-[85] flex items-center justify-center p-4 pointer-events-none">
             <motion.div
               key="confirm-panel"
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
               className={`pointer-events-auto w-full max-w-md rounded-xl border bg-background shadow-2xl dark:bg-card dark:border-white/10 ring-1 ${styles.ring}`}
               role="alertdialog"
               aria-modal="true"
