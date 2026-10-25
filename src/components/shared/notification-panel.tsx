@@ -326,6 +326,10 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
   // ---- Selected notification for detail view ----
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
+  // Client-only mounting guard — prevents hydration mismatch with createPortal
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // When the portal changes, reset local mock data
   React.useEffect(() => {
     if (!isCustomerPortal) {
@@ -392,7 +396,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
   }, [portal]);
 
   return (
-    <MobileDrawer open={open} onClose={onClose} side="right" className="max-w-[440px]">
+    <MobileDrawer open={open} onClose={onClose} side="right" className="max-w-[480px]">
       <div className="flex h-full flex-col overflow-hidden">
         {/* ---- Header ---- */}
         <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
@@ -510,7 +514,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
       </div>
 
       {/* ---- Notification Detail Modal (portaled to <body> so it always layers above the drawer) ---- */}
-      {typeof document !== 'undefined' && createPortal(
+      {mounted && createPortal(
         <AnimatePresence>
           {selectedNotification && (() => {
           const { icon: Icon, color, bg, label } = getNotificationTypeConfig(selectedNotification.type);

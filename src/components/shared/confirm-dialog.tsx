@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
@@ -115,7 +116,13 @@ export function ConfirmDialog({
     dismiss();
   };
 
-  return (
+  // Client-only mounting guard — prevents hydration mismatch with createPortal
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // The actual modal markup (portaled to <body> so it always layers above
+  // any parent transform / overflow / stacking-context, e.g. PageTransition)
+  const modalMarkup = (
     <AnimatePresence>
       {open && (
         <>
@@ -231,6 +238,11 @@ export function ConfirmDialog({
       )}
     </AnimatePresence>
   );
+
+  // Portal to <body> only on the client to avoid hydration mismatch.
+  // This ensures the modal is always rendered at the document root,
+  // bypassing any parent CSS transform / overflow / stacking-context.
+  return mounted ? createPortal(modalMarkup, document.body) : null;
 }
 
 // ---- Convenience factory hooks ----
