@@ -519,3 +519,24 @@ Stage Summary:
 - Uniform card sizes enforced across Admin, Agent, Treasurer, Customer, Branch Manager, Accountant, Teller, Loan Officer, Field Supervisor, and Compliance dashboards
 - Commit: ee3bd32 "fix: enforce uniform card sizes across all 10 portal dashboards"
 - Payment integration (Hubtel/Paystack) already exists with real provider adapters, webhook handlers, MoMo charge/disburse, bank payouts, simulation mode, and client-side dialog
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix notification sidesheet width + detail modal clarity (user feedback round)
+
+Work Log:
+- Browser-diagnosed with agent-browser: sheet was 320px (max-w-[320px]) with 8/8 messages line-clamped; detail modal layered correctly in light mode but in DARK mode the card (bg-background, CIELAB L*2.1) merged into the black/50 backdrop — exactly the user's "backdrop covers it, not clear" report
+- MobileDrawer (mobile-components.tsx): added optional className prop merged via cn()/tailwind-merge; NotificationPanel passes max-w-[440px]; message preview line-clamp-2 -> line-clamp-3; measured after fix: drawerWidth 440, 0 ellipsized titles, 0 clamped messages
+- Notification detail modal: rendered via createPortal(document.body) — escapes the drawer's transform/stacking context; card gains dark:bg-card (elevated token surface) + dark:border-white/10; VLM-verified in both themes: "clearly visible, sharply readable, layered above the dimmed backdrop"; Escape + backdrop-click close verified
+- ConfirmDialog: same dark elevation (dark:bg-card dark:border-white/10); live-verified onTop + styling + Cancel close
+- Fixed lint error react-hooks/set-state-in-effect in confirm-dialog.tsx: replaced reset-in-effect with dismiss() callback (Escape/backdrop/X/Cancel/confirm all route through it)
+- Fixed 4 tsc errors inherited from auto-commit bb51399: agent.activeCustomers -> totalCustomers; loan.durationMonths -> `${term} ${termUnit}`; LoanApprovalRequest a.product/a.officer -> productName/officerName (values confirmed present in staff-data.ts seed)
+- Known pre-existing issue (NOT fixed, out of scope): admin Loans page row shows "Invalid Date" (bad seed date); its row-Approve flow unstable in dev; branch-manager approvals page used for verification instead
+- Honest caveat: ConfirmDialog Product/Officer values could not be re-verified LIVE post-fix (dev server kept full-reloading mid-test — environment churn, zero page errors); verified via tsc + seed-data grep + stale-module symptom match (pre-fix dialog rendered the exact a.product/a.officer -> empty symptom)
+- Lint clean; tsc clean for all app code (only pre-existing errors in gitignored skills/ dirs remain)
+
+Stage Summary:
+- Notification sheet: 440px with all texts fully visible (was 320px, messages clamped)
+- Detail modal: body-ported, correct z-layering, clear elevated surface in dark mode
+- ConfirmDialog: dark-elevated surface, lint-clean dismiss refactor, type-correct detail values

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomerStore } from '@/store/app-store';
@@ -391,7 +392,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
   }, [portal]);
 
   return (
-    <MobileDrawer open={open} onClose={onClose} side="right">
+    <MobileDrawer open={open} onClose={onClose} side="right" className="max-w-[440px]">
       <div className="flex h-full flex-col overflow-hidden">
         {/* ---- Header ---- */}
         <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
@@ -491,7 +492,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
                       </div>
 
                       {/* Message */}
-                      <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
                         {notification.message}
                       </p>
 
@@ -508,9 +509,10 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
         </ScrollArea>
       </div>
 
-      {/* ---- Notification Detail Modal (above the drawer, backdrop covers everything) ---- */}
-      <AnimatePresence>
-        {selectedNotification && (() => {
+      {/* ---- Notification Detail Modal (portaled to <body> so it always layers above the drawer) ---- */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {selectedNotification && (() => {
           const { icon: Icon, color, bg, label } = getNotificationTypeConfig(selectedNotification.type);
           return (
             <>
@@ -532,7 +534,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
                   transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-                  className="pointer-events-auto w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-xl border bg-background shadow-2xl"
+                  className="pointer-events-auto w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-xl border bg-background shadow-2xl dark:bg-card dark:border-white/10"
                   role="dialog"
                   aria-modal="true"
                   aria-label={selectedNotification.title}
@@ -613,7 +615,9 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
             </>
           );
         })()}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </MobileDrawer>
   );
 }

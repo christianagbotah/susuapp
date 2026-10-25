@@ -89,20 +89,22 @@ export function ConfirmDialog({
   const styles = getVariantStyles(variant);
   const Icon = styles.icon;
 
-  // Reset reason whenever the dialog opens
-  useEffect(() => {
-    if (open) setReason('');
-  }, [open]);
+  // Dismiss helper — clears the reason input as part of the close action
+  // (keeps the next open fresh without setState-in-effect)
+  const dismiss = React.useCallback(() => {
+    setReason('');
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   // Escape key closes
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onOpenChange(false);
+      if (e.key === 'Escape') dismiss();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onOpenChange]);
+  }, [open, dismiss]);
 
   const reasonValid = !requireReason || reason.trim().length >= 3;
   const canConfirm = reasonValid;
@@ -110,7 +112,7 @@ export function ConfirmDialog({
   const handleConfirm = () => {
     if (!canConfirm) return;
     onConfirm(requireReason ? reason.trim() : undefined);
-    onOpenChange(false);
+    dismiss();
   };
 
   return (
@@ -125,7 +127,7 @@ export function ConfirmDialog({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-[2px]"
-            onClick={() => onOpenChange(false)}
+            onClick={dismiss}
           />
           {/* Panel */}
           <div className="fixed inset-0 z-[85] flex items-center justify-center p-4 pointer-events-none">
@@ -135,7 +137,7 @@ export function ConfirmDialog({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-              className={`pointer-events-auto w-full max-w-md rounded-xl border bg-background shadow-2xl ring-1 ${styles.ring}`}
+              className={`pointer-events-auto w-full max-w-md rounded-xl border bg-background shadow-2xl dark:bg-card dark:border-white/10 ring-1 ${styles.ring}`}
               role="alertdialog"
               aria-modal="true"
               aria-label={title}
@@ -152,7 +154,7 @@ export function ConfirmDialog({
                   </p>
                 </div>
                 <button
-                  onClick={() => onOpenChange(false)}
+                  onClick={dismiss}
                   className="touch-target -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-muted"
                   aria-label="Close"
                 >
@@ -212,7 +214,7 @@ export function ConfirmDialog({
 
               {/* Footer */}
               <div className="flex items-center justify-end gap-2 border-t px-5 py-3.5">
-                <Button variant="outline" onClick={() => onOpenChange(false)} className="min-h-[40px]">
+                <Button variant="outline" onClick={dismiss} className="min-h-[40px]">
                   {cancelLabel}
                 </Button>
                 <Button

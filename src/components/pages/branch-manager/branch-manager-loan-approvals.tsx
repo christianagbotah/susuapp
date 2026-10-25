@@ -37,9 +37,9 @@ export function BranchManagerLoanApprovals() {
       description: 'You are about to approve this loan and release funds to the disbursement queue. The loan officer and customer will be notified by SMS.',
       subject: `${a.applicantName} — ${formatGHS(a.amount)}`,
       details: [
-        { label: 'Product', value: a.product },
+        { label: 'Product', value: a.productName },
         { label: 'Credit Grade', value: a.creditGrade },
-        { label: 'Officer', value: a.officer },
+        { label: 'Officer', value: a.officerName },
       ],
       confirmLabel: 'Yes, Approve Loan',
       variant: 'success',

@@ -9,6 +9,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
+
 // ---- Bottom Tab Bar ----
 export interface BottomTabItem {
   id: string;
@@ -269,9 +271,11 @@ interface MobileDrawerProps {
   children: React.ReactNode;
   /** Which edge the drawer slides in from. Defaults to 'left'. */
   side?: 'left' | 'right';
+  /** Extra classes merged into the panel (e.g. width overrides via tailwind-merge). */
+  className?: string;
 }
 
-export function MobileDrawer({ open, onClose, children, side = 'left' }: MobileDrawerProps) {
+export function MobileDrawer({ open, onClose, children, side = 'left', className }: MobileDrawerProps) {
   const isRight = side === 'right';
   return (
     <AnimatePresence>
@@ -292,9 +296,11 @@ export function MobileDrawer({ open, onClose, children, side = 'left' }: MobileD
             animate={{ x: 0 }}
             exit={{ x: isRight ? '100%' : '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className={`fixed top-0 bottom-0 z-[60] w-[85%] max-w-[320px] bg-background shadow-2xl ${
-              isRight ? 'right-0 safe-area-right' : 'left-0 safe-area-left'
-            }`}
+            className={cn(
+              'fixed top-0 bottom-0 z-[60] w-[85%] max-w-[320px] bg-background shadow-2xl',
+              isRight ? 'right-0 safe-area-right' : 'left-0 safe-area-left',
+              className
+            )}
           >
             {children}
           </motion.div>

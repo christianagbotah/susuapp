@@ -55,3 +55,6 @@ server.log
 # Dev process id files
 .zscripts/*.pid
 .data/
+
+# Agent tool output (screenshots, vision analysis JSON) — never commit
+tool-results/

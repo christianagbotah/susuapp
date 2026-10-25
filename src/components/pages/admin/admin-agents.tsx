@@ -60,7 +60,7 @@ export function AdminAgents() {
       details: [
         { label: 'Agent Code', value: agent.code },
         { label: 'Total Collections', value: formatGHS(agent.totalCollections) },
-        { label: 'Customers', value: String(agent.activeCustomers) },
+        { label: 'Customers', value: String(agent.totalCustomers) },
       ],
       confirmLabel: willSuspend ? 'Yes, Suspend Agent' : 'Yes, Activate Agent',
       variant: willSuspend ? 'destructive' : 'success',

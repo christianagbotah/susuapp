@@ -202,7 +202,7 @@ export function AdminLoans() {
       subject: `${detailLoan.applicantName} — ${formatGHS(detailLoan.amount)}`,
       details: [
         { label: 'Purpose', value: detailLoan.purpose },
-        { label: 'Duration', value: `${detailLoan.durationMonths} months` },
+        { label: 'Duration', value: `${detailLoan.term} ${detailLoan.termUnit}` },
         { label: 'Credit Score', value: String(detailLoan.creditScore ?? '—') },
       ],
       confirmLabel: 'Yes, Approve Loan',
