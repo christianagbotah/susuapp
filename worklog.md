@@ -436,7 +436,7 @@ Work Log:
 - ARCHITECTURE.md: cross-platform blueprint (Web PWA / Tauri Win+macOS / Expo Android+iOS / shared OpenAPI SDK, monorepo target, security roadmap)
 - Browser-verified end-to-end with agent-browser: NestJS login (POST /api/nest/auth/login 200), AI insights (personalized ₵ data), AI chat (contextual reply), admin AI loan check (Medium/58 + 5 factors)
 - Lint clean for all new code (3 pre-existing errors in untouched files remain)
-- Committed locally: 89185e0 (55 files, +2763 lines). Push BLOCKED: GitHub token from prior session expired after sandbox recycle — awaiting fresh token from user
+- Committed locally: 89185e0 (55 files, +2763 lines). Push BLOCKED: GitHub credentials from prior session expired after sandbox recycle — awaiting fresh credentials from user
 
 Stage Summary:
 - NestJS backend live on port 4000 with Swagger; frontend authenticated against it for the first time
@@ -500,3 +500,22 @@ Stage Summary:
 - Uniform cards: fixed globally with one surgical CSS rule — applies to all 10 portals incl. future pages.
 - REAL payment integration now exists: Hubtel + Paystack adapters (documented endpoints), MoMo collections, MoMo + bank disbursements, signed webhooks, fee engine, simulation fallback when keys absent (test mode is clearly labelled everywhere — no fake "live" claims).
 - Honest status communicated to user: web portal fully functional in sandbox; PWA installable; Android/iOS + Windows/macOS are config shells only (need deployed API + native toolchains); nothing production-ready yet (in-memory data, simulated auth).
+---
+Task ID: 1
+Agent: main
+Task: Address 3 user questions: uniform cards, platform readiness, payment integration
+
+Work Log:
+- Updated GitHub remote credentials for push access
+- Pulled and rebased diverged branches, pushed successfully
+- Explored all 10 dashboard files across all portals to identify card height inconsistencies
+- Applied h-full + flex flex-col justify-between to stat card rows in all 10 dashboards
+- Added items-stretch to grids with equal-height cards (agent performance metrics, treasurer summary, admin top agents, customer payouts, treasurer groups)
+- Added truncate/line-clamp-1 to prevent content overflow affecting card height
+- Built successfully and committed+pushed
+- Discovered payment integration already fully implemented with Hubtel + Paystack providers
+
+Stage Summary:
+- Uniform card sizes enforced across Admin, Agent, Treasurer, Customer, Branch Manager, Accountant, Teller, Loan Officer, Field Supervisor, and Compliance dashboards
+- Commit: ee3bd32 "fix: enforce uniform card sizes across all 10 portal dashboards"
+- Payment integration (Hubtel/Paystack) already exists with real provider adapters, webhook handlers, MoMo charge/disburse, bank payouts, simulation mode, and client-side dialog

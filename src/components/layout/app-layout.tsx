@@ -342,8 +342,8 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogO
   const userRole = portalRoles[portal] || '';
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-6 h-16 border-b safe-area-top">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-center gap-3 px-6 h-16 border-b safe-area-top shrink-0">
         <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-primary/10">
           <Landmark className="h-5 w-5 text-primary" />
         </div>
@@ -353,7 +353,7 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogO
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <nav className="p-3 space-y-0.5">
           {navItems.map((item) => {
             const isActive = activePage === item.id;
@@ -385,7 +385,7 @@ function DesktopSidebar({ portal, activePage, user, onNavigate, setLogoutDialogO
         </nav>
       </ScrollArea>
 
-      <div className="p-3 border-t">
+      <div className="p-3 border-t shrink-0">
         <div className="flex items-center gap-3 px-3 py-2">
           <Avatar className="h-9 w-9">
             <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{initials}</AvatarFallback>
@@ -413,9 +413,9 @@ function MobileDrawerContent({ portal, activePage, user, onNavigate, setLogoutDi
   const userRole = portalRoles[portal] || '';
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Header with safe area */}
-      <div className="safe-area-top flex items-center justify-between px-4 h-14 border-b">
+      <div className="safe-area-top flex items-center justify-between px-4 h-14 border-b shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10">
             <Landmark className="h-4.5 w-4.5 text-primary" />
@@ -434,7 +434,7 @@ function MobileDrawerContent({ portal, activePage, user, onNavigate, setLogoutDi
       </div>
 
       {/* User Profile Card */}
-      <div className="px-4 py-4">
+      <div className="px-4 py-4 shrink-0">
         <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
           <Avatar className="h-12 w-12">
             <AvatarFallback className="bg-primary text-primary-foreground text-base font-bold">{initials}</AvatarFallback>
@@ -450,7 +450,7 @@ function MobileDrawerContent({ portal, activePage, user, onNavigate, setLogoutDi
       </div>
 
       {/* Nav Items */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <nav className="px-3 space-y-0.5 pb-4">
           {navItems.map((item) => {
             const isActive = activePage === item.id;
