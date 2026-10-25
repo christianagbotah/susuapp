@@ -37,6 +37,7 @@ import type { Loan, RepaymentScheduleEntry, CreditScoreFactors } from '@/lib/typ
 import { normalizeGhanaPhone } from '@/lib/payments/types';
 import type { PaymentIntent } from '@/lib/payments/types';
 import { usePaymentsStore } from '@/store/payments-store';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 
 const ITEMS_PER_PAGE = 8;
 
@@ -106,6 +107,9 @@ export function AdminLoans() {
   const [elapsed, setElapsed] = useState(0);
   const [bankName, setBankName] = useState('');
   const [accountName, setAccountName] = useState('');
+
+  // Confirmation dialog for sensitive actions
+  const [confirmDialog, askConfirm] = useConfirm();
 
   // ---- AI Risk Assessment ----
   interface AiFactor { factor: string; impact: 'positive' | 'negative' | 'neutral'; note: string; }
@@ -191,11 +195,24 @@ export function AdminLoans() {
     : [];
 
   const handleApprove = () => {
-    if (detailLoan) {
-      approveLoan(detailLoan.id);
-      toast.success(`Loan approved for ${detailLoan.applicantName}`);
-      setDetailLoan(null);
-    }
+    if (!detailLoan) return;
+    askConfirm({
+      title: 'Approve Loan Application',
+      description: `You are about to approve this loan and release funds to the disbursement queue. The customer and loan officer will be notified immediately.`,
+      subject: `${detailLoan.applicantName} — ${formatGHS(detailLoan.amount)}`,
+      details: [
+        { label: 'Purpose', value: detailLoan.purpose },
+        { label: 'Duration', value: `${detailLoan.durationMonths} months` },
+        { label: 'Credit Score', value: String(detailLoan.creditScore ?? '—') },
+      ],
+      confirmLabel: 'Yes, Approve Loan',
+      variant: 'success',
+      onConfirm: () => {
+        approveLoan(detailLoan.id);
+        toast.success(`Loan approved for ${detailLoan.applicantName}`);
+        setDetailLoan(null);
+      },
+    });
   };
 
   const handleReject = () => {
@@ -319,6 +336,7 @@ export function AdminLoans() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* A. Summary Stats Cards */}
       <motion.div
         variants={containerVariants}

@@ -267,9 +267,12 @@ interface MobileDrawerProps {
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  /** Which edge the drawer slides in from. Defaults to 'left'. */
+  side?: 'left' | 'right';
 }
 
-export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
+export function MobileDrawer({ open, onClose, children, side = 'left' }: MobileDrawerProps) {
+  const isRight = side === 'right';
   return (
     <AnimatePresence>
       {open && (
@@ -285,11 +288,13 @@ export function MobileDrawer({ open, onClose, children }: MobileDrawerProps) {
           />
           {/* Drawer panel */}
           <motion.div
-            initial={{ x: '-100%' }}
+            initial={{ x: isRight ? '100%' : '-100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
+            exit={{ x: isRight ? '100%' : '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-0 left-0 bottom-0 z-[60] w-[85%] max-w-[320px] bg-background shadow-2xl safe-area-left"
+            className={`fixed top-0 bottom-0 z-[60] w-[85%] max-w-[320px] bg-background shadow-2xl ${
+              isRight ? 'right-0 safe-area-right' : 'left-0 safe-area-left'
+            }`}
           >
             {children}
           </motion.div>

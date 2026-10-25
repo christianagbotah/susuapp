@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import { Vault, Landmark, ArrowRightLeft, Send, ShieldCheck } from 'lucide-react';
 import type { VaultTransfer } from '@/lib/types';
 
@@ -33,6 +34,9 @@ export function TellerVault() {
   const { transfers, requestTransfer, markTransferStatus, user } = useTellerStore();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ direction: 'to_vault' as VaultTransfer['direction'], amount: '', bank: '', note: '' });
+
+  // Confirmation dialog for sensitive actions
+  const [confirmDialog, askConfirm] = useConfirm();
 
   const handleSubmit = () => {
     if (!form.amount || Number(form.amount) <= 0) {
@@ -58,12 +62,29 @@ export function TellerVault() {
 
   const advance = (t: VaultTransfer) => {
     const next: VaultTransfer['status'] = t.status === 'requested' ? 'approved' : t.status === 'approved' ? 'in_transit' : 'completed';
-    markTransferStatus(t.id, next);
-    toast.info(`Transfer ${next.replace(/_/g, ' ')}`, { description: `${formatGHS(t.amount)} — ${t.note ?? t.bank ?? 'vault movement'}` });
+    const actionLabel = t.status === 'requested' ? 'Approve Transfer (BM)' : t.status === 'approved' ? 'Mark In Transit' : 'Confirm Delivered';
+    askConfirm({
+      title: actionLabel,
+      description: 'This is a dual-control cash movement. Your action will be recorded in the audit trail with your name, branch, and timestamp.',
+      subject: `${directionMeta[t.direction].label} — ${formatGHS(t.amount)}`,
+      details: [
+        { label: 'Reference', value: t.id },
+        { label: 'Bank', value: t.bank ?? '—' },
+        { label: 'Note', value: t.note ?? '—' },
+        { label: 'New Status', value: next.replace(/_/g, ' ') },
+      ],
+      confirmLabel: `Yes, ${actionLabel}`,
+      variant: t.status === 'requested' ? 'success' : 'default',
+      onConfirm: () => {
+        markTransferStatus(t.id, next);
+        toast.info(`Transfer ${next.replace(/_/g, ' ')}`, { description: `${formatGHS(t.amount)} — ${t.note ?? t.bank ?? 'vault movement'}` });
+      },
+    });
   };
 
   return (
     <div className="space-y-5">
+      {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold"><ArrowRightLeft className="h-5 w-5 text-amber-500" /> Vault & Bank Transfers</h2>

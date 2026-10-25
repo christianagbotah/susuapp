@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomerStore } from '@/store/app-store';
 import { MobileDrawer } from '@/components/shared/mobile-components';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatTimeAgo } from '@/lib/formatters';
 import { staffNotifications } from '@/lib/staff-data';
 import { Button } from '@/components/ui/button';
@@ -332,6 +332,16 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
     }
   }, [portal, isCustomerPortal]);
 
+  // Escape key closes the detail modal
+  useEffect(() => {
+    if (!selectedNotification) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedNotification(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedNotification]);
+
   const handleNotificationClick = useCallback(
     (notification: Notification) => {
       // Mark as read
@@ -381,8 +391,8 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
   }, [portal]);
 
   return (
-    <MobileDrawer open={open} onClose={onClose}>
-      <div className="flex h-full flex-col">
+    <MobileDrawer open={open} onClose={onClose} side="right">
+      <div className="flex h-full flex-col overflow-hidden">
         {/* ---- Header ---- */}
         <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -419,7 +429,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
         )}
 
         {/* ---- Notification list ---- */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           {displayNotifications.length === 0 ? (
             /* Empty state */
             <div className="flex flex-col items-center justify-center px-4 py-20 text-center">
@@ -437,7 +447,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
             </div>
           ) : (
             /* Notification items */
-            <div className="max-h-[calc(100dvh-140px)] py-1">
+            <div className="py-1">
               {displayNotifications.map((notification) => {
                 const { icon: Icon, color, bg, label } = getNotificationTypeConfig(notification.type);
                 return (
@@ -498,85 +508,112 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
         </ScrollArea>
       </div>
 
-      {/* ---- Notification Detail Dialog ---- */}
-      <Dialog
-        open={!!selectedNotification}
-        onOpenChange={(open) => {
-          if (!open) setSelectedNotification(null);
-        }}
-      >
+      {/* ---- Notification Detail Modal (above the drawer, backdrop covers everything) ---- */}
+      <AnimatePresence>
         {selectedNotification && (() => {
           const { icon: Icon, color, bg, label } = getNotificationTypeConfig(selectedNotification.type);
           return (
-            <DialogContent className="mx-4 sm:mx-0 sm:max-w-lg">
-              <DialogHeader>
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${bg}`}>
-                    <Icon className={`h-5 w-5 ${color}`} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <DialogTitle className="text-base leading-snug">
-                      {selectedNotification.title}
-                    </DialogTitle>
-                    <div className="mt-1 flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className={`text-[10px] px-1.5 py-0 font-medium border-0 ${bg} ${color}`}
-                      >
-                        {label}
-                      </Badge>
-                      <span className="text-[11px] text-muted-foreground">
-                        {formatTimeAgo(selectedNotification.date)}
-                      </span>
+            <>
+              {/* Backdrop — covers the notification sheet below */}
+              <motion.div
+                key="notif-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-[2px]"
+                onClick={() => setSelectedNotification(null)}
+              />
+              {/* Modal panel */}
+              <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 pointer-events-none">
+                <motion.div
+                  key="notif-modal"
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+                  className="pointer-events-auto w-full max-w-lg max-h-[85dvh] overflow-y-auto rounded-xl border bg-background shadow-2xl"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={selectedNotification.title}
+                >
+                  {/* Modal header */}
+                  <div className="flex items-start gap-3 border-b px-5 py-4">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${bg}`}>
+                      <Icon className={`h-5 w-5 ${color}`} />
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-semibold leading-snug text-foreground">
+                        {selectedNotification.title}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] px-1.5 py-0 font-medium border-0 ${bg} ${color}`}
+                        >
+                          {label}
+                        </Badge>
+                        <span className="text-[11px] text-muted-foreground">
+                          {formatTimeAgo(selectedNotification.date)}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedNotification(null)}
+                      className="touch-target -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-muted"
+                      aria-label="Close details"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                </div>
-              </DialogHeader>
 
-              <div className="space-y-4">
-                {/* Full message */}
-                <div className="rounded-lg bg-muted/50 p-4">
-                  <div className="flex items-start gap-2.5">
-                    <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                    <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                      {selectedNotification.message}
-                    </p>
-                  </div>
-                </div>
+                  {/* Modal body */}
+                  <div className="space-y-4 px-5 py-4">
+                    {/* Full message */}
+                    <div className="rounded-lg bg-muted/50 p-4">
+                      <div className="flex items-start gap-2.5">
+                        <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                          {selectedNotification.message}
+                        </p>
+                      </div>
+                    </div>
 
-                {/* Metadata */}
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="space-y-1">
-                    <p className="font-medium text-muted-foreground">Category</p>
-                    <p className="capitalize font-medium text-foreground">
-                      {selectedNotification.category}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-medium text-muted-foreground">Date &amp; Time</p>
-                    <p className="font-medium text-foreground">
-                      {format(new Date(selectedNotification.date), 'dd MMM yyyy, hh:mm a')}
-                    </p>
-                  </div>
-                </div>
+                    {/* Metadata */}
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">Category</p>
+                        <p className="capitalize font-medium text-foreground">
+                          {selectedNotification.category}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">Date &amp; Time</p>
+                        <p className="font-medium text-foreground">
+                          {format(new Date(selectedNotification.date), 'dd MMM yyyy, hh:mm a')}
+                        </p>
+                      </div>
+                    </div>
 
-                {selectedNotification.link && (
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={() => {
-                      window.open(selectedNotification.link, '_blank');
-                    }}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    View Details
-                  </Button>
-                )}
+                    {selectedNotification.link && (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2"
+                        onClick={() => {
+                          window.open(selectedNotification.link, '_blank');
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        View Details
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
               </div>
-            </DialogContent>
+            </>
           );
         })()}
-      </Dialog>
+      </AnimatePresence>
     </MobileDrawer>
   );
 }

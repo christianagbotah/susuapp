@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import { ClipboardCheck, CircleDollarSign, CheckCircle2, XCircle, Eye, CalendarDays, UserCheck } from 'lucide-react';
 import type { LoanApprovalRequest } from '@/lib/types';
 
@@ -20,6 +21,9 @@ export function BranchManagerLoanApprovals() {
   const [rejectOpen, setRejectOpen] = useState<LoanApprovalRequest | null>(null);
   const [reason, setReason] = useState('');
 
+  // Confirmation dialog for sensitive actions
+  const [confirmDialog, askConfirm] = useConfirm();
+
   const filtered = approvals.filter(a => filter === 'all' || a.status === filter);
   const counts = {
     pending: approvals.filter(a => a.status === 'pending_bm').length,
@@ -28,10 +32,24 @@ export function BranchManagerLoanApprovals() {
   };
 
   const approve = (a: LoanApprovalRequest) => {
-    decideApproval(a.id, 'approved');
-    setDetail(null);
-    toast.success(`Loan approved — ${a.applicantName}`, {
-      description: `${formatGHS(a.amount)} released to disbursement queue. Officer & customer notified via SMS.`,
+    askConfirm({
+      title: 'Approve Loan Application',
+      description: 'You are about to approve this loan and release funds to the disbursement queue. The loan officer and customer will be notified by SMS.',
+      subject: `${a.applicantName} — ${formatGHS(a.amount)}`,
+      details: [
+        { label: 'Product', value: a.product },
+        { label: 'Credit Grade', value: a.creditGrade },
+        { label: 'Officer', value: a.officer },
+      ],
+      confirmLabel: 'Yes, Approve Loan',
+      variant: 'success',
+      onConfirm: () => {
+        decideApproval(a.id, 'approved');
+        setDetail(null);
+        toast.success(`Loan approved — ${a.applicantName}`, {
+          description: `${formatGHS(a.amount)} released to disbursement queue. Officer & customer notified via SMS.`,
+        });
+      },
     });
   };
 
@@ -57,6 +75,7 @@ export function BranchManagerLoanApprovals() {
 
   return (
     <div className="space-y-5">
+      {confirmDialog}
       {/* Summary + filters */}
       <div className="grid grid-cols-3 gap-3">
         {[

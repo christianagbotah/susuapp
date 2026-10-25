@@ -23,6 +23,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import type { KYCVerificationRecord, KYCRecordStatus } from '@/lib/types';
 
 // ---- Constants ----
@@ -96,6 +97,9 @@ export function AdminKYCVerification() {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [detailRecord, setDetailRecord] = useState<KYCVerificationRecord | null>(null);
   const [rejectDialogRecord, setRejectDialogRecord] = useState<KYCVerificationRecord | null>(null);
+
+  // Confirmation dialog for sensitive actions
+  const [confirmDialog, askConfirm] = useConfirm();
   const [rejectReason, setRejectReason] = useState('');
 
   // ---- Stats ----
@@ -134,9 +138,24 @@ export function AdminKYCVerification() {
 
   // ---- Handlers ----
   const handleApprove = (record: KYCVerificationRecord) => {
-    approveKYC(record.id, 'Daniel Tetteh');
-    toast.success(`KYC approved for ${record.userName}`);
-    setDetailRecord(null);
+    askConfirm({
+      title: 'Approve KYC Verification',
+      description: 'The applicant will be upgraded to Full KYC status, unlocking higher transaction limits and loan eligibility. This decision is recorded for compliance audit.',
+      subject: `${record.userName} — ${record.cardData.idNumber}`,
+      details: [
+        { label: 'OCR Confidence', value: `${record.ocrConfidence}%` },
+        { label: 'Facial Match', value: `${record.facialMatchScore}%` },
+        { label: 'NIA Verified', value: record.niaVerified ? 'Yes' : 'No' },
+        { label: 'Recommendation', value: record.recommendation === 'approve' ? 'Auto-approve' : record.recommendation === 'manual_review' ? 'Manual review' : 'Reject' },
+      ],
+      confirmLabel: 'Yes, Approve KYC',
+      variant: 'success',
+      onConfirm: () => {
+        approveKYC(record.id, 'Daniel Tetteh');
+        toast.success(`KYC approved for ${record.userName}`);
+        setDetailRecord(null);
+      },
+    });
   };
 
   const handleReject = () => {
@@ -772,6 +791,7 @@ export function AdminKYCVerification() {
   // ---- Main Return ----
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {[

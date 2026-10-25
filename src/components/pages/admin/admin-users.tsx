@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
 } from 'recharts';
@@ -53,6 +54,9 @@ export function AdminUsers() {
   const [newRole, setNewRole] = useState('');
   const [suspendedUsers, setSuspendedUsers] = useState<Set<string>>(new Set());
 
+  // Confirmation dialog for sensitive actions
+  const [confirmDialog, askConfirm] = useConfirm();
+
   const filteredUsers = useMemo(() => {
     return allUsers.filter(u => {
       const matchSearch = !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()) || u.phone.includes(search);
@@ -79,21 +83,38 @@ export function AdminUsers() {
   };
 
   const handleToggleSuspend = (user: typeof allUsers[0]) => {
-    setSuspendedUsers(prev => {
-      const next = new Set(prev);
-      if (next.has(user.id)) {
-        next.delete(user.id);
-        toast.success(`${user.name} has been activated`);
-      } else {
-        next.add(user.id);
-        toast.warning(`${user.name} has been suspended`);
-      }
-      return next;
+    const willSuspend = !suspendedUsers.has(user.id);
+    askConfirm({
+      title: willSuspend ? 'Suspend User Account' : 'Activate User Account',
+      description: willSuspend
+        ? 'The user will immediately lose access to their account and all portal features until reactivated.'
+        : 'The user will regain full access to their account and portal features.',
+      subject: `${user.name} (${user.email})`,
+      details: [
+        { label: 'Role', value: user.role },
+        { label: 'KYC Level', value: user.kycLevel.toUpperCase() },
+      ],
+      confirmLabel: willSuspend ? 'Yes, Suspend User' : 'Yes, Activate User',
+      variant: willSuspend ? 'destructive' : 'success',
+      onConfirm: () => {
+        setSuspendedUsers(prev => {
+          const next = new Set(prev);
+          if (next.has(user.id)) {
+            next.delete(user.id);
+            toast.success(`${user.name} has been activated`);
+          } else {
+            next.add(user.id);
+            toast.warning(`${user.name} has been suspended`);
+          }
+          return next;
+        });
+      },
     });
   };
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {[

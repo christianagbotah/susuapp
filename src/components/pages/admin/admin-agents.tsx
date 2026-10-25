@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import type { Agent } from '@/lib/types';
 
 const fadeUp = {
@@ -40,22 +41,42 @@ export function AdminAgents() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [suspendedAgents, setSuspendedAgents] = useState<Set<string>>(new Set());
 
+  // Confirmation dialog for sensitive actions
+  const [confirmDialog, askConfirm] = useConfirm();
+
   const activeAgents = allAgents.filter(a => a.status === 'active').length;
   const inactiveAgents = allAgents.filter(a => a.status === 'inactive').length;
   const totalCollections = allAgents.reduce((s, a) => s + a.totalCollections, 0);
   const topAgents = [...allAgents].sort((a, b) => b.totalCollections - a.totalCollections);
 
   const handleToggleSuspend = (agent: Agent) => {
-    setSuspendedAgents(prev => {
-      const next = new Set(prev);
-      if (next.has(agent.id)) {
-        next.delete(agent.id);
-        toast.success(`${agent.name} has been activated`);
-      } else {
-        next.add(agent.id);
-        toast.warning(`${agent.name} has been suspended`);
-      }
-      return next;
+    const willSuspend = !suspendedAgents.has(agent.id);
+    askConfirm({
+      title: willSuspend ? 'Suspend Agent' : 'Activate Agent',
+      description: willSuspend
+        ? 'The agent will be blocked from logging collections, receiving commissions, and accessing the agent portal until reactivated.'
+        : 'The agent will regain access to the agent portal and can resume daily collections.',
+      subject: `${agent.name} — ${agent.territory}`,
+      details: [
+        { label: 'Agent Code', value: agent.code },
+        { label: 'Total Collections', value: formatGHS(agent.totalCollections) },
+        { label: 'Customers', value: String(agent.activeCustomers) },
+      ],
+      confirmLabel: willSuspend ? 'Yes, Suspend Agent' : 'Yes, Activate Agent',
+      variant: willSuspend ? 'destructive' : 'success',
+      onConfirm: () => {
+        setSuspendedAgents(prev => {
+          const next = new Set(prev);
+          if (next.has(agent.id)) {
+            next.delete(agent.id);
+            toast.success(`${agent.name} has been activated`);
+          } else {
+            next.add(agent.id);
+            toast.warning(`${agent.name} has been suspended`);
+          }
+          return next;
+        });
+      },
     });
   };
 
@@ -67,6 +88,7 @@ export function AdminAgents() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-4">
         {[

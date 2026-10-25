@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import { ShieldAlert, Search, FileWarning, Send, CheckCircle2, Eye, XCircle } from 'lucide-react';
 import type { AMLAlert } from '@/lib/types';
 
@@ -36,6 +37,9 @@ export function ComplianceAmlAlerts() {
   const [strOpen, setStrOpen] = useState<AMLAlert | null>(null);
   const [strActivity, setStrActivity] = useState('');
   const [strTarget, setStrTarget] = useState('Financial Intelligence Centre (FIC)');
+
+  // Confirmation dialog for sensitive actions
+  const [confirmDialog, askConfirm] = useConfirm();
 
   const filtered = alerts.filter(a =>
     filter === 'all' ? true : filter === 'active' ? ['open', 'investigating', 'escalated'].includes(a.status) : a.status === filter
@@ -64,6 +68,7 @@ export function ComplianceAmlAlerts() {
 
   return (
     <div className="space-y-5">
+      {confirmDialog}
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
         {([
