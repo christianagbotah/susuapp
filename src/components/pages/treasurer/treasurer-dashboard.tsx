@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTreasurerStore } from '@/store/app-store';
 import { formatGHS, formatDate, getStatusColor, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -42,6 +43,7 @@ export function TreasurerDashboard() {
       icon: Layers,
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+      page: 'groups' as const,
     },
     {
       title: 'Total Pool Value',
@@ -49,6 +51,7 @@ export function TreasurerDashboard() {
       icon: Wallet,
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-100 dark:bg-amber-900/30',
+      page: 'reports' as const,
     },
     {
       title: 'Members Under Management',
@@ -56,6 +59,7 @@ export function TreasurerDashboard() {
       icon: Users,
       color: 'text-blue-600 dark:text-blue-400',
       bg: 'bg-blue-100 dark:bg-blue-900/30',
+      page: 'members' as const,
     },
     {
       title: 'Pending Payouts',
@@ -63,6 +67,7 @@ export function TreasurerDashboard() {
       icon: Clock,
       color: 'text-orange-600 dark:text-orange-400',
       bg: 'bg-orange-100 dark:bg-orange-900/30',
+      page: 'payouts' as const,
     },
   ];
 
@@ -118,26 +123,16 @@ export function TreasurerDashboard() {
       {/* Stats Row */}
       <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {statsCards.map((stat, i) => (
-          <motion.div
+          <KpiCard
             key={stat.title}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.1 }}
-          >
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
-              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1 min-w-0">
-                    <p className="text-xs lg:text-sm text-muted-foreground truncate">{stat.title}</p>
-                    <p className="text-2xl font-bold truncate">{stat.value}</p>
-                  </div>
-                  <div className={`shrink-0 rounded-lg p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+            index={i}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            color={stat.color}
+            bg={stat.bg}
+            onClick={() => setActivePage(stat.page)}
+          />
         ))}
       </div>
 

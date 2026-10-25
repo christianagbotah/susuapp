@@ -3,6 +3,7 @@
 import { useAgentStore } from '@/store/app-store';
 import { formatGHS, formatDate, formatDateTime, getStatusColor, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ export function AgentDashboard() {
       icon: DollarSign,
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+      page: 'collections' as const,
     },
     {
       title: 'Total Customers',
@@ -86,6 +88,7 @@ export function AgentDashboard() {
       icon: Users,
       color: 'text-blue-600 dark:text-blue-400',
       bg: 'bg-blue-100 dark:bg-blue-900/30',
+      page: 'customers' as const,
     },
     {
       title: "This Month's Commissions",
@@ -93,6 +96,7 @@ export function AgentDashboard() {
       icon: BadgeDollarSign,
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-100 dark:bg-amber-900/30',
+      page: 'commissions' as const,
     },
     {
       title: 'Active Routes',
@@ -100,6 +104,7 @@ export function AgentDashboard() {
       icon: Route,
       color: 'text-purple-600 dark:text-purple-400',
       bg: 'bg-purple-100 dark:bg-purple-900/30',
+      page: 'collections' as const,
     },
   ];
 
@@ -136,29 +141,19 @@ export function AgentDashboard() {
         </Card>
       </motion.div>
 
-      {/* Stats Row */}
+      {/* Stats Row — every KPI opens its details page */}
       <div className="grid grid-cols-2 gap-3 lg:gap-4 lg:grid-cols-4">
         {statsCards.map((stat, i) => (
-          <motion.div
+          <KpiCard
             key={stat.title}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.1 }}
-          >
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
-              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="space-y-0.5 lg:space-y-1 min-w-0">
-                    <p className="text-xs lg:text-sm text-muted-foreground truncate">{stat.title}</p>
-                    <p className="text-xl font-bold lg:text-2xl truncate">{stat.value}</p>
-                  </div>
-                  <div className={`shrink-0 rounded-lg p-2 lg:p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+            index={i}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            color={stat.color}
+            bg={stat.bg}
+            onClick={() => setActivePage(stat.page)}
+          />
         ))}
       </div>
 

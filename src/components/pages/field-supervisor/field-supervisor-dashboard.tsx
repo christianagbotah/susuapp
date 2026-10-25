@@ -4,6 +4,7 @@ import { useFieldSupervisorStore } from '@/store/staff-stores';
 import { toast } from 'sonner';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -31,10 +32,10 @@ export function FieldSupervisorDashboard() {
   const offlineAgents = agents.filter(a => a.status === 'offline');
 
   const statsCards = [
-    { title: 'Agents in Field', value: `${agents.filter(a => a.status === 'in_field').length}/${agents.length}`, icon: Radio, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-    { title: 'Collected Today', value: formatGHS(totalCollected), sub: `of ${formatGHS(totalExpected)} expected`, icon: Wallet, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30' },
-    { title: 'Collection Rate', value: `${rate}%`, icon: Percent, color: rate >= 85 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400', bg: rate >= 85 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-amber-100 dark:bg-amber-900/30' },
-    { title: 'Pending Verification', value: `${pendingVerify}`, sub: 'collections to verify', icon: ClipboardCheck, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30' },
+    { title: 'Agents in Field', value: `${agents.filter(a => a.status === 'in_field').length}/${agents.length}`, icon: Radio, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30', page: 'agents' as const },
+    { title: 'Collected Today', value: formatGHS(totalCollected), sub: `of ${formatGHS(totalExpected)} expected`, icon: Wallet, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', page: 'routes' as const },
+    { title: 'Collection Rate', value: `${rate}%`, icon: Percent, color: rate >= 85 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400', bg: rate >= 85 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-amber-100 dark:bg-amber-900/30', page: 'routes' as const },
+    { title: 'Pending Verification', value: `${pendingVerify}`, sub: 'collections to verify', icon: ClipboardCheck, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', page: 'spot-checks' as const },
   ];
 
   return (
@@ -63,22 +64,17 @@ export function FieldSupervisorDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {statsCards.map((stat, i) => (
-          <motion.div key={stat.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.1 }}>
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
-              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 space-y-1">
-                    <p className="truncate text-xs text-muted-foreground lg:text-sm">{stat.title}</p>
-                    <p className="truncate text-base font-bold lg:text-xl">{stat.value}</p>
-                    {stat.sub && <p className="truncate text-[11px] text-muted-foreground line-clamp-1">{stat.sub}</p>}
-                  </div>
-                  <div className={`shrink-0 rounded-lg p-2.5 lg:p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <KpiCard
+            key={stat.title}
+            index={i}
+            title={stat.title}
+            value={stat.value}
+            sub={stat.sub}
+            icon={stat.icon}
+            color={stat.color}
+            bg={stat.bg}
+            onClick={() => setActivePage(stat.page)}
+          />
         ))}
       </div>
 

@@ -3,6 +3,7 @@
 import { useAccountantStore } from '@/store/staff-stores';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
@@ -24,10 +25,10 @@ export function AccountantDashboard() {
   const variances = reconciliations.filter(r => r.status === 'variance');
 
   const statsCards = [
-    { title: 'Total Assets', value: formatGHS(totalAssets), icon: Landmark, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30' },
-    { title: 'Member Deposits (Susu)', value: formatGHS(totalLiabilities), icon: BookOpen, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30' },
-    { title: 'Net Income YTD', value: formatGHS(netIncome), icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-    { title: 'Reconciliation Variances', value: `${variances.length}`, icon: AlertTriangle, color: variances.length ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400', bg: variances.length ? 'bg-red-100 dark:bg-red-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30' },
+    { title: 'Total Assets', value: formatGHS(totalAssets), icon: Landmark, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', page: 'ledger' as const },
+    { title: 'Member Deposits (Susu)', value: formatGHS(totalLiabilities), icon: BookOpen, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', page: 'ledger' as const },
+    { title: 'Net Income YTD', value: formatGHS(netIncome), icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30', page: 'statements' as const },
+    { title: 'Reconciliation Variances', value: `${variances.length}`, icon: AlertTriangle, color: variances.length ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400', bg: variances.length ? 'bg-red-100 dark:bg-red-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30', page: 'reconciliation' as const },
   ];
 
   const topAccounts = [...coa].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance)).slice(0, 5);
@@ -58,21 +59,16 @@ export function AccountantDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {statsCards.map((stat, i) => (
-          <motion.div key={stat.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.1 }}>
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
-              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 space-y-1">
-                    <p className="truncate text-xs text-muted-foreground lg:text-sm">{stat.title}</p>
-                    <p className="truncate text-base font-bold lg:text-xl">{stat.value}</p>
-                  </div>
-                  <div className={`shrink-0 rounded-lg p-2.5 lg:p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <KpiCard
+            key={stat.title}
+            index={i}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            color={stat.color}
+            bg={stat.bg}
+            onClick={() => setActivePage(stat.page)}
+          />
         ))}
       </div>
 

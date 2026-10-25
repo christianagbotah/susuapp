@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Search, Phone, Mail, ShieldCheck, ShieldOff, Coffee, Users } from 'lucide-react';
@@ -21,6 +22,7 @@ export function BranchManagerStaff() {
   const [query, setQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [selected, setSelected] = useState<StaffMember | null>(null);
+  const [confirmDialog, askConfirm] = useConfirm();
 
   const filtered = staff.filter(m => {
     const matchesQuery = `${m.name} ${m.role} ${m.branch}`.toLowerCase().includes(query.toLowerCase());
@@ -30,12 +32,33 @@ export function BranchManagerStaff() {
 
   const roles = Array.from(new Set(staff.map(s => s.role)));
 
-  const handleStatus = (member: StaffMember, status: StaffMember['status']) => {
+  const applyStatus = (member: StaffMember, status: StaffMember['status']) => {
     updateStaffStatus(member.id, status);
     setSelected(null);
     toast.success(`${member.name} marked as ${status.replace('_', ' ')}`, {
       description: 'Staff record updated and synced to HR.',
     });
+  };
+
+  const handleStatus = (member: StaffMember, status: StaffMember['status']) => {
+    if (status === 'suspended') {
+      askConfirm({
+        title: 'Suspend Staff Member',
+        description: 'This staff member will immediately lose platform access and be removed from active duty rosters. HR and the branch manager will be notified for the record.',
+        subject: member.name,
+        details: [
+          { label: 'Role', value: member.role },
+          { label: 'Branch', value: member.branch },
+        ],
+        confirmLabel: 'Yes, Suspend',
+        variant: 'destructive',
+        requireReason: true,
+        reasonPlaceholder: 'Reason for suspension (recorded for HR)',
+        onConfirm: () => applyStatus(member, status),
+      });
+      return;
+    }
+    applyStatus(member, status);
   };
 
   const statusBadge = (status: StaffMember['status']) =>
@@ -47,6 +70,7 @@ export function BranchManagerStaff() {
 
   return (
     <div className="space-y-5">
+      {confirmDialog}
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">

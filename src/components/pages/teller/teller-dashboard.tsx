@@ -3,6 +3,7 @@
 import { useTellerStore } from '@/store/staff-stores';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -22,10 +23,10 @@ export function TellerDashboard() {
   const momoIn = 41280 + 8940 + 3620;
 
   const statsCards = [
-    { title: 'Drawer Balance (expected)', value: formatGHS(drawer.expectedBalance), icon: Wallet, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30' },
-    { title: 'Cash In / Out Today', value: `${formatGHS(drawer.cashIn)} / ${formatGHS(drawer.cashOut)}`, icon: ArrowDownToLine, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30' },
-    { title: 'Customers Waiting', value: `${waiting}`, icon: Users, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30' },
-    { title: 'Processed Today', value: `${processedToday}`, icon: CheckCircle2, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-900/30' },
+    { title: 'Drawer Balance (expected)', value: formatGHS(drawer.expectedBalance), icon: Wallet, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30', page: 'vault' as const },
+    { title: 'Cash In / Out Today', value: `${formatGHS(drawer.cashIn)} / ${formatGHS(drawer.cashOut)}`, icon: ArrowDownToLine, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', page: 'counter' as const },
+    { title: 'Customers Waiting', value: `${waiting}`, icon: Users, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', page: 'counter' as const },
+    { title: 'Processed Today', value: `${processedToday}`, icon: CheckCircle2, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-900/30', page: 'counter' as const },
   ];
 
   const pendingTransfers = transfers.filter(t => ['requested', 'approved', 'in_transit'].includes(t.status));
@@ -56,21 +57,16 @@ export function TellerDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {statsCards.map((stat, i) => (
-          <motion.div key={stat.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.1 }}>
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
-              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 space-y-1">
-                    <p className="truncate text-xs text-muted-foreground lg:text-sm">{stat.title}</p>
-                    <p className="truncate text-base font-bold lg:text-xl">{stat.value}</p>
-                  </div>
-                  <div className={`shrink-0 rounded-lg p-2.5 lg:p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <KpiCard
+            key={stat.title}
+            index={i}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            color={stat.color}
+            bg={stat.bg}
+            onClick={() => setActivePage(stat.page)}
+          />
         ))}
       </div>
 

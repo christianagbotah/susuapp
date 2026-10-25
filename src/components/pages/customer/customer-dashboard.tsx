@@ -50,6 +50,8 @@ interface StatCard {
   iconBg: string;
   iconColor: string;
   trend?: { value: string; positive: boolean };
+  /** Details page opened when the card is clicked */
+  page: string;
 }
 
 // ---- Custom chart tooltip ----
@@ -102,6 +104,7 @@ export function CustomerDashboard() {
       iconBg: 'bg-emerald-100',
       iconColor: 'text-emerald-600',
       trend: { value: '+12.5%', positive: true },
+      page: 'susu',
     },
     {
       title: 'Active Loans',
@@ -110,6 +113,7 @@ export function CustomerDashboard() {
       icon: Landmark,
       iconBg: 'bg-amber-100',
       iconColor: 'text-amber-600',
+      page: 'loans',
     },
     {
       title: 'Wallet Balance',
@@ -118,6 +122,7 @@ export function CustomerDashboard() {
       icon: Wallet,
       iconBg: 'bg-blue-100',
       iconColor: 'text-blue-600',
+      page: 'wallet',
     },
     {
       title: 'Total Contributions',
@@ -127,6 +132,7 @@ export function CustomerDashboard() {
       iconBg: 'bg-emerald-100',
       iconColor: 'text-emerald-600',
       trend: { value: '+8.2%', positive: true },
+      page: 'transactions',
     },
   ];
 
@@ -255,8 +261,20 @@ export function CustomerDashboard() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <motion.div key={stat.title} variants={itemVariants}>
-              <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md touch-manipulation overflow-hidden">
+            <motion.div key={stat.title} variants={itemVariants} className="h-full">
+              <Card
+                onClick={() => setActivePage(stat.page)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActivePage(stat.page);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open ${stat.title} details`}
+                className="h-full cursor-pointer select-none border-slate-200/80 bg-white shadow-sm transition-all hover:shadow-md hover:border-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 active:scale-[0.98] touch-manipulation overflow-hidden"
+              >
                 <CardContent className="flex flex-col items-center gap-1.5 p-3 lg:flex-row lg:items-start lg:gap-4 lg:p-5 h-full justify-between">
                   <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${stat.iconBg}`}>
                     <Icon className={`h-5 w-5 ${stat.iconColor}`} />

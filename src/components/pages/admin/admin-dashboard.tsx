@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useAdminStore } from '@/store/app-store';
 import { formatGHS, formatDate, getStatusColor, getInitials, formatCompactNumber } from '@/lib/formatters';
 import { monthlyRevenueData, loanPortfolioData } from '@/lib/mock-data';
@@ -11,6 +10,8 @@ import {
   Building2, Award, FileText, Settings, BarChart3, CreditCard, Shield, Info,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCard } from '@/components/shared/kpi-card';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -19,39 +20,63 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.4 } }),
-};
-
 export function AdminDashboard() {
   const { stats, allLoans, allAgents, allBranches, approveLoan, rejectLoan, setActivePage } = useAdminStore();
-  const [approveId, setApproveId] = useState<string | null>(null);
-  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [confirmDialog, askConfirm] = useConfirm();
 
   const pendingLoans = allLoans.filter(l => l.status === 'pending' || l.status === 'under_review');
   const topAgents = [...allAgents].sort((a, b) => b.totalCollections - a.totalCollections).slice(0, 5);
   const topBranches = [...allBranches].sort((a, b) => b.totalCustomers - a.totalCustomers).slice(0, 5);
 
   const handleApprove = (id: string) => {
-    approveLoan(id);
-    setApproveId(null);
-    toast.success('Loan approved successfully');
+    const loan = pendingLoans.find(l => l.id === id);
+    if (!loan) return;
+    askConfirm({
+      title: 'Approve Loan Application',
+      description: 'You are about to approve this loan and release funds to the disbursement queue. The customer will be notified immediately.',
+      subject: `${loan.applicantName} — ${formatGHS(loan.amount)}`,
+      details: [
+        { label: 'Type', value: loan.type },
+        { label: 'Amount', value: formatGHS(loan.amount) },
+      ],
+      confirmLabel: 'Yes, Approve Loan',
+      variant: 'success',
+      onConfirm: () => {
+        approveLoan(id);
+        toast.success('Loan approved successfully');
+      },
+    });
   };
 
   const handleReject = (id: string) => {
-    rejectLoan(id, 'Does not meet lending criteria');
-    setRejectId(null);
-    toast.error('Loan has been rejected');
+    const loan = pendingLoans.find(l => l.id === id);
+    if (!loan) return;
+    askConfirm({
+      title: 'Reject Loan Application',
+      description: 'The application will be rejected and the customer notified with next steps. A reason is required for the audit trail.',
+      subject: `${loan.applicantName} — ${formatGHS(loan.amount)}`,
+      details: [
+        { label: 'Type', value: loan.type },
+        { label: 'Amount', value: formatGHS(loan.amount) },
+      ],
+      confirmLabel: 'Reject Application',
+      variant: 'destructive',
+      requireReason: true,
+      reasonPlaceholder: 'Why is this application being rejected?',
+      onConfirm: (reason) => {
+        rejectLoan(id, reason?.trim() || 'Does not meet lending criteria');
+        toast.error('Loan has been rejected');
+      },
+    });
   };
 
   const statCards = [
-    { label: 'Total Users', value: formatCompactNumber(stats.totalUsers), change: '+12.5%', icon: Users, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
-    { label: 'Active Loans', value: `${stats.pendingLoans} pending`, change: '34 pending', icon: Landmark, color: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30' },
-    { label: 'Total Deposits', value: formatGHS(stats.totalDeposits), change: '+8.2%', icon: Wallet, color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
-    { label: 'Total Susu Pool', value: formatGHS(stats.totalSusuPool), change: '+15.3%', icon: PiggyBank, color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30' },
-    { label: 'Active Agents', value: `${stats.activeAgents} of ${stats.totalAgents}`, change: '83% active', icon: UserCheck, color: 'text-teal-600 bg-teal-100 dark:bg-teal-900/30' },
-    { label: 'Default Rate', value: `${stats.defaultRate}%`, change: '-0.5%', icon: AlertTriangle, color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },
+    { label: 'Total Users', value: formatCompactNumber(stats.totalUsers), change: '+12.5%', icon: Users, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30', page: 'users' as const },
+    { label: 'Active Loans', value: `${stats.pendingLoans} pending`, change: '34 pending', icon: Landmark, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', page: 'loans' as const },
+    { label: 'Total Deposits', value: formatGHS(stats.totalDeposits), change: '+8.2%', icon: Wallet, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', page: 'analytics' as const },
+    { label: 'Total Susu Pool', value: formatGHS(stats.totalSusuPool), change: '+15.3%', icon: PiggyBank, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-900/30', page: 'susu-groups' as const },
+    { label: 'Active Agents', value: `${stats.activeAgents} of ${stats.totalAgents}`, change: '83% active', icon: UserCheck, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-100 dark:bg-teal-900/30', page: 'agents' as const },
+    { label: 'Default Rate', value: `${stats.defaultRate}%`, change: '-0.5%', icon: AlertTriangle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', page: 'loans' as const },
   ];
 
   const quickActions = [
@@ -63,6 +88,7 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* System Overview Banner */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-4 lg:p-6 text-white">
         <div className="relative z-10">
@@ -78,25 +104,21 @@ export function AdminDashboard() {
         <div className="absolute -bottom-6 right-20 h-24 w-24 rounded-full bg-white/10" />
       </motion.div>
 
-      {/* Stats Row */}
+      {/* Stats Row — every KPI opens its details page */}
       <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {statCards.map((s, i) => (
-          <motion.div key={s.label} custom={i} variants={fadeUp} initial="hidden" animate="visible">
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation h-full">
-              <CardContent className="p-3 lg:p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center gap-2">
-                  <div className={`flex h-8 w-8 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-lg ${s.color}`}>
-                    <s.icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[10px] lg:text-xs text-muted-foreground">{s.label}</p>
-                    <p className="text-xs lg:text-sm font-semibold leading-tight truncate">{s.value}</p>
-                  </div>
-                </div>
-                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium truncate">{s.change}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <KpiCard
+            key={s.label}
+            index={i}
+            title={s.label}
+            value={s.value}
+            sub={s.change}
+            subClassName="text-emerald-600 dark:text-emerald-400 font-medium"
+            icon={s.icon}
+            color={s.color}
+            bg={s.bg}
+            onClick={() => setActivePage(s.page)}
+          />
         ))}
       </div>
 

@@ -540,3 +540,22 @@ Stage Summary:
 - Notification sheet: 440px with all texts fully visible (was 320px, messages clamped)
 - Detail modal: body-ported, correct z-layering, clear elevated surface in dark mode
 - ConfirmDialog: dark-elevated surface, lint-clean dismiss refactor, type-correct detail values
+---
+Task ID: 1
+Agent: Main Agent
+Task: Complete KPI card click-navigation across all 10 portals + close confirmation-modal coverage gaps (continuation of 4-change UI batch)
+
+Work Log:
+- Verified prior round (commit 28e30d4) pushed: local main == origin/main; notification sheet 440px right-side + body-ported detail modal (z-75 above z-70 backdrop) re-verified live in browser — no regression
+- Created src/components/shared/kpi-card.tsx: uniform clickable KPI card (title/value/sub + icon box, stagger entrance, role=button + tabIndex + Enter/Space activation, focus-visible ring, hover lift, active press scale, cursor-pointer)
+- Wired KpiCard into all 9 staff dashboards with per-card page targets (scripts/wire_kpi_cards.py, exact-anchor asserts): admin (users/loans/analytics/susu-groups/agents/loans), agent (collections/customers/commissions/collections), treasurer (groups/reports/members/payouts), branch-manager (staff/loan-approvals x2/targets), loan-officer (pipeline/appraisals/pipeline/portfolio), teller (vault/counter x3), field-supervisor (agents/routes x2/spot-checks), accountant (ledger x2/statements/reconciliation), compliance (aml-alerts/str-reports/bog-returns/aml-alerts)
+- Customer dashboard: kept its unique card design, added page field (susu/loans/wallet/transactions) + inline interactive props (role=button, keyboard, emerald hover ring)
+- Fixed follow-ups: agent-dashboard missing KpiCard import; removed invalid sub prop from 4 dashboards without sub fields; removed vestigial approveId/rejectId state from admin-dashboard
+- Confirmation-modal gap audit: found 3 uncovered sensitive flows and gated them with useConfirm(): (1) admin-dashboard Pending Loans approve (success variant) / reject (destructive + required reason >=3 chars); (2) admin-settings PaymentGatewaysTab + SMSProvidersTab activate/deactivate (destructive on deactivate, warns live-money impact); (3) branch-manager-staff Suspend (destructive + HR reason). Verified already-covered: admin loans/users/agents/kyc, BM approvals, compliance AML, teller vault, treasurer payouts, customer wallet; non-sensitive false-positives excluded (form image Remove, status text displays)
+- tsc --noEmit clean (app code), eslint clean on all 14 touched files, bun run build passes
+- Live browser verification (agent-browser): customer 4 KPI cards -> Wallet Balance opens Wallet page; admin 6 KPI cards -> Total Users opens Users page; teller 4 cards -> Customers Waiting opens Counter page; admin loan Approve -> confirm modal -> Cancel (no action) -> Yes Approve (toast, funds released); Reject -> reason required, button disabled <3 chars, reason -> rejected; notification sheet 440px right + modal z-75 over z-70 backdrop + Escape closes; Settings Payments -> Set as Active -> "Activate Payment Gateway" confirm modal
+
+Stage Summary:
+- All KPI cards on all 10 portal dashboards are now clickable and navigate to their details pages (uniform shared KpiCard component, keyboard accessible)
+- Every sensitive action now has a confirmation modal: loan approve/reject (admin dashboard + existing pages), payment gateway + SMS provider activation/deactivation, staff suspension — joining the previously covered pages
+- Notification sheet/modal fixes from previous round confirmed intact

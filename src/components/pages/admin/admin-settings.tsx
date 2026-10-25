@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { PaymentGatewayId, SMSProviderId } from '@/lib/types';
 import { usePaymentsStore, refreshGatewayStatus, type GatewayStatusClient } from '@/store/payments-store';
+import { useConfirm } from '@/components/shared/confirm-dialog';
 import {
   User, Shield, Bell, Lock, Smartphone, Camera, Eye, EyeOff,
   Fingerprint, Globe, Settings, History, Key, AlertTriangle, Copy, RefreshCw,
@@ -766,7 +767,9 @@ function PaymentGatewaysTab() {
     }
   };
 
-  const handleActivate = async (id: PaymentGatewayId) => {
+  const [confirmDialog, askConfirm] = useConfirm();
+
+  const applyGatewayActivation = async (id: PaymentGatewayId) => {
     const next = activePaymentGateway === id ? null : id;
     setActivePaymentGateway(next);
     try {
@@ -786,6 +789,21 @@ function PaymentGatewaysTab() {
           : 'Payments fall back to the first configured provider, or test mode.',
       },
     );
+  };
+
+  const handleActivate = (id: PaymentGatewayId) => {
+    const deactivating = activePaymentGateway === id;
+    const gwName = paymentGateways.find(g => g.id === id)?.name ?? id;
+    askConfirm({
+      title: deactivating ? 'Deactivate Payment Gateway' : 'Activate Payment Gateway',
+      description: deactivating
+        ? 'MoMo collections and disbursements will fall back to the first configured provider, or simulation mode, until another gateway is activated.'
+        : `${gwName} will handle every MoMo collection and disbursement on the platform. Verify the credentials and mode before continuing.`,
+      subject: gwName,
+      confirmLabel: deactivating ? 'Yes, Deactivate' : 'Yes, Activate',
+      variant: deactivating ? 'destructive' : 'default',
+      onConfirm: () => { void applyGatewayActivation(id); },
+    });
   };
 
   const handleTest = async (id: PaymentGatewayId) => {
@@ -814,6 +832,7 @@ function PaymentGatewaysTab() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Active Gateway Summary */}
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="p-4 sm:p-5">
@@ -1135,7 +1154,9 @@ function SMSProvidersTab() {
     }
   };
 
-  const handleActivate = (id: SMSProviderId) => {
+  const [confirmDialog, askConfirm] = useConfirm();
+
+  const applySMSActivation = (id: SMSProviderId) => {
     setActiveSMSProvider(activeSMSProvider === id ? null : id);
     toast.success(
       activeSMSProvider === id ? 'SMS provider deactivated' : 'SMS provider activated',
@@ -1145,6 +1166,21 @@ function SMSProvidersTab() {
           : `${smsProviders.find(p => p.id === id)?.name} is now the active SMS/OTP provider.`,
       }
     );
+  };
+
+  const handleActivate = (id: SMSProviderId) => {
+    const deactivating = activeSMSProvider === id;
+    const provName = smsProviders.find(p => p.id === id)?.name ?? id;
+    askConfirm({
+      title: deactivating ? 'Deactivate SMS Provider' : 'Activate SMS Provider',
+      description: deactivating
+        ? 'With no active provider, OTP and verification SMS cannot be delivered until another provider is activated.'
+        : `${provName} becomes the active SMS/OTP provider for all verification messages.`,
+      subject: provName,
+      confirmLabel: deactivating ? 'Yes, Deactivate' : 'Yes, Activate',
+      variant: deactivating ? 'destructive' : 'default',
+      onConfirm: () => applySMSActivation(id),
+    });
   };
 
   const handleTest = (id: SMSProviderId) => {
@@ -1161,6 +1197,7 @@ function SMSProvidersTab() {
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       {/* Active Provider Summary */}
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="p-4 sm:p-5">
