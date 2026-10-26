@@ -1,153 +1,103 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  Shield, Users, LayoutDashboard, PiggyBank, Building2,
-  Phone, Lock, ArrowRight, Landmark, Wallet, Eye, EyeOff,
-  UserCog, ClipboardCheck, Scale, Radio, BookOpen, FileWarning, Calculator,
+  Shield, ShieldCheck, Users, Wallet, PiggyBank, Building2, UserCog,
+  ClipboardCheck, Scale, Radio, BookOpen, FileWarning, LayoutDashboard,
+  Landmark, Phone, Lock, ArrowRight, Eye, EyeOff, Smartphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/ui/input-otp';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { useNavigationStore } from '@/store/app-store';
 import { apiFetch, ensureBackendStarted } from '@/lib/api-client';
 import { toast } from 'sonner';
 import type { PortalId } from '@/lib/types';
 
-// ---- Portal card data (10 portals, grouped like a real branch structure) ----
-const portals: {
-  id: PortalId;
-  title: string;
-  description: string;
+const DEMO_PIN = '123456';
+const PORTAL_IDS: readonly PortalId[] = [
+  'customer', 'agent', 'admin', 'treasurer', 'branch-manager',
+  'loan-officer', 'teller', 'field-supervisor', 'accountant', 'compliance-officer',
+] as const;
+
+// ---- Demo accounts (one per portal; `live` entries exist in the NestJS seed) ----
+interface DemoAccount {
+  id: string;
+  name: string;
+  role: string;
+  portal: PortalId;
+  phone: string;
   icon: React.ElementType;
-  iconColor: string;
-  iconBg: string;
-  hoverBorder: string;
-}[] = [
-  {
-    id: 'customer',
-    title: 'Customer Portal',
-    description: 'Susu, loans, wallet, bills & USSD',
-    icon: Wallet,
-    iconColor: 'text-emerald-600',
-    iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
-    hoverBorder: 'hover:border-emerald-300',
-  },
-  {
-    id: 'agent',
-    title: 'Agent Portal',
-    description: 'Daily collections & customer onboarding',
-    icon: Building2,
-    iconColor: 'text-blue-600',
-    iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-    hoverBorder: 'hover:border-blue-300',
-  },
-  {
-    id: 'field-supervisor',
-    title: 'Field Supervisor',
-    description: 'Agents, routes & collection spot checks',
-    icon: Radio,
-    iconColor: 'text-lime-600',
-    iconBg: 'bg-lime-100 dark:bg-lime-900/30',
-    hoverBorder: 'hover:border-lime-300',
-  },
-  {
-    id: 'teller',
-    title: 'Teller / Cashier',
-    description: 'Counter queue, drawer & vault transfers',
-    icon: Scale,
-    iconColor: 'text-cyan-600',
-    iconBg: 'bg-cyan-100 dark:bg-cyan-900/30',
-    hoverBorder: 'hover:border-cyan-300',
-  },
-  {
-    id: 'branch-manager',
-    title: 'Branch Manager',
-    description: 'Staff, targets & loan approvals',
-    icon: UserCog,
-    iconColor: 'text-indigo-600',
-    iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
-    hoverBorder: 'hover:border-indigo-300',
-  },
-  {
-    id: 'loan-officer',
-    title: 'Loan Officer',
-    description: 'Pipeline, 5C appraisals & portfolio',
-    icon: ClipboardCheck,
-    iconColor: 'text-amber-600',
-    iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-    hoverBorder: 'hover:border-amber-300',
-  },
-  {
-    id: 'treasurer',
-    title: 'Group Treasurer',
-    description: 'Community susu books & payout rotation',
-    icon: PiggyBank,
-    iconColor: 'text-purple-600',
-    iconBg: 'bg-purple-100 dark:bg-purple-900/30',
-    hoverBorder: 'hover:border-purple-300',
-  },
-  {
-    id: 'accountant',
-    title: 'Accountant',
-    description: 'Ledger, statements & reconciliation',
-    icon: BookOpen,
-    iconColor: 'text-teal-600',
-    iconBg: 'bg-teal-100 dark:bg-teal-900/30',
-    hoverBorder: 'hover:border-teal-300',
-  },
-  {
-    id: 'compliance-officer',
-    title: 'Compliance Officer',
-    description: 'AML alerts, FIC STRs & BoG returns',
-    icon: FileWarning,
-    iconColor: 'text-rose-600',
-    iconBg: 'bg-rose-100 dark:bg-rose-900/30',
-    hoverBorder: 'hover:border-rose-300',
-  },
-  {
-    id: 'admin',
-    title: 'System Admin',
-    description: 'Users, integrations & analytics',
-    icon: LayoutDashboard,
-    iconColor: 'text-slate-600',
-    iconBg: 'bg-slate-100 dark:bg-slate-900/30',
-    hoverBorder: 'hover:border-slate-300',
-  },
+  live?: boolean;
+}
+
+const demoAccounts: DemoAccount[] = [
+  // Customer & community — these exist in the live API seed, PIN 123456
+  { id: 'ama', name: 'Ama Mensah', role: 'Customer', portal: 'customer', phone: '0241234567', icon: Wallet, live: true },
+  { id: 'kwame', name: 'Kwame Asante', role: 'Customer', portal: 'customer', phone: '0209876543', icon: Wallet, live: true },
+  { id: 'patricia', name: 'Patricia Ampah', role: 'Group Treasurer', portal: 'treasurer', phone: '0246677889', icon: PiggyBank, live: true },
+  { id: 'emmanuel', name: 'Emmanuel Osei', role: 'Susu Agent', portal: 'agent', phone: '0265566778', icon: Building2, live: true },
+  // Branch & head office — staff portals backed by frontend demo data
+  { id: 'nana', name: 'Nana Ampofo', role: 'Branch Manager', portal: 'branch-manager', phone: '0201110001', icon: UserCog },
+  { id: 'efua', name: 'Efua Sarpong', role: 'Loan Officer', portal: 'loan-officer', phone: '0201110002', icon: ClipboardCheck },
+  { id: 'yaw', name: 'Yaw Antwi', role: 'Teller / Cashier', portal: 'teller', phone: '0201110003', icon: Scale },
+  { id: 'abena', name: 'Abena Frimpong', role: 'Field Supervisor', portal: 'field-supervisor', phone: '0201110004', icon: Radio },
+  { id: 'kwesi', name: 'Kwesi Nyarko', role: 'Accountant', portal: 'accountant', phone: '0201110005', icon: BookOpen },
+  { id: 'gifty', name: 'Gifty Owusu', role: 'Compliance Officer', portal: 'compliance-officer', phone: '0201110006', icon: FileWarning },
+  { id: 'daniel', name: 'Daniel Tetteh', role: 'System Admin', portal: 'admin', phone: '0278899001', icon: LayoutDashboard, live: true },
 ];
 
-// ---- Animation variants ----
+const communityAccounts = demoAccounts.filter((a) => ['ama', 'kwame', 'patricia', 'emmanuel'].includes(a.id));
+const staffAccounts = demoAccounts.filter((a) => !['ama', 'kwame', 'patricia', 'emmanuel'].includes(a.id));
+
+// ---- Animation variants (consistent app-wide: opacity + small offset, easeOut) ----
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' as const },
-  },
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' as const } },
 };
 
-// Staggered form field entry animation
 const formFieldVariants = {
-  hidden: { opacity: 0, x: -16 },
-  visible: (i: number) => ({
-    opacity: 1,
-    x: 0,
-    transition: { delay: 0.15 + i * 0.08, duration: 0.35, ease: 'easeOut' as const },
-  }),
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' as const } },
 };
+
+// ---- Demo account row (shared by dropdown items) ----
+function DemoAccountOption({ account }: { account: DemoAccount }) {
+  const Icon = account.icon;
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
+        <Icon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium leading-tight">
+          {account.name}
+          {account.live && (
+            <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+              API
+            </span>
+          )}
+        </p>
+        <p className="truncate text-[11px] leading-tight text-muted-foreground">
+          {account.role} · {account.phone.slice(0, 3)} {account.phone.slice(3, 6)} {account.phone.slice(6)}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ---- Component ----
 export function LoginPage() {
@@ -156,7 +106,11 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [showPin, setShowPin] = useState(false);
+  const [selectedId, setSelectedId] = useState('');
   const setPortal = useNavigationStore((s) => s.setPortal);
+
+  const selectedAccount = demoAccounts.find((a) => a.id === selectedId) ?? null;
+  const targetPortal: PortalId = selectedAccount?.portal ?? 'customer';
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -165,19 +119,22 @@ export function LoginPage() {
 
     const demoLogin = async (offline: boolean) => {
       await new Promise((r) => setTimeout(r, 600));
-      setPortal('customer');
+      setPortal(targetPortal);
       setIsLoading(false);
       if (offline) toast.info('Signed in to demo mode — NestJS API not reachable in this session.');
     };
 
+    const routePortal = (role?: string): PortalId =>
+      PORTAL_IDS.includes(role as PortalId) ? (role as PortalId) : targetPortal;
+
     try {
       // 1) Try the NestJS backend directly
-      const data = await apiFetch<{ accessToken: string; user: { name: string } }>('/api/v1/auth/login', {
+      const data = await apiFetch<{ accessToken: string; user: { name: string; role?: string } }>('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: normalizedPhone, pin }),
       });
-      setPortal('customer');
+      setPortal(routePortal(data.user.role));
       setIsLoading(false);
       toast.success(`Welcome back, ${data.user.name}! · Authenticated via iSusuPro API`);
     } catch (err: unknown) {
@@ -191,12 +148,12 @@ export function LoginPage() {
       try {
         const started = await ensureBackendStarted();
         if (started) {
-          const data = await apiFetch<{ accessToken: string; user: { name: string } }>('/api/v1/auth/login', {
+          const data = await apiFetch<{ accessToken: string; user: { name: string; role?: string } }>('/api/v1/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: normalizedPhone, pin }),
           });
-          setPortal('customer');
+          setPortal(routePortal(data.user.role));
           setIsLoading(false);
           toast.success(`Welcome back, ${data.user.name}! · Authenticated via iSusuPro API`);
           return;
@@ -209,8 +166,15 @@ export function LoginPage() {
     }
   };
 
-  const handlePortalLaunch = (portalId: PortalId) => {
-    setPortal(portalId);
+  const handleDemoSelect = (id: string) => {
+    const account = demoAccounts.find((a) => a.id === id);
+    if (!account) return;
+    setSelectedId(id);
+    setPhone(account.phone);
+    setPin(DEMO_PIN);
+    toast.success(`${account.name} — ${account.role}`, {
+      description: 'Phone and PIN filled in (123456). Tap Sign In to continue.',
+    });
   };
 
   const pinComplete = pin.length === 6;
@@ -230,124 +194,128 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      {/* ===== LEFT PANEL — Ghana-inspired brand (hidden on mobile) ===== */}
-      <div className="relative hidden flex-col items-center justify-center overflow-hidden lg:flex lg:w-[480px] xl:w-[520px]">
-        {/* Background with Ghana flag stripe accents */}
-        <div className="absolute inset-0 bg-gradient-to-br from-red-700 via-yellow-500 via-40% to-emerald-700" />
+      {/* ===== LEFT PANEL — premium emerald brand (desktop only) ===== */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-emerald-950 p-10 text-white lg:flex lg:w-[460px] xl:w-[520px] xl:p-14">
+        {/* Ambient gradients */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-emerald-950 to-emerald-950" />
+        <div className="absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute -bottom-48 -left-32 h-[30rem] w-[30rem] rounded-full bg-emerald-400/10 blur-3xl" />
+        {/* Ghana flag ribbon accent */}
+        <div className="absolute inset-x-0 top-0 h-1 ghana-accent opacity-90" />
 
-        {/* Subtle flag stripe overlay */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="h-1/3 w-full bg-red-600" />
-          <div className="h-1/3 w-full bg-yellow-400" />
-          <div className="h-1/3 w-full bg-emerald-600" />
-        </div>
-
-        {/* Decorative dark overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/30" />
-
-        {/* Decorative circles */}
-        <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-white/5" />
-        <div className="absolute -bottom-32 -right-32 h-[28rem] w-[28rem] rounded-full bg-white/5" />
-
-        {/* Content */}
-        <div className="relative z-10 flex max-w-md flex-col items-center gap-6 px-8 text-center">
+        <div className="relative z-10">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' as const }}
-            className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/15 shadow-lg backdrop-blur-sm"
-          >
-            <Landmark className="h-10 w-10 text-white" />
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="text-5xl font-bold tracking-tight text-white"
+            transition={{ duration: 0.5, ease: 'easeOut' as const }}
+            className="flex items-center gap-4"
           >
-            iSusuPro
-          </motion.h1>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/15 ring-1 ring-emerald-300/25">
+              <Landmark className="h-6 w-6 text-emerald-300" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">iSusuPro</h1>
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-300/80">Susu &amp; Microfinance</p>
+            </div>
+          </motion.div>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="text-lg leading-relaxed text-white/85"
+            transition={{ delay: 0.1, duration: 0.5, ease: 'easeOut' as const }}
+            className="mt-10 max-w-sm text-2xl font-semibold leading-snug tracking-tight xl:text-[1.7rem]"
           >
-            Empowering Ghanaian Communities Through Inclusive Finance
+            Empowering Ghanaian communities through inclusive finance.
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18, duration: 0.5, ease: 'easeOut' as const }}
+            className="mt-3 max-w-sm text-sm leading-relaxed text-white/65"
+          >
+            Daily susu collections, micro-loans, MoMo floats and BoG-compliant reporting — one platform for branches, agents and their customers.
           </motion.p>
 
-          {/* Trust indicators */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-            className="mt-4 flex items-center gap-6 text-sm text-white/70"
+          <motion.ul
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.26, duration: 0.5, ease: 'easeOut' as const }}
+            className="mt-10 space-y-4 text-sm"
           >
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              <span>Bank-grade Security</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span>50k+ Members</span>
-            </div>
-          </motion.div>
+            {[
+              { icon: ShieldCheck, text: 'Licensed by Bank of Ghana — BoG/MFI/2024/001' },
+              { icon: Lock, text: 'Bank-grade 256-bit encryption on every transaction' },
+              { icon: Smartphone, text: 'MTN MoMo · Telecel Cash · AT Money · USSD *713#' },
+              { icon: Users, text: 'Built for susu groups, agents and branch teams' },
+            ].map(({ icon: Icon, text }) => (
+              <li key={text} className="flex items-center gap-3 text-white/85">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 ring-1 ring-emerald-300/15">
+                  <Icon className="h-4 w-4 text-emerald-300" />
+                </span>
+                {text}
+              </li>
+            ))}
+          </motion.ul>
         </div>
-      </div>
 
-      {/* ===== RIGHT PANEL — Login form + Portal selection ===== */}
-      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto bg-gradient-to-br from-white via-emerald-50/30 to-amber-50/20 dark:from-background dark:via-emerald-950/10 dark:to-amber-950/10 px-4 py-8 sm:px-6 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="relative z-10 grid grid-cols-3 gap-4 border-t border-white/10 pt-6"
+        >
+          {[
+            { value: '50k+', label: 'Members' },
+            { value: '₵12M+', label: 'Monthly susu volume' },
+            { value: '16', label: 'Regions covered' },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <p className="text-xl font-bold tracking-tight text-emerald-300">{stat.value}</p>
+              <p className="mt-0.5 text-[11px] leading-tight text-white/50">{stat.label}</p>
+            </div>
+          ))}
+        </motion.div>
+      </aside>
+
+      {/* ===== RIGHT PANEL — login form ===== */}
+      <main className="flex flex-1 flex-col overflow-y-auto bg-gradient-to-br from-white via-emerald-50/40 to-amber-50/30 px-4 py-8 dark:from-background dark:via-emerald-950/10 dark:to-amber-950/10 sm:px-6 lg:px-10">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-lg"
+          className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center"
         >
-          {/* Mobile-only brand header with Ghana flag accent */}
-          <motion.div variants={itemVariants} className="mb-6 flex flex-col items-center gap-3 lg:hidden">
-            {/* Ghana flag accent bar */}
-            <div className="ghana-accent w-16 rounded-full mb-1" />
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, ease: 'easeOut' as const }}
-              className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-600/30"
-            >
-              <Landmark className="h-8 w-8 text-white" />
-            </motion.div>
-            <h1 className="text-2xl font-bold text-emerald-800 dark:text-emerald-300">iSusuPro</h1>
-            <p className="text-center text-xs text-muted-foreground max-w-[240px]">
-              Empowering Ghanaian Communities Through Inclusive Finance
-            </p>
+          {/* Compact mobile brand header */}
+          <motion.div variants={itemVariants} className="mb-6 lg:hidden">
+            <div className="ghana-accent mx-auto w-16 rounded-full" />
+            <div className="mt-4 flex items-center justify-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 shadow-md shadow-emerald-600/25">
+                <Landmark className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold leading-tight text-emerald-900 dark:text-emerald-300">iSusuPro</h1>
+                <p className="text-[11px] leading-tight text-muted-foreground">Susu &amp; Microfinance Platform</p>
+              </div>
+            </div>
           </motion.div>
 
-          {/* Login Card */}
+          {/* Login card */}
           <motion.div variants={itemVariants}>
-            <Card className="border-0 shadow-xl shadow-emerald-900/5 dark:shadow-none dark:bg-card">
-              <CardHeader className="space-y-1 pb-4 pt-5">
-                <CardTitle className="text-2xl font-bold text-emerald-900 dark:text-foreground">Welcome back</CardTitle>
-                <CardDescription>
+            <Card className="rounded-2xl border-border/80 py-6 shadow-xl shadow-emerald-900/5 sm:py-7 dark:bg-card dark:shadow-none">
+              <div className="px-5 sm:px-7">
+                <h2 className="text-xl font-bold tracking-tight text-emerald-950 dark:text-foreground sm:text-2xl">
+                  Welcome back
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
                   Sign in to your iSusuPro account to continue
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {/* Phone Number with +233 prefix badge */}
-                <motion.div
-                  custom={0}
-                  variants={formFieldVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="space-y-2"
-                >
-                  <Label htmlFor="phone" className="text-sm font-medium">
-                    Phone Number
-                  </Label>
-                  <div className="flex items-center gap-0 rounded-xl border border-input bg-background focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 dark:focus-within:ring-emerald-900/40">
-                    {/* +233 prefix badge */}
-                    <div className="flex h-12 items-center border-r border-input bg-muted/50 px-3 gap-1.5">
-                      <span className="text-base">🇬🇭</span>
+                </p>
+
+                {/* Phone Number with +233 prefix */}
+                <motion.div variants={formFieldVariants} className="mt-6 space-y-2">
+                  <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
+                  <div className="flex items-center gap-0 rounded-xl border border-input bg-background transition-colors focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 dark:focus-within:ring-emerald-900/40">
+                    <div className="flex h-11 items-center gap-1.5 border-r border-input bg-muted/50 px-3">
+                      <span className="text-base leading-none">🇬🇭</span>
                       <span className="text-sm font-semibold text-foreground">+233</span>
                     </div>
                     <Input
@@ -356,7 +324,7 @@ export function LoginPage() {
                       placeholder="24 123 4567"
                       value={formatPhoneDisplay(phone)}
                       onChange={(e) => handlePhoneChange(e.target.value)}
-                      className="h-12 flex-1 border-0 shadow-none focus-visible:ring-0 text-base rounded-none"
+                      className="h-11 flex-1 rounded-none border-0 text-base shadow-none focus-visible:ring-0"
                       inputMode="numeric"
                       autoComplete="tel"
                     />
@@ -367,22 +335,16 @@ export function LoginPage() {
                 </motion.div>
 
                 {/* PIN with individual digit boxes */}
-                <motion.div
-                  custom={1}
-                  variants={formFieldVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="space-y-2"
-                >
+                <motion.div variants={formFieldVariants} className="mt-5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Label className="flex items-center gap-1.5 text-sm font-medium">
                       <Lock className="h-3.5 w-3.5" />
                       6-Digit PIN
                     </Label>
                     <button
                       type="button"
                       onClick={() => setShowPin(!showPin)}
-                      className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                      className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                     >
                       {showPin ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                       {showPin ? 'Hide' : 'Show'}
@@ -393,57 +355,49 @@ export function LoginPage() {
                       maxLength={6}
                       value={pin}
                       onChange={setPin}
-                      className="gap-2.5"
+                      className="gap-2 sm:gap-2.5"
                       type={showPin ? 'text' : 'password'}
                     >
                       <InputOTPGroup>
-                        <InputOTPSlot index={0} className="h-12 w-10 rounded-lg text-base font-semibold" />
-                        <InputOTPSlot index={1} className="h-12 w-10 rounded-lg text-base font-semibold" />
-                        <InputOTPSlot index={2} className="h-12 w-10 rounded-lg text-base font-semibold" />
+                        {[0, 1, 2].map((i) => (
+                          <InputOTPSlot key={i} index={i} className="h-11 w-9 rounded-lg text-base font-semibold sm:w-10" />
+                        ))}
                       </InputOTPGroup>
                       <InputOTPSeparator />
                       <InputOTPGroup>
-                        <InputOTPSlot index={3} className="h-12 w-10 rounded-lg text-base font-semibold" />
-                        <InputOTPSlot index={4} className="h-12 w-10 rounded-lg text-base font-semibold" />
-                        <InputOTPSlot index={5} className="h-12 w-10 rounded-lg text-base font-semibold" />
+                        {[3, 4, 5].map((i) => (
+                          <InputOTPSlot key={i} index={i} className="h-11 w-9 rounded-lg text-base font-semibold sm:w-10" />
+                        ))}
                       </InputOTPGroup>
                     </InputOTP>
                   </div>
                 </motion.div>
 
-                {/* Remember me toggle */}
-                <motion.div
-                  custom={2}
-                  variants={formFieldVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="flex items-center justify-between"
-                >
-                  <Label
-                    htmlFor="remember-me"
-                    className="text-sm font-normal text-muted-foreground cursor-pointer"
-                    onClick={() => setRememberMe(!rememberMe)}
+                {/* Remember me + forgot PIN */}
+                <motion.div variants={formFieldVariants} className="mt-5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Switch id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} />
+                    <Label htmlFor="remember-me" className="cursor-pointer text-xs text-muted-foreground sm:text-sm">
+                      Remember me
+                    </Label>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-emerald-600 transition-colors hover:text-emerald-700 hover:underline sm:text-sm dark:text-emerald-400"
+                    onClick={() => toast.info('PIN Reset', {
+                      description: 'A PIN reset link has been sent to your registered phone number.',
+                    })}
                   >
-                    Remember me on this device
-                  </Label>
-                  <Switch
-                    id="remember-me"
-                    checked={rememberMe}
-                    onCheckedChange={setRememberMe}
-                  />
+                    Forgot PIN?
+                  </button>
                 </motion.div>
 
                 {/* Login Button */}
-                <motion.div
-                  custom={3}
-                  variants={formFieldVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
+                <motion.div variants={formFieldVariants} className="mt-6">
                   <Button
                     onClick={handleLogin}
                     disabled={isLoading || !phone.trim() || !pinComplete}
-                    className="h-12 w-full bg-emerald-600 text-base font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/40 active:scale-[0.98] disabled:opacity-50 rounded-xl"
+                    className="h-12 w-full rounded-xl bg-emerald-600 text-base font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/40 active:scale-[0.98] disabled:opacity-50"
                   >
                     {isLoading ? (
                       <span className="flex items-center gap-2">
@@ -458,100 +412,69 @@ export function LoginPage() {
                     )}
                   </Button>
                 </motion.div>
-
-                {/* Forgot PIN */}
-                <motion.div
-                  custom={4}
-                  variants={formFieldVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  <p className="text-center text-sm text-muted-foreground">
-                    Forgot your PIN?{' '}
-                    <button
-                      className="font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
-                      onClick={() => toast.info('PIN Reset', {
-                        description: 'A PIN reset link has been sent to your registered phone number.',
-                      })}
-                    >
-                      Reset it here
-                    </button>
-                  </p>
-                </motion.div>
-              </CardContent>
+              </div>
             </Card>
           </motion.div>
 
-          {/* Divider with Portal Selection */}
-          <motion.div variants={itemVariants} className="mt-8">
-            <div className="mb-6 flex items-center gap-4">
-              <Separator className="flex-1" />
-              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                Or select a portal to demo
-              </span>
-              <Separator className="flex-1" />
-            </div>
+          {/* Demo accounts dropdown */}
+          <motion.div variants={itemVariants} className="mt-6">
+            <Card className="rounded-2xl border-border/80 py-5 shadow-sm sm:py-6 dark:bg-card">
+              <div className="px-5 sm:px-7">
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="flex items-center gap-1.5 text-sm font-semibold">
+                    <Users className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Explore a demo account
+                  </Label>
+                  <span className="rounded-md border bg-muted/60 px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+                    PIN {DEMO_PIN}
+                  </span>
+                </div>
 
-            {/* Portal Cards Grid */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {portals.map((portal) => {
-                const Icon = portal.icon;
-                return (
-                  <motion.div
-                    key={portal.id}
-                    whileHover={{ y: -4, scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  >
-                    <Card
-                      className={`group cursor-pointer border-border bg-card py-0 transition-shadow hover:shadow-lg hover:shadow-slate-900/5 ${portal.hoverBorder}`}
-                      onClick={() => handlePortalLaunch(portal.id)}
-                    >
-                      <CardContent className="flex flex-col items-start gap-2.5 p-4">
-                        <div
-                          className={`flex h-10 w-10 items-center justify-center rounded-xl ${portal.iconBg} transition-transform group-hover:scale-110`}
-                        >
-                          <Icon className={`h-5 w-5 ${portal.iconColor}`} />
-                        </div>
-                        <div className="space-y-0.5">
-                          <h3 className="text-xs font-semibold text-foreground">
-                            {portal.title}
-                          </h3>
-                          <p className="text-[11px] leading-relaxed text-muted-foreground line-clamp-2">
-                            {portal.description}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-0.5 h-7 gap-1 px-2.5 text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-900/20"
-                        >
-                          Launch
-                          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
+                <Select value={selectedId} onValueChange={handleDemoSelect}>
+                  <SelectTrigger className="mt-3 h-12 w-full rounded-xl text-left">
+                    <SelectValue placeholder="Choose a demo account" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[320px]">
+                    <SelectGroup>
+                      <SelectLabel>Customer &amp; community · live API</SelectLabel>
+                      {communityAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id} className="py-2.5">
+                          <DemoAccountOption account={account} />
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel>Branch &amp; head office</SelectLabel>
+                      {staffAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id} className="py-2.5">
+                          <DemoAccountOption account={account} />
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                  Selecting an account fills in the phone number and PIN automatically — then tap{' '}
+                  <span className="font-medium text-foreground">Sign In</span> to open that portal.
+                </p>
+              </div>
+            </Card>
           </motion.div>
 
-          {/* Footer with powered-by text */}
-          <motion.div variants={itemVariants} className="mt-8 flex flex-col items-center gap-3 text-center">
-            <div className="ghana-accent w-12 rounded-full" />
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p className="flex items-center justify-center gap-1">
-                <Shield className="h-3 w-3" />
-                Licensed by Bank of Ghana &bull; BoG/MFI/2024/001
-              </p>
-              <p className="text-[10px] text-muted-foreground/60">
-                Powered by iSusuPro &copy; {new Date().getFullYear()}
-              </p>
-            </div>
+          {/* Footer */}
+          <motion.div variants={itemVariants} className="mt-8 pb-2 text-center">
+            <Separator className="mx-auto mb-4 w-16" />
+            <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <Shield className="h-3 w-3" />
+              Licensed by Bank of Ghana &bull; BoG/MFI/2024/001
+            </p>
+            <p className="mt-1 text-[10px] text-muted-foreground/60">
+              Powered by iSusuPro &copy; {new Date().getFullYear()}
+            </p>
           </motion.div>
         </motion.div>
-      </div>
+      </main>
     </div>
   );
 }
