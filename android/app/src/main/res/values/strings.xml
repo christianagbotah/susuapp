@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">iSusuPro</string>
+    <string name="title_activity_main">iSusuPro</string>
+    <string name="package_name">com.isusupro.ghana</string>
+    <string name="custom_url_scheme">com.isusupro.ghana</string>
+</resources>

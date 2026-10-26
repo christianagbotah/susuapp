@@ -1,0 +1,86 @@
+name: Build Android App
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_url:
+        description: 'Server URL the app loads (must be a live deployment)'
+        required: false
+        default: 'https://isusupro.com'
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  android:
+    name: Build Android APK & AAB
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build native shell
+        env:
+          APP_SERVER_URL: ${{ github.event.inputs.server_url || 'https://isusupro.com' }}
+        run: bun run shell:build
+
+      - name: Sync Capacitor (web assets + plugins)
+        run: bunx cap sync android
+
+      - name: Build debug APK (sideload-ready, debug-signed)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Build release AAB (unsigned, for Play Store signing)
+        run: |
+          cd android
+          ./gradlew bundleRelease --no-daemon
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          cp android/app/build/outputs/apk/debug/*.apk artifacts/iSusuPro-debug.apk
+          cp android/app/build/outputs/bundle/release/*.aab artifacts/iSusuPro-release-unsigned.aab
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iSusuPro-android-apk
+          path: artifacts/iSusuPro-debug.apk
+          if-no-files-found: error
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iSusuPro-android-aab
+          path: artifacts/iSusuPro-release-unsigned.aab
+          if-no-files-found: error
+
+      - name: Attach to release (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/iSusuPro-debug.apk
+            artifacts/iSusuPro-release-unsigned.aab
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

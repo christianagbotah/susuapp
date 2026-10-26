@@ -1,35 +1,46 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 /**
- * iSusuPro Ghana — Capacitor configuration
- * ----------------------------------------
- * Wraps the Next.js PWA build into native Android (AAB/APK) and
- * iOS (.ipa) apps. The native shell is a thin WebView layer:
- *   • Static build served from `dist/` (next build && next export -o dist)
- *     with the NestJS API base pointing at the production URL.
- *   • Native plugins available: PushNotifications (contribution
- *     reminders), BiometricAuth (PIN replacement), Camera (Ghana Card
- *     OCR), Geolocation (agent route tracking).
+ * iSusuPro Ghana — Capacitor configuration (Android & iOS)
+ * --------------------------------------------------------
+ * The Next.js app is SERVER-DEPENDENT (API routes + NestJS backend + Prisma),
+ * so the native shell is a thin WebView that loads the hosted deployment:
+ *
+ *   APP_SERVER_URL=https://isusupro.com bun run cap:sync
+ *
+ * • `server.url` points the WebView at the live server (bridge + plugins inject).
+ * • `webDir: 'dist'` holds a branded bootstrap/offline shell (scripts/build-native-shell.mjs)
+ *   used as fallback assets and by tooling.
+ * • Native plugins installed: PushNotifications (contribution reminders),
+ *   LocalNotifications, Camera (Ghana Card OCR), Geolocation (agent routes),
+ *   Preferences (offline queue), SplashScreen, StatusBar, App (lifecycle).
  *
  * Build commands:
- *   bun run build && bun run cap:sync
- *   bun run cap:open:android   → Android Studio (build AAB for Play)
- *   bun run cap:open:ios       → Xcode (build IPA for App Store)
+ *   bun run cap:sync               → build shell + sync into android/
+ *   bun run cap:open:android       → Android Studio (build AAB for Play)
+ *   bun run cap:open:ios           → Xcode (build IPA for App Store, macOS only)
+ *   CI: .github/workflows/build-mobile.yml builds the APK/AAB automatically
+ *
+ * Dev against a local server (Android emulator):
+ *   APP_SERVER_URL=http://10.0.2.2:3000 bun run cap:sync
  *
  * Ghana-specific notes:
- *   - targetSdk 34 (Google Play 2025 requirement)
- *   - MoMo deep links registered: mtnmomo://, telecelcash://, atmoney://
- *   - Offline-first: service worker handles collection caching;
- *     Capacitor Preferences syncs queued collections on reconnect.
+ *   - targetSdk 35 (Google Play requirement, Capacitor 8)
+ *   - Offline-first agents: USSD *713# always works; queued collections sync
+ *     through the server once the WebView reconnects.
  */
+
+const serverUrl =
+  process.env.APP_SERVER_URL ||
+  process.env.CAP_SERVER_URL ||
+  'https://isusupro.com';
+
 const config: CapacitorConfig = {
   appId: 'com.isusupro.ghana',
   appName: 'iSusuPro',
   webDir: 'dist',
-  bundledWebRuntime: false,
   android: {
     allowMixedContent: false,
-    captureInput: true,
     webContentsDebuggingEnabled: false,
   },
   ios: {
@@ -38,9 +49,9 @@ const config: CapacitorConfig = {
   },
   server: {
     androidScheme: 'https',
-    // For development against the live sandbox, uncomment:
-    // url: 'https://your-sandbox-url.space-z.ai',
-    // cleartext: true,
+    url: serverUrl,
+    // Allow http:// dev servers (e.g. http://10.0.2.2:3000 on the emulator)
+    cleartext: serverUrl.startsWith('http://'),
   },
   plugins: {
     SplashScreen: {

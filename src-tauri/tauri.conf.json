@@ -6,13 +6,15 @@
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "bun run shell:build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "iSusuPro — Ghana Susu & Microfinance",
+        "url": "index.html",
         "width": 1280,
         "height": 820,
         "minWidth": 380,
@@ -21,16 +23,15 @@
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
-        "titleBarStyle": "Overlay",
         "theme": null
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https://*.isusupro.com https://api.hubtel.com https://api.paystack.co; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; connect-src 'self' https: http://localhost:* http://10.0.2.2:*; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'"
     },
     "trayIcon": {
       "iconPath": "icons/icon.png",
-      "iconAsTemplate": true,
+      "iconAsTemplate": false,
       "tooltip": "iSusuPro — Ghana Susu Banking"
     }
   },
