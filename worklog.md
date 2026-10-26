@@ -559,3 +559,30 @@ Stage Summary:
 - All KPI cards on all 10 portal dashboards are now clickable and navigate to their details pages (uniform shared KpiCard component, keyboard accessible)
 - Every sensitive action now has a confirmation modal: loan approve/reject (admin dashboard + existing pages), payment gateway + SMS provider activation/deactivation, staff suspension — joining the previously covered pages
 - Notification sheet/modal fixes from previous round confirmed intact
+
+---
+Task ID: native-builds
+Agent: main (Z.ai)
+Task: Build functional desktop and mobile native versions (Capacitor + Tauri)
+
+Work Log:
+- Audited existing scaffolding: capacitor.config.ts + src-tauri/tauri.conf.json existed but CLIs were not installed, no platform projects, configs pointed to nonexistent dist/ static export
+- Determined architecture: app is server-dependent (Next API routes + NestJS backend + Prisma) → native shells must load hosted deployment via APP_SERVER_URL (default https://isusupro.com)
+- Installed @capacitor/core@8.5.3 + cli + android + 8 plugins (app, preferences, status-bar, splash-screen, push/local-notifications, geolocation, camera) and @tauri-apps/cli@2.12.4
+- Created scripts/build-native-shell.mjs → generates dist/ bootstrap shell (branded splash, server probe with fetch, offline fallback screen)
+- Rewrote capacitor.config.ts: env-driven server.url, auto cleartext for http:// dev URLs, removed deprecated bundledWebRuntime; type-checked against Capacitor 8 types
+- Generated android/ platform project (cap add android + sync; SDK 36, Java 21) with all 8 plugins detected
+- Created scripts/brand-android.py: brand emerald launcher background + branded splash screens in all 11 density buckets
+- Scaffolded complete src-tauri Rust project: Cargo.toml (tauri 2 + tray-icon feature, release profile optimizations), build.rs, main.rs, lib.rs (system tray Show/Quit + left-click restore + close-to-tray), capabilities/default.json, .gitignore
+- Generated full Tauri icon set from new 1024px brand source (tauri icon → .icns/.ico/all PNGs + mobile launchers)
+- Copied brand launcher icons into android/ res folders
+- Updated tauri.conf.json: beforeBuildCommand → shell:build (fast), window label "main" + url index.html (bootstrap shell), CSP broadened, tray iconAsTemplate false for colored brand mark
+- Added .github/workflows/build-mobile.yml (Android debug APK + unsigned release AAB, Java 21 + Android SDK) and build-desktop.yml (Windows MSI/NSIS + macOS DMG + Linux AppImage/DEB matrix, rust-cache, draft release attachment on tags)
+- Updated package.json scripts (shell:build, cap:sync:android, android:brand, tauri:build) and .gitignore (dist/, src-tauri/target+gen, android build outputs)
+- Created NATIVE_BUILDS.md documenting server URL config, local dev (emulator 10.0.2.2), CI builds, Play Store signing, FCM, iOS on macOS, release checklist
+- Verified: capacitor.config.ts type-checks, tauri info recognizes project, next build passes, no secrets in diff, 120 files committed and pushed (52f619d)
+
+Stage Summary:
+- Native builds are now functional end-to-end: push a vX.Y.Z tag or run the workflows manually to get Android APK/AAB + Windows/macOS/Linux desktop installers from GitHub Actions
+- Key decision: remote-URL architecture (server.url / shell redirect) because the app cannot be statically exported
+- iOS platform requires macOS to generate (documented); Rust/webkit not available in this environment so desktop compiles happen in CI
