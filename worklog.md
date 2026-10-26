@@ -609,3 +609,32 @@ Stage Summary:
 - All 5 native targets now covered by one repo: Android (APK/AAB), iOS (unsigned IPA), Windows (MSI/NSIS), macOS (Universal DMG), Linux (AppImage/DEB)
 - iOS bundle id com.isusupro.ghana, deployment target iOS 15, MARKETING_VERSION 1.0
 - iOS unsigned IPA is sideload-ready (Sideloadly/AltStore); App Store requires signing team in Xcode (documented)
+
+---
+Task ID: login-redesign-dropdown
+Agent: main-agent (Z.ai)
+Task: "redesign the login page professionally with mobile friendly, make the demo accounts a dropdown selection menu instead of the card"
+
+Work Log:
+- Rewrote src/components/pages/auth/login-page.tsx (net −77 lines)
+- Demo accounts: replaced the 10-portal card grid with a grouped shadcn Select —
+  "Customer & community · live API" (Ama Mensah, Kwame Asante, Patricia Ampah, Emmanuel Osei — real NestJS seed users, badged API) +
+  "Branch & head office" (Branch Manager, Loan Officer, Teller, Field Supervisor, Accountant, Compliance Officer, System Admin)
+  Each item: icon chip + name + role + formatted phone; trigger shows selection; PIN 123456 badge on the card
+- On select: prefills phone + PIN + toast cue; sign-in routes to that portal.
+  handleLogin now routes by backend user role when API auth succeeds (was hardcoded customer),
+  demo/offline login routes to selected portal via targetPortal
+- Desktop left panel: premium deep-emerald gradient (replaces loud red/yellow/green wash),
+  headline + supporting copy, 4 feature rows (BoG license, 256-bit encryption, MoMo/Telco/USSD, audience),
+  stats row (50k+ members, ₵12M+ monthly volume, 16 regions), thin ghana-accent ribbon
+- Mobile (390px): compact horizontal brand header, single column, h-11/12 touch targets,
+  Remember-me + Forgot PIN on one row, all content within one screen
+- Headless verification (agent-browser): desktop 1440px + mobile 390px screenshots,
+  dropdown open/render OK, selected Patricia Ampah → prefills 02 4667 7889 + PIN → Sign In →
+  cold-started NestJS API authenticated ("Welcome back, Patricia Ampah!") → routed to Treasurer portal (Groups/Payouts/Members nav)
+- tsc --noEmit clean, eslint clean, next build passed
+
+Stage Summary:
+- Commit 61a5ba2 pushed to main
+- Login flow verified end-to-end against the live API with role-aware portal routing
+- All 10 portals remain reachable via the dropdown (11 accounts: customer ×2)
