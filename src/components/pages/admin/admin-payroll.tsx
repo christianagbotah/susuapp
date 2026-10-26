@@ -27,7 +27,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import type { PayrollRun, Payslip } from '@/lib/types';
+import type { PayrollRun, Payslip, PayrollEmployee } from '@/lib/types';
 
 // ---- Helpers ----
 const getInitials = (name: string) =>
@@ -93,6 +93,7 @@ export function AdminPayroll() {
   const [empStatusFilter, setEmpStatusFilter] = useState('all');
   const [payslipPeriodFilter, setPayslipPeriodFilter] = useState('all');
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null);
+  const [detailEmployee, setDetailEmployee] = useState<PayrollEmployee | null>(null);
   const [payslipsForRun, setPayslipsForRun] = useState<Payslip[]>([]);
   const [showRunPayslips, setShowRunPayslips] = useState<PayrollRun | null>(null);
   const [approveDialog, setApproveDialog] = useState<PayrollRun | null>(null);
@@ -143,6 +144,18 @@ export function AdminPayroll() {
     }
     return result;
   }, [payslips, payslipPeriodFilter]);
+
+  // Payslips on record for the employee currently open in the detail dialog
+  const detailEmployeePayslips = useMemo(
+    () => detailEmployee
+      ? payslips.filter((ps) => ps.employeeId === detailEmployee.employeeId || ps.employeeName === detailEmployee.name)
+      : [],
+    [payslips, detailEmployee],
+  );
+
+  const detailEmployeeLatestSlip = detailEmployeePayslips.length > 0
+    ? detailEmployeePayslips.reduce((a, b) => (new Date(b.payDate) > new Date(a.payDate) ? b : a))
+    : null;
 
   // ---- Handlers ----
   const handleApprove = () => {
@@ -444,7 +457,11 @@ export function AdminPayroll() {
                     </TableHeader>
                     <TableBody>
                       {filteredEmployees.map((emp) => (
-                        <TableRow key={emp.id} className="hover:bg-muted/30 transition-colors">
+                        <TableRow
+                          key={emp.id}
+                          className="hover:bg-muted/30 transition-colors cursor-pointer"
+                          onClick={() => setDetailEmployee(emp)}
+                        >
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-7 w-7">
@@ -481,7 +498,15 @@ export function AdminPayroll() {
                 {/* Mobile Cards */}
                 <div className="lg:hidden divide-y">
                   {filteredEmployees.map((emp) => (
-                    <div key={emp.id} className="mobile-card p-4 space-y-3">
+                    <div
+                      key={emp.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View employee details for ${emp.name}`}
+                      className="mobile-card p-4 space-y-3 cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+                      onClick={() => setDetailEmployee(emp)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailEmployee(emp); } }}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Avatar className="h-9 w-9">
@@ -972,6 +997,148 @@ export function AdminPayroll() {
                   </span>
                 </div>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== EMPLOYEE DETAIL DIALOG ===== */}
+      <Dialog open={!!detailEmployee} onOpenChange={() => setDetailEmployee(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Employee Details</DialogTitle>
+            <DialogDescription>Full employee profile and compensation information</DialogDescription>
+          </DialogHeader>
+          {detailEmployee && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {getInitials(detailEmployee.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{detailEmployee.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-muted-foreground font-mono">{detailEmployee.employeeId}</span>
+                    <Badge variant="secondary" className={`text-xs capitalize ${employeeStatusColor[detailEmployee.status] || ''}`}>
+                      {detailEmployee.status.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Profile fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Position</p>
+                  <p className="font-medium">{detailEmployee.position}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Department</p>
+                  <p className="font-medium">{detailEmployee.department}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Branch</p>
+                  <p className="font-medium">{detailEmployee.branch}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pay Grade</p>
+                  <p className="font-medium">{detailEmployee.payGrade}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Contract Type</p>
+                  <p className="font-medium">{contractTypeLabel[detailEmployee.contractType] || detailEmployee.contractType}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Date Joined</p>
+                  <p className="font-medium">{formatDate(detailEmployee.dateJoined)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="font-medium">{detailEmployee.phone}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="font-medium truncate">{detailEmployee.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">SSNIT Number</p>
+                  <p className="font-medium font-mono text-xs">{detailEmployee.ssnitNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">TIN Number</p>
+                  <p className="font-medium font-mono text-xs">{detailEmployee.tinNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Ghana Card</p>
+                  <p className="font-medium font-mono text-xs">{detailEmployee.ghanaCardId}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Bank</p>
+                  <p className="font-medium">{detailEmployee.bankName}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Bank Account</p>
+                  <p className="font-medium font-mono text-xs">{detailEmployee.bankAccount}</p>
+                </div>
+              </div>
+
+              {/* Compensation */}
+              <div className="rounded-lg bg-muted p-4">
+                <h4 className="mb-3 text-sm font-semibold flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
+                  Monthly Compensation
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Basic Salary</span><span className="font-medium">{formatGHS(detailEmployee.basicSalary)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Housing Allow.</span><span>{formatGHS(detailEmployee.housingAllowance)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Transport Allow.</span><span>{formatGHS(detailEmployee.transportAllowance)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Other Allow.</span><span>{formatGHS(detailEmployee.otherAllowances)}</span></div>
+                </div>
+                <Separator className="my-3" />
+                <div className="flex justify-between text-sm">
+                  <span className="font-semibold">Gross Monthly Package</span>
+                  <span className="font-bold text-emerald-600">
+                    {formatGHS(
+                      detailEmployee.basicSalary +
+                        detailEmployee.housingAllowance +
+                        detailEmployee.transportAllowance +
+                        detailEmployee.otherAllowances
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Latest payslip (computed net) */}
+              {detailEmployeeLatestSlip && (
+                <div className="rounded-lg border p-4">
+                  <h4 className="mb-2 text-sm font-semibold flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-muted-foreground" />
+                    Latest Payslip — {detailEmployeeLatestSlip.period}
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2 text-sm text-center">
+                    <div className="rounded-lg bg-muted p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase">Gross</p>
+                      <p className="font-semibold">{formatGHS(detailEmployeeLatestSlip.grossPay)}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase">Deductions</p>
+                      <p className="font-semibold text-red-600">-{formatGHS(detailEmployeeLatestSlip.totalDeductions)}</p>
+                    </div>
+                    <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-2">
+                      <p className="text-[10px] text-emerald-600 uppercase">Net Pay</p>
+                      <p className="font-semibold text-emerald-600">{formatGHS(detailEmployeeLatestSlip.netPay)}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {detailEmployeePayslips.length} payslip{detailEmployeePayslips.length !== 1 ? 's' : ''} on record
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

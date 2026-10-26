@@ -14,6 +14,10 @@ import { Separator } from '@/components/ui/separator';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
@@ -161,6 +165,9 @@ export function CustomerReferrals() {
 
   // ---- Copy referral code ----
   const [copied, setCopied] = useState(false);
+
+  // ---- Detail dialog state (row/card → detail linkage) ----
+  const [referralDetail, setReferralDetail] = useState<Referral | null>(null);
 
   function handleCopyCode() {
     navigator.clipboard.writeText(REFERRAL_CODE).then(() => {
@@ -526,7 +533,11 @@ export function CustomerReferrals() {
                         const rewardConfig = getRewardStatusConfig(referral.rewardStatus);
                         const StatusIcon = statusConfig.icon;
                         return (
-                          <TableRow key={referral.id} className="group">
+                          <TableRow
+                            key={referral.id}
+                            className="group transition-colors cursor-pointer hover:bg-muted/30"
+                            onClick={() => setReferralDetail(referral)}
+                          >
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <div className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
@@ -612,7 +623,14 @@ export function CustomerReferrals() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                   >
-                    <Card className="border-slate-200/80 dark:border-slate-700/50 shadow-sm">
+                    <Card
+                      onClick={() => setReferralDetail(referral)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setReferralDetail(referral); } }}
+                      aria-label={`View referral details for ${referral.referredName}`}
+                      className="border-slate-200/80 dark:border-slate-700/50 shadow-sm transition-all cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3 min-h-[60px]">
                           <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
@@ -863,6 +881,57 @@ export function CustomerReferrals() {
           </motion.div>
         </TabsContent>
       </Tabs>
+
+      {/* ==============================
+          Referral Detail Dialog
+          ============================== */}
+      <Dialog open={!!referralDetail} onOpenChange={() => setReferralDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Referral Details</DialogTitle>
+            <DialogDescription>
+              Full information about this referral and its reward
+            </DialogDescription>
+          </DialogHeader>
+          {referralDetail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                    {referralDetail.referredName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-lg font-semibold">{referralDetail.referredName}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className={`text-xs capitalize ${getReferralStatusConfig(referralDetail.status).color}`}>
+                      {getReferralStatusConfig(referralDetail.status).label}
+                    </Badge>
+                    <Badge variant="secondary" className={`text-xs capitalize ${getRewardStatusConfig(referralDetail.rewardStatus).color}`}>
+                      Reward: {getRewardStatusConfig(referralDetail.rewardStatus).label}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Referred</span><span className="font-medium truncate">{referralDetail.referredName}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Phone</span><span className="font-mono">{referralDetail.referredPhone}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Status</span><span className="capitalize">{referralDetail.status}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Reward Amount</span><span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatGHS(referralDetail.rewardAmount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Reward Status</span><span className="capitalize">{referralDetail.rewardStatus}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Date Referred</span><span>{formatDate(referralDetail.date)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Registered</span><span>{referralDetail.registeredDate ? formatDate(referralDetail.registeredDate) : 'Not yet'}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Referrer</span><span className="truncate">{referralDetail.referrerName}</span></div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

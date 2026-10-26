@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { useLoanOfficerStore } from '@/store/staff-stores';
-import { formatGHS, formatDate } from '@/lib/formatters';
+import { formatGHS, formatDate, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -25,6 +27,7 @@ export function LoanOfficerPortfolio() {
   const { portfolio, recordFollowUp } = useLoanOfficerStore();
   const [filter, setFilter] = useState('all');
   const [followUp, setFollowUp] = useState<PortfolioLoan | null>(null);
+  const [detail, setDetail] = useState<PortfolioLoan | null>(null);
   const [note, setNote] = useState('');
 
   const filtered = useMemo(() =>
@@ -133,7 +136,14 @@ export function LoanOfficerPortfolio() {
       <div className="space-y-2">
         {filtered.map((p, i) => (
           <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.03 }}>
-            <Card className="mobile-card">
+            <Card
+              onClick={() => setDetail(p)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetail(p); } }}
+              role="button"
+              tabIndex={0}
+              aria-label={`View loan details for ${p.customerName}`}
+              className="mobile-card cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+            >
               <CardContent className="p-3.5">
                 <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
@@ -149,7 +159,7 @@ export function LoanOfficerPortfolio() {
                       <p className="text-[11px] text-muted-foreground">last pay {formatDate(p.lastPaymentDate)}</p>
                     </div>
                     {p.arrearsDays > 0 && (
-                      <Button size="sm" variant="outline" className="min-h-[40px] shrink-0 touch-manipulation" onClick={() => setFollowUp(p)}>
+                      <Button size="sm" variant="outline" className="min-h-[40px] shrink-0 touch-manipulation" onClick={(e) => { e.stopPropagation(); setFollowUp(p); }}>
                         <Phone className="mr-1 h-3.5 w-3.5" /> Follow up
                       </Button>
                     )}
@@ -173,6 +183,75 @@ export function LoanOfficerPortfolio() {
             <Button variant="outline" className="min-h-[44px]" onClick={() => setFollowUp(null)}>Cancel</Button>
             <Button className="min-h-[44px] touch-manipulation" onClick={handleFollowUp}><CalendarCheck className="mr-2 h-4 w-4" /> Save Follow-up</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loan detail dialog */}
+      <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Loan Details</DialogTitle>
+            <DialogDescription>Portfolio loan position and repayment status</DialogDescription>
+          </DialogHeader>
+          {detail && (() => {
+            const paid = Math.max(detail.principal - detail.outstanding, 0);
+            const repaidPct = detail.principal ? Math.min(100, Math.round((paid / detail.principal) * 100)) : 0;
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                      {getInitials(detail.customerName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold truncate">{detail.customerName}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary" className={`text-xs ${classMeta[detail.classification].badge}`}>
+                        {classMeta[detail.classification].label}
+                      </Badge>
+                      {detail.arrearsDays > 0 && (
+                        <Badge className="bg-red-100 text-[10px] text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                          {detail.arrearsDays} days in arrears
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Repayment progress */}
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Repaid To Date</span>
+                    <span className="font-bold">{repaidPct}%</span>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-background">
+                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" style={{ width: `${repaidPct}%` }} />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Paid: {formatGHS(paid)}</span>
+                    <span>Outstanding: {formatGHS(detail.outstanding)}</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Loan details */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="min-w-0"><p className="text-xs text-muted-foreground">Product</p><p className="truncate font-medium">{detail.productName}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Principal</p><p className="font-medium">{formatGHS(detail.principal)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Outstanding</p><p className="font-medium">{formatGHS(detail.outstanding)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Paid</p><p className="font-medium text-emerald-600 dark:text-emerald-400">{formatGHS(paid)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Arrears Days</p><p className="font-medium">{detail.arrearsDays}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Classification</p><p className="font-medium">{classMeta[detail.classification].label}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Last Payment</p><p className="font-medium">{formatDate(detail.lastPaymentDate)}</p></div>
+                  <div className="min-w-0"><p className="text-xs text-muted-foreground">Branch</p><p className="truncate font-medium">{detail.branch}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-muted-foreground">Loan Reference</p><p className="truncate font-medium">{detail.id}</p></div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

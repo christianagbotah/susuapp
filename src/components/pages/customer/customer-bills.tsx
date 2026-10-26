@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -87,6 +87,7 @@ export function CustomerBills() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [lastPayment, setLastPayment] = useState<BillPayment | null>(null);
+  const [receiptPayment, setReceiptPayment] = useState<BillPayment | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
 
   // Payment form state
@@ -351,7 +352,11 @@ export function CustomerBills() {
                         const catConfig = categoryConfig[payment.billerCategory];
                         const CatIcon = catConfig.icon;
                         return (
-                          <TableRow key={payment.id} className="border-slate-50 hover:bg-slate-50/50">
+                          <TableRow
+                            key={payment.id}
+                            className="border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                            onClick={() => setReceiptPayment(payment)}
+                          >
                             <TableCell className="text-xs font-medium text-slate-800">
                               {payment.billerName}
                             </TableCell>
@@ -382,7 +387,7 @@ export function CustomerBills() {
                             <TableCell>
                               {payment.token ? (
                                 <button
-                                  onClick={() => handleCopyToken(payment.token!)}
+                                  onClick={(e) => { e.stopPropagation(); handleCopyToken(payment.token!); }}
                                   className="flex items-center gap-1 text-xs font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded hover:bg-amber-100 transition-colors cursor-pointer"
                                 >
                                   {payment.token}
@@ -415,7 +420,12 @@ export function CustomerBills() {
                     return (
                       <div
                         key={payment.id}
-                        className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5"
+                        onClick={() => setReceiptPayment(payment)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setReceiptPayment(payment); } }}
+                        aria-label={`View ${payment.billerName} payment receipt`}
+                        className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 transition-all cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -455,7 +465,7 @@ export function CustomerBills() {
                             </div>
                             {payment.token && (
                               <button
-                                onClick={() => handleCopyToken(payment.token!)}
+                                onClick={(e) => { e.stopPropagation(); handleCopyToken(payment.token!); }}
                                 className="flex items-center gap-1 text-[10px] font-mono text-amber-700 bg-amber-50 px-2 py-1 rounded hover:bg-amber-100 transition-colors cursor-pointer mt-1"
                               >
                                 Token: {payment.token}
@@ -694,6 +704,91 @@ export function CustomerBills() {
               Done
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==============================
+          6. Payment Receipt Dialog
+          ============================== */}
+      <Dialog open={!!receiptPayment} onOpenChange={() => setReceiptPayment(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Payment Receipt</DialogTitle>
+            <DialogDescription>
+              Full details of this bill payment transaction
+            </DialogDescription>
+          </DialogHeader>
+          {receiptPayment && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white font-bold text-sm"
+                  style={{ backgroundColor: categoryConfig[receiptPayment.billerCategory].color }}
+                >
+                  {receiptPayment.billerName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-lg font-semibold">{receiptPayment.billerName}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge
+                      className="gap-1 text-[10px] font-medium hover:opacity-80"
+                      style={{
+                        backgroundColor: `${categoryConfig[receiptPayment.billerCategory].color}18`,
+                        color: categoryConfig[receiptPayment.billerCategory].color,
+                      }}
+                    >
+                      {categoryConfig[receiptPayment.billerCategory].name}
+                    </Badge>
+                    <Badge className={`${getPaymentStatusVariant(receiptPayment.status)} text-xs font-medium capitalize`}>
+                      {receiptPayment.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Prepaid Token (with copy) */}
+              {receiptPayment.token && (
+                <div className="rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-4">
+                  <p className="text-xs font-medium text-amber-700 uppercase tracking-wider mb-2">
+                    Prepaid Token
+                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-lg font-bold font-mono tracking-widest text-amber-900 break-all">
+                      {receiptPayment.token}
+                    </p>
+                    <button
+                      onClick={() => handleCopyToken(receiptPayment.token!)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-200/60 text-amber-800 hover:bg-amber-200 transition-colors cursor-pointer"
+                      aria-label="Copy token"
+                    >
+                      {copiedToken ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-amber-600 mt-2">
+                    Enter this token on your prepaid meter
+                  </p>
+                </div>
+              )}
+
+              <Separator className="bg-slate-200" />
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Biller</span><span className="font-medium truncate">{receiptPayment.billerName}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Category</span><span>{categoryConfig[receiptPayment.billerCategory].name}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Account</span><span className="font-mono">{receiptPayment.accountNumber}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Customer</span><span className="truncate">{receiptPayment.customerName}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Amount</span><span className="font-medium">{formatCurrency(receiptPayment.amount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Fee</span><span>{formatCurrency(receiptPayment.fee)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Total Paid</span><span className="font-bold text-emerald-600">{formatCurrency(receiptPayment.totalAmount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Date</span><span>{formatDate(receiptPayment.date)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Reference</span><span className="font-mono text-xs">{receiptPayment.reference}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Status</span><span className="capitalize">{receiptPayment.status}</span></div>
+                <div className="flex justify-between gap-2 sm:col-span-2"><span className="text-muted-foreground">Wallet Balance After</span><span>{formatCurrency(receiptPayment.balanceAfter)}</span></div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </motion.div>

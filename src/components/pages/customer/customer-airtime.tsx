@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useCustomerExtendedStore } from '@/store/app-store';
 import { formatGHS, formatDate, getStatusColor } from '@/lib/formatters';
-import type { TelcoProvider, AirtimeProduct } from '@/lib/types';
+import type { TelcoProvider, AirtimeProduct, AirtimeTransaction } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,10 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -116,6 +118,9 @@ export function CustomerAirtime() {
   const [activeTab, setActiveTab] = useState<'airtime' | 'data' | 'bundle'>('airtime');
   const [selectedProduct, setSelectedProduct] = useState<AirtimeProduct | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // ---- Detail dialog state (row → detail linkage) ----
+  const [topupDetail, setTopupDetail] = useState<AirtimeTransaction | null>(null);
 
   // ---- Derived: filtered products ----
   const filteredProducts = useMemo(() => {
@@ -644,7 +649,8 @@ export function CustomerAirtime() {
                           key={txn.id}
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="transition-colors hover:bg-slate-50/80"
+                          onClick={() => setTopupDetail(txn)}
+                          className="transition-colors hover:bg-slate-50/80 cursor-pointer"
                         >
                           <td className="whitespace-nowrap px-5 py-3.5">
                             <Badge
@@ -837,6 +843,69 @@ export function CustomerAirtime() {
               Confirm &amp; Pay {selectedProduct ? formatGHS(selectedProduct.price) : ''}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==============================
+          Top-up Detail Dialog
+          ============================== */}
+      <Dialog open={!!topupDetail} onOpenChange={() => setTopupDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Top-up Details</DialogTitle>
+            <DialogDescription>
+              Full details of this airtime / data purchase
+            </DialogDescription>
+          </DialogHeader>
+          {topupDetail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback
+                    className="text-sm font-bold"
+                    style={{
+                      backgroundColor: `${providerConfig[topupDetail.provider].color}20`,
+                      color: providerConfig[topupDetail.provider].color,
+                    }}
+                  >
+                    {providerConfig[topupDetail.provider].name === 'MTN'
+                      ? 'M'
+                      : providerConfig[topupDetail.provider].name === 'Telecel'
+                        ? 'T'
+                        : 'AT'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-lg font-semibold">{topupDetail.recipientPhone}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={`${providerConfig[topupDetail.provider].bgColor} ${providerConfig[topupDetail.provider].textColor} border-0 text-xs font-semibold`}>
+                      {providerConfig[topupDetail.provider].name}
+                    </Badge>
+                    <Badge variant="secondary" className={`text-xs capitalize ${getStatusColor(topupDetail.status)}`}>
+                      {topupDetail.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Provider</span><span className="font-medium">{providerConfig[topupDetail.provider].name}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Type</span><span className="capitalize">{topupDetail.type}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Phone</span><span className="font-medium">{topupDetail.recipientPhone}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Recipient</span><span>{topupDetail.recipientName ?? '—'}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Product</span><span className="truncate">{topupDetail.productName}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Amount</span><span className="font-bold text-emerald-600">{formatGHS(topupDetail.amount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Date</span><span>{formatDate(topupDetail.date)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Status</span><span className="capitalize">{topupDetail.status}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Reference</span><span className="font-mono text-xs">{topupDetail.reference}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Balance After</span><span>{formatGHS(topupDetail.balanceAfter)}</span></div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </motion.div>

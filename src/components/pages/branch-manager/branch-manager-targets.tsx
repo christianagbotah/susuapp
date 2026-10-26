@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -18,11 +19,22 @@ import type { BranchTarget } from '@/lib/types';
 export function BranchManagerTargets() {
   const { targets, addTarget } = useBranchManagerStore();
   const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState<BranchTarget | null>(null);
   const [form, setForm] = useState({ metric: '', target: '', owner: '', period: 'October 2026' as BranchTarget['period'], unit: 'currency' as BranchTarget['unit'] });
 
   const overall = Math.round(
     targets.reduce((s, t) => s + Math.min(100, t.unit === 'percent' ? (t.target >= t.achieved ? (t.target / Math.max(t.achieved, 0.01)) * 100 : 100) : (t.achieved / Math.max(t.target, 1)) * 100), 0) / targets.length
   );
+
+  const fmtValue = (t: BranchTarget, v: number) => t.unit === 'currency' ? formatGHS(v) : t.unit === 'percent' ? `${v}%` : `${v}`;
+
+  const progressFor = (t: BranchTarget) => {
+    const pct = t.unit === 'percent'
+      ? Math.min(100, Math.round((t.target / Math.max(t.achieved, 0.01)) * 100))
+      : Math.min(100, Math.round((t.achieved / Math.max(t.target, 1)) * 100));
+    const onTrack = t.unit === 'percent' ? t.achieved <= t.target : pct >= 75;
+    return { pct, onTrack };
+  };
 
   const iconFor = (metric: string) => {
     if (metric.toLowerCase().includes('collection') || metric.toLowerCase().includes('disbursement')) return CircleDollarSign;
@@ -74,15 +86,19 @@ export function BranchManagerTargets() {
       {/* Targets grid */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {targets.map((t, i) => {
-          const pct = t.unit === 'percent'
-            ? Math.min(100, Math.round((t.target / Math.max(t.achieved, 0.01)) * 100))
-            : Math.min(100, Math.round((t.achieved / Math.max(t.target, 1)) * 100));
-          const onTrack = t.unit === 'percent' ? t.achieved <= t.target : pct >= 75;
+          const { pct, onTrack } = progressFor(t);
           const Icon = iconFor(t.metric);
-          const fmt = (v: number) => t.unit === 'currency' ? formatGHS(v) : t.unit === 'percent' ? `${v}%` : `${v}`;
+          const fmt = (v: number) => fmtValue(t, v);
           return (
             <motion.div key={t.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>
-              <Card className="mobile-card h-full hover:shadow-md transition-shadow">
+              <Card
+                onClick={() => setDetail(t)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetail(t); } }}
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${t.metric} target details`}
+                className="mobile-card h-full cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-start justify-between text-sm font-semibold">
                     <span className="flex items-center gap-2"><Icon className="h-4 w-4 text-blue-600 dark:text-blue-400" /> {t.metric}</span>
@@ -167,6 +183,69 @@ export function BranchManagerTargets() {
             <Button variant="outline" className="min-h-[44px]" onClick={() => setOpen(false)}>Cancel</Button>
             <Button className="min-h-[44px] touch-manipulation" onClick={handleSubmit}><Target className="mr-2 h-4 w-4" /> Create Target</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Target detail dialog */}
+      <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Target Details</DialogTitle>
+            <DialogDescription>Branch target progress and assignment</DialogDescription>
+          </DialogHeader>
+          {detail && (() => {
+            const { pct, onTrack } = progressFor(detail);
+            const DetailIcon = iconFor(detail.metric);
+            const remaining = Math.max(detail.target - detail.achieved, 0);
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                      <DetailIcon className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold leading-tight">{detail.metric}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary" className={`text-xs ${onTrack ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}`}>
+                        {onTrack ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
+                        {onTrack ? 'On Track' : 'Behind'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">{detail.period}</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-2xl font-bold">{fmtValue(detail, detail.achieved)}</p>
+                      <p className="text-xs text-muted-foreground">of {fmtValue(detail, detail.target)} target</p>
+                    </div>
+                    <span className="text-sm font-bold">{pct}%</span>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-background">
+                    <div className={`h-full rounded-full ${onTrack ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+
+                {/* Details grid */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><p className="text-xs text-muted-foreground">Target Value</p><p className="font-medium">{fmtValue(detail, detail.target)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Achieved To Date</p><p className="font-medium text-emerald-600 dark:text-emerald-400">{fmtValue(detail, detail.achieved)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Attainment</p><p className="font-medium">{detail.unit === 'percent' ? `${detail.target}% limit · ${detail.achieved}% now` : `${pct}%`}</p></div>
+                  <div><p className="text-xs text-muted-foreground">{detail.unit === 'percent' ? 'Headroom to Limit' : 'Remaining to Goal'}</p><p className="font-medium">{fmtValue(detail, remaining)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Period (Deadline Window)</p><p className="font-medium">{detail.period}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Unit</p><p className="font-medium capitalize">{detail.unit}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-muted-foreground">Assigned Staff / Team</p><p className="font-medium">{detail.owner}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-muted-foreground">Reference</p><p className="truncate font-medium">{detail.id}</p></div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

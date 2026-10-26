@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -23,7 +24,7 @@ import {
   AlertCircle, DollarSign, UserX, CalendarDays,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CollectionCustomer } from '@/lib/types';
+import type { CollectionCustomer, CollectionRoute } from '@/lib/types';
 
 interface CollectDialogState {
   open: boolean;
@@ -38,6 +39,11 @@ interface AbsentDialogState {
   routeId: string;
   customerId: string;
   customerName: string;
+}
+
+interface VisitDetailState {
+  route: CollectionRoute;
+  customer: CollectionCustomer;
 }
 
 const fadeIn = {
@@ -67,6 +73,10 @@ export function AgentCollections() {
     open: false, routeId: '', customerId: '', customerName: '',
   });
   const [absentNotes, setAbsentNotes] = useState('');
+
+  // Clickable-card detail states
+  const [visitDetail, setVisitDetail] = useState<VisitDetailState | null>(null);
+  const [routeDetail, setRouteDetail] = useState<CollectionRoute | null>(null);
 
   function openCollectDialog(routeId: string, customer: CollectionCustomer) {
     setCollectDialog({
@@ -261,7 +271,11 @@ export function AgentCollections() {
                                 </TableHeader>
                                 <TableBody>
                                   {route.customers.map((customer) => (
-                                    <TableRow key={customer.id}>
+                                    <TableRow
+                                      key={customer.id}
+                                      onClick={() => setVisitDetail({ route, customer })}
+                                      className="cursor-pointer hover:bg-muted/30 transition-colors"
+                                    >
                                       <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
                                           {getCustomerStatusIcon(customer.status)}
@@ -296,7 +310,10 @@ export function AgentCollections() {
                                             <Button
                                               size="sm"
                                               variant="outline"
-                                              onClick={() => openCollectDialog(route.id, customer)}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openCollectDialog(route.id, customer);
+                                              }}
                                             >
                                               <DollarSign className="mr-1 h-3.5 w-3.5" />
                                               Collect
@@ -305,7 +322,10 @@ export function AgentCollections() {
                                               size="sm"
                                               variant="ghost"
                                               className="text-gray-500 hover:text-gray-700"
-                                              onClick={() => openAbsentDialog(route.id, customer)}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openAbsentDialog(route.id, customer);
+                                              }}
                                             >
                                               <UserX className="h-3.5 w-3.5" />
                                             </Button>
@@ -329,7 +349,17 @@ export function AgentCollections() {
                               {route.customers.map((customer) => (
                                 <div
                                   key={customer.id}
-                                  className="mobile-list-item flex items-start gap-3 rounded-lg border p-3 touch-manipulation"
+                                  onClick={() => setVisitDetail({ route, customer })}
+                                  role="button"
+                                  tabIndex={0}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      setVisitDetail({ route, customer });
+                                    }
+                                  }}
+                                  aria-label={`Open visit details for ${customer.customerName}`}
+                                  className="mobile-list-item flex items-start gap-3 rounded-lg border p-3 touch-manipulation cursor-pointer hover:bg-muted/30 hover:border-primary/40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 >
                                   <div className="mt-0.5">{getCustomerStatusIcon(customer.status)}</div>
                                   <div className="min-w-0 flex-1 space-y-1.5">
@@ -359,7 +389,10 @@ export function AgentCollections() {
                                         <Button
                                           size="sm"
                                           className="haptic-feedback flex-1 bg-emerald-600 hover:bg-emerald-700 min-h-[44px] lg:min-h-0"
-                                          onClick={() => openCollectDialog(route.id, customer)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openCollectDialog(route.id, customer);
+                                          }}
                                         >
                                           <DollarSign className="mr-1 h-3.5 w-3.5" />
                                           Collect
@@ -368,7 +401,10 @@ export function AgentCollections() {
                                           size="sm"
                                           variant="outline"
                                           className="haptic-feedback min-h-[44px] lg:min-h-0"
-                                          onClick={() => openAbsentDialog(route.id, customer)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openAbsentDialog(route.id, customer);
+                                          }}
                                         >
                                           <UserX className="mr-1 h-3.5 w-3.5" />
                                           Absent
@@ -422,7 +458,19 @@ export function AgentCollections() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.08 }}
               >
-                <Card className="mobile-card">
+                <Card
+                  onClick={() => setRouteDetail(route)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setRouteDetail(route);
+                    }
+                  }}
+                  aria-label={`Open route summary for ${route.name}`}
+                  className="mobile-card cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+                >
                   <CardContent className="p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="space-y-1">
@@ -545,6 +593,210 @@ export function AgentCollections() {
               Mark Absent
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Visit Detail Dialog */}
+      <Dialog open={!!visitDetail} onOpenChange={() => setVisitDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Customer Visit Details</DialogTitle>
+            <DialogDescription>Visit record for this collection stop</DialogDescription>
+          </DialogHeader>
+          {visitDetail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {getInitials(visitDetail.customer.customerName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{visitDetail.customer.customerName}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`text-xs capitalize ${getStatusColor(visitDetail.customer.status)}`}>
+                      {visitDetail.customer.status}
+                    </Badge>
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <CalendarDays className="h-3 w-3" />
+                      {formatDate(visitDetail.route.date)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fields */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="text-sm font-medium mt-0.5">{visitDetail.customer.customerPhone}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Susu Group</p>
+                  <p className="text-sm font-medium mt-0.5 truncate">{visitDetail.customer.susuGroupName}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Expected Amount</p>
+                  <p className="text-sm font-medium mt-0.5">{formatGHS(visitDetail.customer.expectedAmount)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Collected Amount</p>
+                  <p className={`text-sm font-bold mt-0.5 ${visitDetail.customer.collectedAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                    {visitDetail.customer.collectedAmount > 0 ? formatGHS(visitDetail.customer.collectedAmount) : '—'}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Paid Status</p>
+                  <p className="text-sm font-medium capitalize mt-0.5">{visitDetail.customer.status}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Route</p>
+                  <p className="text-sm font-medium mt-0.5 truncate">{visitDetail.route.name}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Area</p>
+                  <p className="text-sm font-medium mt-0.5">{visitDetail.route.area}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Visit Reference</p>
+                  <p className="text-sm font-medium mt-0.5">{visitDetail.customer.id}</p>
+                </div>
+                <div className="rounded-lg border p-3 col-span-2">
+                  <p className="text-xs text-muted-foreground">Visit Notes / History</p>
+                  <p className="text-sm font-medium mt-0.5">{visitDetail.customer.notes || 'No notes recorded for this visit.'}</p>
+                </div>
+              </div>
+
+              {/* Quick actions (kept for pending stops) */}
+              {visitDetail.customer.status === 'pending' && (
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const { route, customer } = visitDetail;
+                      setVisitDetail(null);
+                      openAbsentDialog(route.id, customer);
+                    }}
+                  >
+                    <UserX className="mr-1 h-3.5 w-3.5" />
+                    Mark Absent
+                  </Button>
+                  <Button
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => {
+                      const { route, customer } = visitDetail;
+                      setVisitDetail(null);
+                      openCollectDialog(route.id, customer);
+                    }}
+                  >
+                    <DollarSign className="mr-1 h-3.5 w-3.5" />
+                    Record Collection
+                  </Button>
+                </DialogFooter>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Completed Route Summary Dialog */}
+      <Dialog open={!!routeDetail} onOpenChange={() => setRouteDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Route Summary</DialogTitle>
+            <DialogDescription>Completed collection route totals</DialogDescription>
+          </DialogHeader>
+          {routeDetail && (() => {
+            const completion =
+              routeDetail.totalExpected > 0
+                ? Math.round((routeDetail.totalCollected / routeDetail.totalExpected) * 100)
+                : 0;
+            const collectedCustomers = routeDetail.customers.filter((c) => c.status === 'collected').length;
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                      {getInitials(routeDetail.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold truncate">{routeDetail.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={`text-xs capitalize ${getStatusColor(routeDetail.status)}`}>
+                        {routeDetail.status.replace('_', ' ')}
+                      </Badge>
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        {routeDetail.area}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Completion progress */}
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Route Completion</span>
+                    <span className="font-bold">{completion}%</span>
+                  </div>
+                  <Progress value={completion} className="h-2.5" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{formatGHS(routeDetail.totalCollected)} collected</span>
+                    <span>{formatGHS(routeDetail.totalExpected)} expected</span>
+                  </div>
+                </div>
+
+                {/* Fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Area</p>
+                    <p className="text-sm font-medium mt-0.5">{routeDetail.area}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="text-sm font-medium mt-0.5">{formatDate(routeDetail.date)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Customers</p>
+                    <p className="text-sm font-medium mt-0.5">{collectedCustomers}/{routeDetail.customerCount} collected</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Total Expected</p>
+                    <p className="text-sm font-medium mt-0.5">{formatGHS(routeDetail.totalExpected)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Total Collected</p>
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(routeDetail.totalCollected)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Reference ID</p>
+                    <p className="text-sm font-medium mt-0.5">{routeDetail.id}</p>
+                  </div>
+                </div>
+
+                {/* Customer breakdown */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Customer Breakdown</p>
+                  <div className="rounded-lg border divide-y max-h-48 overflow-y-auto overscroll-contain">
+                    {routeDetail.customers.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <span className="truncate">{c.customerName}</span>
+                        <span className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="text-xs text-muted-foreground">{formatGHS(c.collectedAmount)}</span>
+                          <Badge className={`text-[10px] capitalize ${getStatusColor(c.status)}`}>
+                            {c.status}
+                          </Badge>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useComplianceStore } from '@/store/staff-stores';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,11 +8,13 @@ import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import {
   ShieldAlert, FileWarning, Landmark, Gauge,
   AlertTriangle, ArrowRight, Search, FileCheck2, CalendarClock,
 } from 'lucide-react';
+import type { AMLAlert } from '@/lib/types';
 
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.4 } };
 
@@ -24,6 +27,7 @@ const severityBadge: Record<string, string> = {
 
 export function ComplianceDashboard() {
   const { user, alerts, strs, bogReturns, setActivePage } = useComplianceStore();
+  const [alertDetail, setAlertDetail] = useState<AMLAlert | null>(null);
 
   const open = alerts.filter(a => ['open', 'investigating'].includes(a.status));
   const critical = alerts.filter(a => a.severity === 'critical' && a.status !== 'closed_false_positive' && a.status !== 'closed_str_filed');
@@ -92,7 +96,15 @@ export function ComplianceDashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {criticalAlerts.map(a => (
-              <div key={a.id} className="space-y-1.5 rounded-lg border border-red-200 bg-red-50/60 p-3.5 dark:border-red-900 dark:bg-red-900/10">
+              <div
+                key={a.id}
+                onClick={() => setAlertDetail(a)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAlertDetail(a); } }}
+                role="button"
+                tabIndex={0}
+                aria-label={`View AML alert for ${a.customerName}`}
+                className="cursor-pointer space-y-1.5 rounded-lg border border-red-200 bg-red-50/60 p-3.5 transition-all hover:border-red-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-red-900 dark:bg-red-900/10"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className={`text-[10px] ${severityBadge[a.severity]}`}>{a.severity}</Badge>
                   <p className="text-sm font-semibold">{a.customerName}</p>
@@ -103,7 +115,7 @@ export function ComplianceDashboard() {
                 <p className="line-clamp-2 text-xs text-muted-foreground">{a.description}</p>
                 <div className="flex items-center justify-between pt-1">
                   <Badge variant="outline" className="text-[10px] capitalize">{a.status.replace(/_/g, ' ')}</Badge>
-                  <Button size="sm" variant="outline" className="min-h-[36px] touch-manipulation" onClick={() => setActivePage('aml-alerts')}>
+                  <Button size="sm" variant="outline" className="min-h-[36px] touch-manipulation" onClick={(e) => { e.stopPropagation(); setAlertDetail(a); }}>
                     <Search className="mr-1.5 h-3.5 w-3.5" /> Investigate
                   </Button>
                 </div>
@@ -164,6 +176,70 @@ export function ComplianceDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* AML alert detail dialog (inline — no portal navigation, alert context preserved) */}
+      <Dialog open={!!alertDetail} onOpenChange={() => setAlertDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>AML Alert Detail</DialogTitle>
+            <DialogDescription>{alertDetail?.rule} · case opened {alertDetail ? formatDate(alertDetail.triggeredDate) : ''}</DialogDescription>
+          </DialogHeader>
+          {alertDetail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                  <ShieldAlert className="h-5 w-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-lg font-semibold">{alertDetail.customerName}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <Badge className={`text-[10px] ${severityBadge[alertDetail.severity]}`}>{alertDetail.severity}</Badge>
+                    <Badge variant="outline" className="text-[10px] capitalize">{alertDetail.status.replace(/_/g, ' ')}</Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Amount involved</p>
+                  <p className="text-sm font-bold">{alertDetail.amount > 0 ? formatGHS(alertDetail.amount) : 'N/A'}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Risk level</p>
+                  <p className="text-sm font-bold capitalize">{alertDetail.severity}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Customer ID</p>
+                  <p className="font-mono text-sm">{alertDetail.customerId}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Triggered</p>
+                  <p className="text-sm font-medium">{formatDate(alertDetail.triggeredDate)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Assigned to</p>
+                  <p className="truncate text-sm font-medium">{alertDetail.assignedTo ?? 'Unassigned'}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-sm font-medium capitalize">{alertDetail.status.replace(/_/g, ' ')}</p>
+                </div>
+              </div>
+              <div className="space-y-1.5 rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Trigger rule</p>
+                <p className="text-sm font-medium">{alertDetail.rule}</p>
+              </div>
+              <div className="space-y-1.5 rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Suspicious pattern</p>
+                <p className="text-sm">{alertDetail.description}</p>
+              </div>
+              <Button variant="outline" className="w-full min-h-[40px] touch-manipulation" onClick={() => { setAlertDetail(null); setActivePage('aml-alerts'); }}>
+                <Search className="mr-2 h-4 w-4" /> Open AML Alerts Workspace
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

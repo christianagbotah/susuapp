@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useFieldSupervisorStore } from '@/store/staff-stores';
 import { formatGHS, getInitials } from '@/lib/formatters';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,9 +21,26 @@ const statusMeta: Record<SupervisedAgent['status'], { badge: string; dot: string
   offline: { badge: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', dot: 'bg-slate-400' },
 };
 
+const openOnKey = (fn: () => void) => (e: React.KeyboardEvent<HTMLDivElement>): void => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fn();
+  }
+};
+
+function DetailField({ label, value, wide = false }: { label: string; value: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={`min-w-0 ${wide ? 'col-span-2' : ''}`}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="text-sm font-medium">{value}</div>
+    </div>
+  );
+}
+
 export function FieldSupervisorAgents() {
   const { agents, nudgeAgent } = useFieldSupervisorStore();
   const [query, setQuery] = useState('');
+  const [detailAgent, setDetailAgent] = useState<SupervisedAgent | null>(null);
 
   const filtered = agents.filter(a => `${a.name} ${a.agentCode} ${a.area}`.toLowerCase().includes(query.toLowerCase()));
 
@@ -38,7 +56,14 @@ export function FieldSupervisorAgents() {
           const meta = statusMeta[a.status];
           return (
             <motion.div key={a.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>
-              <Card className="mobile-card h-full hover:shadow-md transition-shadow">
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-label={`Open agent details — ${a.name}`}
+                onClick={() => setDetailAgent(a)}
+                onKeyDown={openOnKey(() => setDetailAgent(a))}
+                className="mobile-card h-full cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+              >
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-center gap-3">
                     <div className="relative shrink-0">
@@ -88,7 +113,7 @@ export function FieldSupervisorAgents() {
                     variant="outline"
                     size="sm"
                     className="w-full min-h-[40px] touch-manipulation"
-                    onClick={() => { nudgeAgent(a.id); toast.success(`Ping sent to ${a.name}`, { description: 'SMS + app notification delivered.' }); }}
+                    onClick={e => { e.stopPropagation(); nudgeAgent(a.id); toast.success(`Ping sent to ${a.name}`, { description: 'SMS + app notification delivered.' }); }}
                   >
                     <Bell className="mr-1.5 h-3.5 w-3.5" /> Send Reminder
                   </Button>
@@ -98,6 +123,65 @@ export function FieldSupervisorAgents() {
           );
         })}
       </div>
+
+      {/* Agent detail dialog */}
+      <Dialog open={!!detailAgent} onOpenChange={() => setDetailAgent(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Agent Details</DialogTitle>
+            <DialogDescription>Full agent record — float, collections and verification queue.</DialogDescription>
+          </DialogHeader>
+          {detailAgent && (() => {
+            const meta = statusMeta[detailAgent.status];
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative shrink-0">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-green-100 text-sm font-bold text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                        {getInitials(detailAgent.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${meta.dot}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-semibold">{detailAgent.name}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{detailAgent.agentCode}</span>
+                      <Badge className={`text-[9px] capitalize ${meta.badge}`}>{detailAgent.status.replace('_', ' ')}</Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-muted p-4">
+                  <div className="mb-3 flex items-center justify-between text-sm">
+                    <span className="font-medium">Collection rate</span>
+                    <span className={`font-bold ${detailAgent.collectionRate >= 85 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{detailAgent.collectionRate}%</span>
+                  </div>
+                  <Progress value={detailAgent.collectionRate} className="h-2.5" />
+                  <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                    <span>Today: {formatGHS(detailAgent.todayCollections)}</span>
+                    <span>Expected: {formatGHS(detailAgent.expectedToday)}</span>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-muted p-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <DetailField label="Agent code" value={detailAgent.agentCode} />
+                    <DetailField label="Area" value={detailAgent.area} />
+                    <DetailField label="Status" value={<span className="capitalize">{detailAgent.status.replace('_', ' ')}</span>} />
+                    <DetailField label="Customers" value={String(detailAgent.customers)} />
+                    <DetailField label="Float balance" value={formatGHS(detailAgent.floatBalance)} />
+                    <DetailField label="Pending verify" value={String(detailAgent.pendingVerify)} />
+                    <DetailField label="Today collections" value={<span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatGHS(detailAgent.todayCollections)}</span>} />
+                    <DetailField label="Expected today" value={formatGHS(detailAgent.expectedToday)} />
+                    <DetailField label="Collection rate" value={`${detailAgent.collectionRate}%`} />
+                    <DetailField label="Last sync" value={detailAgent.lastSync} />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

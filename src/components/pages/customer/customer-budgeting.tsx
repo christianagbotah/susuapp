@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -67,7 +68,7 @@ import {
   CircleDollarSign,
 } from 'lucide-react';
 import { useCustomerExtendedStore } from '@/store/app-store';
-import type { BudgetCategory } from '@/lib/types';
+import type { BudgetCategory, Budget, Expense } from '@/lib/types';
 
 // ---- Icon Mapping ----
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -184,6 +185,10 @@ export function CustomerBudgeting() {
 
   // History filter
   const [historyFilter, setHistoryFilter] = useState<BudgetCategory | 'all'>('all');
+
+  // ---- Detail dialog state (card/row → detail linkage) ----
+  const [budgetDetail, setBudgetDetail] = useState<Budget | null>(null);
+  const [expenseDetail, setExpenseDetail] = useState<Expense | null>(null);
 
   // ---- Computed Stats ----
   const totalBudget = useMemo(() => budgets.reduce((s, b) => s + b.allocatedAmount, 0), [budgets]);
@@ -450,7 +455,14 @@ export function CustomerBudgeting() {
 
               return (
                 <motion.div key={budget.id} variants={item}>
-                  <Card className={`relative overflow-hidden transition-shadow hover:shadow-md ${isOverBudget ? 'border-rose-200 dark:border-rose-800' : ''}`}>
+                  <Card
+                    onClick={() => setBudgetDetail(budget)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setBudgetDetail(budget); } }}
+                    aria-label={`View ${budget.categoryName} budget details`}
+                    className={`relative overflow-hidden transition-all cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isOverBudget ? 'border-rose-200 dark:border-rose-800' : ''}`}
+                  >
                     <CardContent className="p-5 space-y-4">
                       {/* Header */}
                       <div className="flex items-center justify-between">
@@ -730,7 +742,12 @@ export function CustomerBudgeting() {
                         return (
                           <div
                             key={exp.id}
-                            className="flex items-start justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                            onClick={() => setExpenseDetail(exp)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpenseDetail(exp); } }}
+                            aria-label={`View ${exp.description} expense details`}
+                            className="flex items-start justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <div className="flex-1 min-w-0 space-y-1">
                               <div className="flex items-center gap-2 flex-wrap">
@@ -919,7 +936,11 @@ export function CustomerBudgeting() {
                     filteredExpenses.map((exp) => {
                       const catColor = getCategoryColor(exp.category);
                       return (
-                        <tr key={exp.id} className="border-b last:border-0 transition-colors hover:bg-muted/30">
+                        <tr
+                          key={exp.id}
+                          className="border-b last:border-0 transition-colors hover:bg-muted/30 cursor-pointer"
+                          onClick={() => setExpenseDetail(exp)}
+                        >
                           <td className="px-4 py-3 whitespace-nowrap">
                             {formatDate(exp.date)}
                           </td>
@@ -1044,6 +1065,146 @@ export function CustomerBudgeting() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ---- Budget Detail Dialog ---- */}
+      <Dialog open={!!budgetDetail} onOpenChange={() => setBudgetDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Budget Details</DialogTitle>
+            <DialogDescription>
+              Spending progress for this budget category
+            </DialogDescription>
+          </DialogHeader>
+          {budgetDetail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${budgetDetail.color}18`, color: budgetDetail.color }}
+                >
+                  {(() => { const Icon = getCategoryIcon(budgetDetail.icon); return <Icon className="h-6 w-6" />; })()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-lg font-semibold">{budgetDetail.categoryName}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
+                      {budgetDetail.period}
+                    </Badge>
+                    {budgetDetail.remainingAmount < 0 && (
+                      <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 text-xs font-medium dark:bg-rose-900/30 dark:text-rose-400">
+                        Over Budget
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress */}
+              <div className="space-y-2 rounded-lg bg-muted p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">
+                    {(() => {
+                      const pct = budgetDetail.allocatedAmount > 0
+                        ? Math.min((budgetDetail.spentAmount / budgetDetail.allocatedAmount) * 100, 100)
+                        : 0;
+                      return `${pct.toFixed(0)}% spent`;
+                    })()}
+                  </span>
+                  <span className={`font-bold ${budgetDetail.remainingAmount < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    {formatCurrency(budgetDetail.remainingAmount)} left
+                  </span>
+                </div>
+                <Progress
+                  value={
+                    budgetDetail.allocatedAmount > 0
+                      ? Math.min((budgetDetail.spentAmount / budgetDetail.allocatedAmount) * 100, 100)
+                      : 0
+                  }
+                  className="h-2.5"
+                />
+                {budgetDetail.remainingAmount < 0 && (
+                  <p className="text-xs font-medium text-rose-600">
+                    Over budget by {formatCurrency(Math.abs(budgetDetail.remainingAmount))}
+                  </p>
+                )}
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Category</span><span className="font-medium truncate">{budgetDetail.categoryName}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Period</span><span className="capitalize">{budgetDetail.period}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Budgeted</span><span className="font-medium">{formatCurrency(budgetDetail.allocatedAmount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Spent</span><span className="font-medium">{formatCurrency(budgetDetail.spentAmount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Remaining</span><span className={budgetDetail.remainingAmount < 0 ? 'font-medium text-rose-600' : 'font-medium'}>{formatCurrency(budgetDetail.remainingAmount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Ends</span><span>{formatDate(budgetDetail.endDate)}</span></div>
+                <div className="flex justify-between gap-2 sm:col-span-2"><span className="text-muted-foreground">Started</span><span>{formatDate(budgetDetail.startDate)}</span></div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ---- Expense Detail Dialog ---- */}
+      <Dialog open={!!expenseDetail} onOpenChange={() => setExpenseDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Expense Details</DialogTitle>
+            <DialogDescription>
+              Full details of this recorded expense
+            </DialogDescription>
+          </DialogHeader>
+          {expenseDetail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${getCategoryColor(expenseDetail.category)}18`, color: getCategoryColor(expenseDetail.category) }}
+                >
+                  <Receipt className="h-6 w-6" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-lg font-semibold">{expenseDetail.description}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge
+                      className="text-[10px]"
+                      style={{
+                        backgroundColor: `${getCategoryColor(expenseDetail.category)}18`,
+                        color: getCategoryColor(expenseDetail.category),
+                        border: `${getCategoryColor(expenseDetail.category)}30`,
+                      }}
+                    >
+                      {expenseDetail.categoryName}
+                    </Badge>
+                    {expenseDetail.recurring && (
+                      <Badge variant="outline" className="text-[10px] gap-1">
+                        <RotateCcw className="h-2.5 w-2.5" />
+                        {expenseDetail.recurringFrequency}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xl font-bold shrink-0">{formatCurrency(expenseDetail.amount)}</p>
+              </div>
+
+              <Separator />
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Description</span><span className="font-medium truncate">{expenseDetail.description}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{formatCurrency(expenseDetail.amount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Category</span><span>{expenseDetail.categoryName}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Date</span><span>{formatDate(expenseDetail.date)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Reference</span><span className="font-mono text-xs">{expenseDetail.reference}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Location</span><span className="truncate">{expenseDetail.location ?? '—'}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Recurring</span><span>{expenseDetail.recurring ? `Yes (${expenseDetail.recurringFrequency})` : 'No'}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Recorded</span><span>{formatDate(expenseDetail.date)}</span></div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

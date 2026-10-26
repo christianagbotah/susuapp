@@ -729,6 +729,16 @@ export const useAdminStore = create<AdminState>((set) => ({
 }));
 
 // ---- Treasurer Store ----
+
+// Advance a next-payout date by the group's contribution frequency
+function advancePayoutDate(dateStr: string, frequency: SusuGroup['frequency']): string {
+  const d = new Date(dateStr);
+  if (frequency === 'daily') d.setDate(d.getDate() + 1);
+  else if (frequency === 'weekly') d.setDate(d.getDate() + 7);
+  else d.setMonth(d.getMonth() + 1);
+  return d.toISOString().split('T')[0];
+}
+
 interface TreasurerState {
   user: User;
   managedGroups: SusuGroup[];
@@ -739,6 +749,7 @@ interface TreasurerState {
 
   setActivePage: (page: string) => void;
   processPayout: (payoutId: string) => void;
+  startNewRound: (groupId: string) => void;
 }
 
 export const useTreasurerStore = create<TreasurerState>((set) => ({
@@ -757,6 +768,34 @@ export const useTreasurerStore = create<TreasurerState>((set) => ({
         p.id === payoutId ? { ...p, status: 'completed' as const } : p
       ),
     }));
+  },
+
+  // Close the current round and open the next one: increments currentRound,
+  // resets round-start date / next payout, and rolls unpaid (pending/overdue)
+  // contributions from the closed round into the new round as pending.
+  startNewRound: (groupId) => {
+    set((s) => {
+      const group = s.managedGroups.find(g => g.id === groupId);
+      if (!group || group.currentRound >= group.totalRounds) return s;
+      const nextRound = group.currentRound + 1;
+      return {
+        managedGroups: s.managedGroups.map(g =>
+          g.id === groupId
+            ? {
+                ...g,
+                currentRound: nextRound,
+                roundStartDate: new Date().toISOString().split('T')[0],
+                nextPayout: advancePayoutDate(g.nextPayout, g.frequency),
+              }
+            : g
+        ),
+        allContributions: s.allContributions.map(c =>
+          c.groupId === groupId && c.round === group.currentRound && c.status !== 'paid'
+            ? { ...c, round: nextRound, status: 'pending' as const }
+            : c
+        ),
+      };
+    });
   },
 }));
 

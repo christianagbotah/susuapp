@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useAdminStore } from '@/store/app-store';
-import { formatGHS, formatCompactNumber } from '@/lib/formatters';
+import { formatGHS, formatCompactNumber, getStatusColor } from '@/lib/formatters';
 import {
   monthlyRevenueData, loanPortfolioData, dailyCollectionData, kycStatusData, branches,
 } from '@/lib/mock-data';
@@ -14,7 +14,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import type { Branch } from '@/lib/types';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -24,6 +30,27 @@ const dateRanges = ['Last 30 days', 'Last 90 days', 'This Year', 'All Time'];
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+/**
+ * Build a CSV string (quoted/escaped fields + header row) and trigger a
+ * browser download via Blob + object URL. Revokes the URL after clicking.
+ */
+function downloadCSV(filename: string, headers: string[], rows: (string | number)[][]) {
+  const escapeCell = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+  const csv = [
+    headers.map(escapeCell).join(','),
+    ...rows.map((row) => row.map(escapeCell).join(',')),
+  ].join('\r\n');
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.4 } }),
@@ -32,9 +59,30 @@ const fadeUp = {
 export function AdminAnalytics() {
   const { stats } = useAdminStore();
   const [selectedRange, setSelectedRange] = useState('Last 30 days');
+  const [detailBranch, setDetailBranch] = useState<Branch | null>(null);
 
-  const handleExportPDF = () => toast.success('Report exported as PDF');
-  const handleExportCSV = () => toast.success('Report exported as CSV');
+  const handleExportPDF = () => {
+    const today = new Date().toISOString().split('T')[0];
+    downloadCSV(
+      `isusupro-revenue-report-${today}.csv`,
+      ['Month', 'Revenue (GHS)', 'Deposits (GHS)', 'Loans (GHS)'],
+      monthlyRevenueData.map((d) => [d.month, d.revenue, d.deposits, d.loans]),
+    );
+    toast.success('Revenue report downloaded as CSV');
+  };
+
+  const handleExportCSV = () => {
+    const today = new Date().toISOString().split('T')[0];
+    downloadCSV(
+      `isusupro-branch-report-${today}.csv`,
+      ['Branch', 'Region', 'Location', 'Manager', 'Customers', 'Agents', 'Susu Groups', 'Status'],
+      [...branches]
+        .sort((a, b) => b.totalCustomers - a.totalCustomers)
+        .map((b) => [b.name, b.region, b.location, b.manager, b.totalCustomers, b.totalAgents, b.totalSusuGroups, b.status]),
+    );
+    toast.success('Branch report downloaded as CSV');
+  };
+
   const handlePrintReport = () => toast.success('Print dialog opened');
 
   const branchComparisonData = [...branches]
@@ -254,7 +302,15 @@ export function AdminAnalytics() {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {branches.map(branch => (
-                <div key={branch.id} className="mobile-card rounded-lg border p-3 lg:p-4 hover:bg-muted/50 transition-colors touch-manipulation">
+                <div
+                  key={branch.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${branch.name} branch details`}
+                  className="mobile-card rounded-lg border p-3 lg:p-4 touch-manipulation cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+                  onClick={() => setDetailBranch(branch)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailBranch(branch); } }}
+                >
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-semibold">{branch.name}</p>
                     <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -282,6 +338,67 @@ export function AdminAnalytics() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Branch Detail Dialog */}
+      <Dialog open={!!detailBranch} onOpenChange={() => setDetailBranch(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Branch Details</DialogTitle>
+            <DialogDescription>Full performance metrics for this branch</DialogDescription>
+          </DialogHeader>
+          {detailBranch && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    <Building2 className="h-5 w-5" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{detailBranch.name}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                      {detailBranch.region}
+                    </Badge>
+                    <Badge variant="secondary" className={`text-xs capitalize ${getStatusColor(detailBranch.status)}`}>
+                      {detailBranch.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Metrics */}
+              <div className="rounded-lg bg-muted p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Customers</span><span className="font-medium text-emerald-600">{detailBranch.totalCustomers.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Agents</span><span className="font-medium text-amber-600">{detailBranch.totalAgents}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Susu Groups</span><span className="font-medium text-blue-600">{detailBranch.totalSusuGroups}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Customers / Agent</span><span>{detailBranch.totalAgents > 0 ? Math.round(detailBranch.totalCustomers / detailBranch.totalAgents) : '—'}</span></div>
+                </div>
+              </div>
+
+              {/* Branch info */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Region</p>
+                  <p className="font-medium">{detailBranch.region}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="font-medium truncate">{detailBranch.location}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Branch Manager</p>
+                  <p className="font-medium">{detailBranch.manager}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

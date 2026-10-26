@@ -116,8 +116,10 @@ export function ConfirmDialog({
     dismiss();
   };
 
-  // Client-only mounting guard — prevents hydration mismatch with createPortal
+  // Client-only mounting guard — prevents hydration mismatch with createPortal.
+  // Intentional setState-in-effect (standard client-mount guard pattern).
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   // The actual modal markup (portaled to <body> so it always layers above

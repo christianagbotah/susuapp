@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useLoanOfficerStore } from '@/store/staff-stores';
-import { formatGHS, formatDate } from '@/lib/formatters';
+import { formatGHS, formatDate, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +30,7 @@ type CriterionKey = typeof CRITERIA[number]['key'];
 export function LoanOfficerAppraisals() {
   const { user, appraisals, applications, saveAppraisal, advanceStage } = useLoanOfficerStore();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detail, setDetail] = useState<LoanAppraisal | null>(null);
   const [activeApp, setActiveApp] = useState<LoanApplication | null>(null);
   const [scores, setScores] = useState<Record<CriterionKey, number>>({ character: 3, capacity: 3, capital: 3, collateral: 3, conditions: 3 });
   const [location, setLocation] = useState('');
@@ -90,7 +93,14 @@ export function LoanOfficerAppraisals() {
           const g = score >= 21 ? 'A' : score >= 17 ? 'B' : score >= 13 ? 'C' : score >= 9 ? 'D' : 'E';
           return (
             <motion.div key={v.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>
-              <Card className="mobile-card h-full">
+              <Card
+                onClick={() => setDetail(v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetail(v); } }}
+                role="button"
+                tabIndex={0}
+                aria-label={`View appraisal details for ${v.applicantName}`}
+                className="mobile-card h-full cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+              >
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0">
@@ -205,6 +215,87 @@ export function LoanOfficerAppraisals() {
             <Button variant="outline" className="min-h-[44px]" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button className="min-h-[44px] bg-amber-600 hover:bg-amber-700 touch-manipulation" onClick={handleSave}><Save className="mr-2 h-4 w-4" /> Save Appraisal</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Appraisal detail dialog */}
+      <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Appraisal Details</DialogTitle>
+            <DialogDescription>Completed 5C assessment and field visit findings</DialogDescription>
+          </DialogHeader>
+          {detail && (() => {
+            const dScore = detail.character + detail.capacity + detail.capital + detail.collateral + detail.conditions;
+            const dGrade = dScore >= 21 ? 'A' : dScore >= 17 ? 'B' : dScore >= 13 ? 'C' : dScore >= 9 ? 'D' : 'E';
+            const recLabel = detail.recommendation === 'approve'
+              ? `Approve ${formatGHS(detail.recommendedAmount)}`
+              : detail.recommendation === 'reduce_amount'
+                ? `Reduce to ${formatGHS(detail.recommendedAmount)}`
+                : 'Reject';
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                      {getInitials(detail.applicantName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold truncate">{detail.applicantName}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="bg-amber-100 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Grade {dGrade}</Badge>
+                      <span className="text-xs text-muted-foreground capitalize">{detail.recommendation.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5C scores */}
+                <div>
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                    <Star className="h-4 w-4 text-muted-foreground" /> 5C Scores
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {CRITERIA.map(c => (
+                      <div key={c.key}>
+                        <p className="text-xs text-muted-foreground">{c.label}</p>
+                        <p className="font-medium">{detail[c.key]}/5</p>
+                      </div>
+                    ))}
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">Total Score</p>
+                      <p className="font-semibold">{dScore}/25 — Grade {dGrade}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Recommendation */}
+                <div className="rounded-lg bg-muted p-4">
+                  <p className="text-xs text-muted-foreground">Recommendation</p>
+                  <p className="font-semibold">{recLabel}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Recommended amount: {formatGHS(detail.recommendedAmount)}</p>
+                </div>
+
+                {/* Field visit */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="min-w-0 sm:col-span-2">
+                    <p className="text-xs text-muted-foreground">Business Location</p>
+                    <p className="truncate font-medium">{detail.businessLocation}</p>
+                  </div>
+                  <div><p className="text-xs text-muted-foreground">Field Visit Date</p><p className="font-medium">{formatDate(detail.fieldVisitDate)}</p></div>
+                  <div className="min-w-0"><p className="text-xs text-muted-foreground">Appraiser</p><p className="truncate font-medium">{detail.officerName}</p></div>
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Field Notes</p>
+                    <p className="text-sm">{detail.notes}</p>
+                  </div>
+                  <div className="col-span-2"><p className="text-xs text-muted-foreground">Reference</p><p className="truncate font-medium">{detail.id} · application {detail.applicationId}</p></div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

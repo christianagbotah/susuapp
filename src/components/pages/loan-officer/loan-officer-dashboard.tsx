@@ -1,17 +1,22 @@
 'use client';
 
+import { useState } from 'react';
 import { useLoanOfficerStore } from '@/store/staff-stores';
-import { formatGHS, formatDate } from '@/lib/formatters';
+import { formatGHS, formatDate, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
 import {
   Landmark, ClipboardList, UserSearch, Briefcase, AlertTriangle,
   TrendingUp, ArrowRight, CalendarCheck, ShieldAlert, PiggyBank, Phone,
 } from 'lucide-react';
+import type { PortfolioLoan } from '@/lib/types';
 
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.4 } };
 
@@ -26,8 +31,17 @@ const stageColors: Record<string, string> = {
   disbursed: 'bg-teal-600 text-white',
 };
 
+const classificationMeta: Record<PortfolioLoan['classification'], string> = {
+  current: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  watch: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  substandard: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  doubtful: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  loss: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+};
+
 export function LoanOfficerDashboard() {
   const { user, applications, appraisals, portfolio, setActivePage } = useLoanOfficerStore();
+  const [borrowerDetail, setBorrowerDetail] = useState<PortfolioLoan | null>(null);
 
   const pipeline = applications.filter(a => !['disbursed', 'rejected'].includes(a.stage));
   const pendingAppraisals = applications.filter(a => ['field_visit', 'appraisal', 'documents_pending'].includes(a.stage));
@@ -132,7 +146,15 @@ export function LoanOfficerDashboard() {
           </div>
           <div className="space-y-2">
             {arrears.slice(0, 3).map(p => (
-              <Card key={p.id} className="mobile-card border-l-4 border-red-400">
+              <Card
+                key={p.id}
+                onClick={() => setBorrowerDetail(p)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setBorrowerDetail(p); } }}
+                role="button"
+                tabIndex={0}
+                aria-label={`View borrower details for ${p.customerName}`}
+                className="mobile-card cursor-pointer border-l-4 border-red-400 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+              >
                 <CardContent className="flex items-center justify-between gap-3 p-3.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{p.customerName}</p>
@@ -191,6 +213,71 @@ export function LoanOfficerDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Borrower (arrears) detail dialog */}
+      <Dialog open={!!borrowerDetail} onOpenChange={() => setBorrowerDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Borrower Details</DialogTitle>
+            <DialogDescription>Arrears watchlist loan position and payment history</DialogDescription>
+          </DialogHeader>
+          {borrowerDetail && (() => {
+            const paid = Math.max(borrowerDetail.principal - borrowerDetail.outstanding, 0);
+            const repaidPct = borrowerDetail.principal ? Math.min(100, Math.round((paid / borrowerDetail.principal) * 100)) : 0;
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                      {getInitials(borrowerDetail.customerName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold truncate">{borrowerDetail.customerName}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary" className={`text-xs capitalize ${classificationMeta[borrowerDetail.classification]}`}>
+                        {borrowerDetail.classification}
+                      </Badge>
+                      <Badge className="bg-red-100 text-[10px] text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                        {borrowerDetail.arrearsDays} days in arrears
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Repayment progress */}
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Repaid To Date</span>
+                    <span className="font-bold">{repaidPct}%</span>
+                  </div>
+                  <Progress value={repaidPct} className="h-2.5" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Paid: {formatGHS(paid)}</span>
+                    <span>Outstanding: {formatGHS(borrowerDetail.outstanding)}</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Loan details */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="min-w-0"><p className="text-xs text-muted-foreground">Product</p><p className="truncate font-medium">{borrowerDetail.productName}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Principal</p><p className="font-medium">{formatGHS(borrowerDetail.principal)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Outstanding</p><p className="font-medium">{formatGHS(borrowerDetail.outstanding)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Paid</p><p className="font-medium text-emerald-600 dark:text-emerald-400">{formatGHS(paid)}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Arrears Days</p><p className="font-medium">{borrowerDetail.arrearsDays}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Classification</p><p className="font-medium capitalize">{borrowerDetail.classification}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Last Payment</p><p className="font-medium">{formatDate(borrowerDetail.lastPaymentDate)}</p></div>
+                  <div className="min-w-0"><p className="text-xs text-muted-foreground">Branch</p><p className="truncate font-medium">{borrowerDetail.branch}</p></div>
+                  <div className="col-span-2"><p className="text-xs text-muted-foreground">Loan Reference</p><p className="truncate font-medium">{borrowerDetail.id}</p></div>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

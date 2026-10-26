@@ -117,9 +117,9 @@ export function LoginPage() {
     const digits = phone.replace(/\D/g, '');
     const normalizedPhone = digits.length === 9 && !digits.startsWith('0') ? `0${digits}` : digits;
 
-    const demoLogin = async (offline: boolean) => {
+    const demoLogin = async (offline: boolean, portal: PortalId = targetPortal) => {
       await new Promise((r) => setTimeout(r, 600));
-      setPortal(targetPortal);
+      setPortal(portal);
       setIsLoading(false);
       if (offline) toast.info('Signed in to demo mode — NestJS API not reachable in this session.');
     };
@@ -141,6 +141,19 @@ export function LoginPage() {
       const status = (err as { status?: number })?.status;
       if (status === 401) {
         setIsLoading(false);
+        // Staff demo accounts (branch & head office portals) are not in the
+        // API seed — a 401 for their credentials means the API is reachable
+        // but doesn't know this user. Fall back to demo login when the
+        // entered credentials match a known demo account; otherwise it is a
+        // genuine wrong-PIN error.
+        const matchedDemo = demoAccounts.find(
+          (a) => !a.live && a.phone === normalizedPhone,
+        );
+        if (matchedDemo && pin === DEMO_PIN) {
+          setSelectedId(matchedDemo.id);
+          await demoLogin(true, matchedDemo.portal);
+          return;
+        }
         toast.error('Invalid phone number or PIN. Demo PIN: 123456');
         return;
       }

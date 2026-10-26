@@ -20,7 +20,6 @@ import {
   XCircle,
   CheckCheck,
   MessageSquare,
-  ExternalLink,
 } from 'lucide-react';
 import type { Notification } from '@/lib/types';
 
@@ -326,8 +325,10 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
   // ---- Selected notification for detail view ----
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
-  // Client-only mounting guard — prevents hydration mismatch with createPortal
+  // Client-only mounting guard — prevents hydration mismatch with createPortal.
+  // Intentional setState-in-effect (standard client-mount guard pattern).
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   // When the portal changes, reset local mock data
@@ -601,18 +602,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
                       </div>
                     </div>
 
-                    {selectedNotification.link && (
-                      <Button
-                        variant="outline"
-                        className="w-full gap-2"
-                        onClick={() => {
-                          window.open(selectedNotification.link, '_blank');
-                        }}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        View Details
-                      </Button>
-                    )}
+
                   </div>
                 </motion.div>
               </div>

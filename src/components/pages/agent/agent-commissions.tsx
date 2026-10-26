@@ -4,8 +4,13 @@ import { useState } from 'react';
 import { useAgentStore } from '@/store/app-store';
 import { formatGHS, formatDate, formatDateTime, getStatusColor, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -18,6 +23,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import type { AgentCommission } from '@/lib/types';
 
 const monthlyEarningsData = [
   { month: 'Nov', amount: 180 },
@@ -50,6 +56,12 @@ export function AgentCommissions() {
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [detail, setDetail] = useState<AgentCommission | null>(null);
+
+  // Scroll helper — summary cards jump to the relevant in-page section
+  function scrollToSection(sectionId: string) {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   const totalEarned = commissions
     .filter((c) => c.status === 'paid')
@@ -80,7 +92,12 @@ export function AgentCommissions() {
       icon: BadgeDollarSign,
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-100 dark:bg-emerald-900/30',
-      subtitle: 'All time',
+      sub: 'All time',
+      subClassName: 'text-emerald-600 dark:text-emerald-400 font-medium',
+      onClick: () => {
+        setStatusFilter('paid');
+        scrollToSection('commission-history');
+      },
     },
     {
       title: 'Pending Payout',
@@ -88,7 +105,12 @@ export function AgentCommissions() {
       icon: Clock,
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-100 dark:bg-amber-900/30',
-      subtitle: 'Next Friday',
+      sub: 'Next Friday',
+      subClassName: 'text-amber-600 dark:text-amber-400 font-medium',
+      onClick: () => {
+        setStatusFilter('pending');
+        scrollToSection('commission-history');
+      },
     },
     {
       title: 'This Month',
@@ -96,7 +118,12 @@ export function AgentCommissions() {
       icon: TrendingUp,
       color: 'text-blue-600 dark:text-blue-400',
       bg: 'bg-blue-100 dark:bg-blue-900/30',
-      subtitle: 'Current period',
+      sub: 'Current period',
+      subClassName: 'text-blue-600 dark:text-blue-400 font-medium',
+      onClick: () => {
+        setStatusFilter('all');
+        scrollToSection('earnings-chart');
+      },
     },
   ];
 
@@ -117,37 +144,28 @@ export function AgentCommissions() {
         </div>
       </motion.div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards — clickable, jump to the relevant section/filter */}
       <div className="grid grid-cols-3 gap-3 lg:gap-4 sm:grid-cols-3">
         {summaryCards.map((stat, i) => (
-          <motion.div
+          <KpiCard
             key={stat.title}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: i * 0.1 }}
-          >
-            <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
-              <CardContent className="p-3 lg:p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="space-y-0.5 lg:space-y-1 min-w-0">
-                    <p className="text-xs lg:text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-xl font-bold lg:text-2xl">{stat.value}</p>
-                    <p className="text-[10px] lg:text-xs text-muted-foreground">{stat.subtitle}</p>
-                  </div>
-                  <div className={`rounded-lg p-2 lg:p-3 ${stat.bg}`}>
-                    <stat.icon className={`h-5 w-5 lg:h-6 lg:w-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+            index={i}
+            title={stat.title}
+            value={stat.value}
+            sub={stat.sub}
+            subClassName={stat.subClassName}
+            icon={stat.icon}
+            color={stat.color}
+            bg={stat.bg}
+            onClick={stat.onClick}
+          />
         ))}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Commission Table */}
         <div className="lg:col-span-2 space-y-4">
-          <Card>
+          <Card id="commission-history">
             <CardHeader className="pb-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-sm lg:text-base">Commission History</CardTitle>
@@ -209,7 +227,11 @@ export function AgentCommissions() {
                       filteredCommissions.map((commission) => {
                         const tc = typeConfig[commission.type];
                         return (
-                          <TableRow key={commission.id}>
+                          <TableRow
+                            key={commission.id}
+                            onClick={() => setDetail(commission)}
+                            className="cursor-pointer hover:bg-muted/30 transition-colors"
+                          >
                             <TableCell className="text-muted-foreground whitespace-nowrap">
                               {formatDate(commission.date)}
                             </TableCell>
@@ -248,7 +270,20 @@ export function AgentCommissions() {
                   filteredCommissions.map((commission) => {
                     const tc = typeConfig[commission.type];
                     return (
-                      <div key={commission.id} className="mobile-card rounded-lg border p-3 space-y-2 touch-manipulation">
+                      <div
+                        key={commission.id}
+                        onClick={() => setDetail(commission)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setDetail(commission);
+                          }
+                        }}
+                        aria-label={`Open commission details: ${commission.description}`}
+                        className="mobile-card rounded-lg border p-3 space-y-2 touch-manipulation cursor-pointer hover:bg-muted/30 hover:border-primary/40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
                         <div className="flex items-center justify-between">
                           <Badge className={`text-[10px] ${tc?.color ?? ''}`}>
                             {tc?.label ?? commission.type}
@@ -275,6 +310,7 @@ export function AgentCommissions() {
         <div className="space-y-4">
           {/* Earnings Chart */}
           <motion.div
+            id="earnings-chart"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.3 }}
@@ -357,6 +393,77 @@ export function AgentCommissions() {
           </motion.div>
         </div>
       </div>
+
+      {/* Commission Detail Dialog */}
+      <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Commission Details</DialogTitle>
+            <DialogDescription>Full details of this commission earning</DialogDescription>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {getInitials(detail.agentName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{formatGHS(detail.amount)}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`text-xs capitalize ${getStatusColor(detail.status)}`}>
+                      {detail.status}
+                    </Badge>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${typeConfig[detail.type]?.color ?? ''}`}>
+                      {typeConfig[detail.type]?.label ?? detail.type}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fields */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3 col-span-2">
+                  <p className="text-xs text-muted-foreground">Description</p>
+                  <p className="text-sm font-medium mt-0.5">{detail.description}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Amount</p>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(detail.amount)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-sm font-medium capitalize mt-0.5">{detail.status}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="text-sm font-medium mt-0.5">{formatDate(detail.date)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="text-sm font-medium mt-0.5">{typeConfig[detail.type]?.label ?? detail.type}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Reference ID</p>
+                  <p className="text-sm font-medium mt-0.5">{detail.id}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Agent</p>
+                  <p className="text-sm font-medium mt-0.5">{detail.agentName}</p>
+                </div>
+                {detail.paidDate && (
+                  <div className="rounded-lg border p-3 col-span-2">
+                    <p className="text-xs text-muted-foreground">Paid Date</p>
+                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{formatDate(detail.paidDate)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

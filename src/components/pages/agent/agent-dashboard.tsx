@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useAgentStore } from '@/store/app-store';
 import { formatGHS, formatDate, formatDateTime, getStatusColor, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +8,10 @@ import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import {
   Route, Users, BadgeDollarSign, DollarSign, Star, MapPin, Clock,
@@ -16,6 +21,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import type { AgentCommission, CollectionRoute } from '@/lib/types';
+
+const commissionTypeLabels: Record<AgentCommission['type'], string> = {
+  susu_collection: 'Susu Collection',
+  loan_referral: 'Loan Referral',
+  new_customer: 'New Customer',
+  milestone_bonus: 'Milestone Bonus',
+};
 
 const weeklyChartData = [
   { day: 'Mon', amount: 12500 },
@@ -52,6 +65,9 @@ function StarRating({ rating }: { rating: number }) {
 
 export function AgentDashboard() {
   const { agent, collectionRoutes, commissions, allCustomers, setActivePage } = useAgentStore();
+
+  const [detailCommission, setDetailCommission] = useState<AgentCommission | null>(null);
+  const [detailRoute, setDetailRoute] = useState<CollectionRoute | null>(null);
 
   const todayRoutes = collectionRoutes.filter(
     (r) => r.status === 'in_progress' || r.status === 'partial'
@@ -196,7 +212,19 @@ export function AgentDashboard() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: i * 0.1 }}
                   >
-                    <Card className="mobile-card hover:shadow-md transition-shadow touch-manipulation">
+                    <Card
+                      onClick={() => setDetailRoute(route)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailRoute(route);
+                        }
+                      }}
+                      aria-label={`Open ${route.name} route details`}
+                      className="mobile-card cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all touch-manipulation"
+                    >
                       <CardContent className="p-3 lg:p-4">
                         <div className="flex flex-col gap-3 lg:gap-4">
                           {/* Header */}
@@ -241,7 +269,10 @@ export function AgentDashboard() {
                                 size="sm"
                                 variant="outline"
                                 className="min-h-[44px] lg:min-h-0"
-                                onClick={() => setActivePage('collections')}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivePage('collections');
+                                }}
                               >
                                 <ChevronRight className="mr-1 h-4 w-4" />
                                 View Details
@@ -249,7 +280,10 @@ export function AgentDashboard() {
                               <Button
                                 size="sm"
                                 className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] lg:min-h-0"
-                                onClick={() => setActivePage('collections')}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivePage('collections');
+                                }}
                               >
                                 <Play className="mr-1 h-4 w-4" />
                                 Continue Collection
@@ -308,7 +342,17 @@ export function AgentDashboard() {
                   {commissions.slice(0, 4).map((c) => (
                     <div
                       key={c.id}
-                      className="mobile-list-item flex items-center justify-between rounded-lg border p-2.5 text-sm"
+                      onClick={() => setDetailCommission(c)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailCommission(c);
+                        }
+                      }}
+                      aria-label={`Open commission details: ${c.description}`}
+                      className="mobile-list-item flex items-center justify-between rounded-lg border p-2.5 text-sm cursor-pointer hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">{c.description}</p>
@@ -403,6 +447,174 @@ export function AgentDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Commission Detail Dialog */}
+      <Dialog open={!!detailCommission} onOpenChange={() => setDetailCommission(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Commission Details</DialogTitle>
+            <DialogDescription>Full details of this commission earning</DialogDescription>
+          </DialogHeader>
+          {detailCommission && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {getInitials(detailCommission.agentName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{formatGHS(detailCommission.amount)}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`text-xs capitalize ${getStatusColor(detailCommission.status)}`}>
+                      {detailCommission.status}
+                    </Badge>
+                    <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                      {commissionTypeLabels[detailCommission.type]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fields */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Description</p>
+                  <p className="text-sm font-medium mt-0.5">{detailCommission.description}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Amount</p>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(detailCommission.amount)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="text-sm font-medium mt-0.5">{formatDate(detailCommission.date)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-sm font-medium capitalize mt-0.5">{detailCommission.status}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="text-sm font-medium mt-0.5">{commissionTypeLabels[detailCommission.type]}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Reference ID</p>
+                  <p className="text-sm font-medium mt-0.5">{detailCommission.id}</p>
+                </div>
+                {detailCommission.paidDate && (
+                  <div className="rounded-lg border p-3 col-span-2">
+                    <p className="text-xs text-muted-foreground">Paid Date</p>
+                    <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{formatDate(detailCommission.paidDate)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Route Detail Dialog */}
+      <Dialog open={!!detailRoute} onOpenChange={() => setDetailRoute(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Route Details</DialogTitle>
+            <DialogDescription>Collection route summary and progress</DialogDescription>
+          </DialogHeader>
+          {detailRoute && (() => {
+            const routeProgress =
+              detailRoute.totalExpected > 0
+                ? Math.round((detailRoute.totalCollected / detailRoute.totalExpected) * 100)
+                : 0;
+            const collectedCustomers = detailRoute.customers.filter((c) => c.status === 'collected').length;
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                      {getInitials(detailRoute.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold truncate">{detailRoute.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={`text-xs capitalize ${getStatusColor(detailRoute.status)}`}>
+                        {detailRoute.status.replace('_', ' ')}
+                      </Badge>
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" />
+                        {detailRoute.area}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Collection Progress</span>
+                    <span className="font-bold">{routeProgress}%</span>
+                  </div>
+                  <Progress value={routeProgress} className="h-2.5" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Collected: {formatGHS(detailRoute.totalCollected)}</span>
+                    <span>Expected: {formatGHS(detailRoute.totalExpected)}</span>
+                  </div>
+                </div>
+
+                {/* Fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Area</p>
+                    <p className="text-sm font-medium mt-0.5">{detailRoute.area}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="text-sm font-medium mt-0.5">{formatDate(detailRoute.date)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Customers Assigned</p>
+                    <p className="text-sm font-medium mt-0.5">{detailRoute.customerCount}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Customers Collected</p>
+                    <p className="text-sm font-medium mt-0.5">{collectedCustomers}/{detailRoute.customerCount}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Expected Amount</p>
+                    <p className="text-sm font-medium mt-0.5">{formatGHS(detailRoute.totalExpected)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Collected Amount</p>
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(detailRoute.totalCollected)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <p className="text-sm font-medium capitalize mt-0.5">{detailRoute.status.replace('_', ' ')}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Reference ID</p>
+                    <p className="text-sm font-medium mt-0.5">{detailRoute.id}</p>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => {
+                    setDetailRoute(null);
+                    setActivePage('collections');
+                  }}
+                >
+                  <Play className="mr-1 h-4 w-4" />
+                  Open in Collections
+                </Button>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Performance Chart */}
       <motion.div

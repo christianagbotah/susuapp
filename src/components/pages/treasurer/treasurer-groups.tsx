@@ -37,7 +37,7 @@ const fadeUp = {
 };
 
 export function TreasurerGroups() {
-  const { managedGroups, allContributions, allMembers, setActivePage } = useTreasurerStore();
+  const { managedGroups, allContributions, allMembers, setActivePage, startNewRound } = useTreasurerStore();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   const activeGroups = managedGroups.filter(g => g.status === 'active');
@@ -45,6 +45,22 @@ export function TreasurerGroups() {
   const combinedPool = managedGroups.reduce((sum, g) => sum + g.totalPool, 0);
 
   const selectedGroup = managedGroups.find(g => g.id === selectedGroupId);
+
+  // Real mutation — advances the group's round in the store (persistent state change)
+  const handleStartNewRound = () => {
+    if (!selectedGroup) return;
+    if (selectedGroup.currentRound >= selectedGroup.totalRounds) {
+      toast.error('All rounds completed', {
+        description: `${selectedGroup.name} has finished all ${selectedGroup.totalRounds} rounds.`,
+      });
+      return;
+    }
+    const nextRound = selectedGroup.currentRound + 1;
+    startNewRound(selectedGroup.id);
+    toast.success(`Round ${nextRound} started for ${selectedGroup.name}`, {
+      description: 'Unpaid contributions were carried into the new round as pending.',
+    });
+  };
 
   // Get mock member data for the selected group
   const getGroupMembers = (groupId: string) => {
@@ -275,7 +291,8 @@ export function TreasurerGroups() {
                     <p className="text-xs text-muted-foreground">Currently in Round {selectedGroup.currentRound} of {selectedGroup.totalRounds}</p>
                   </div>
                   <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px] touch-manipulation"
-                    onClick={() => toast.success('New round started!')}>
+                    onClick={handleStartNewRound}
+                  >
                     <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                     Start New Round
                   </Button>

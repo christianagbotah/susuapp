@@ -2,10 +2,14 @@
 
 import { useState, useMemo } from 'react';
 import { useTreasurerStore } from '@/store/app-store';
-import { formatGHS, formatDate, getStatusColor } from '@/lib/formatters';
+import { formatGHS, formatDate, getStatusColor, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
@@ -34,6 +38,54 @@ const fadeUp = {
 
 type DateRange = 'this_week' | 'this_month' | 'last_month';
 
+interface CollectionReportRow {
+  groupId: string;
+  groupName: string;
+  expected: number;
+  collected: number;
+  rate: number;
+  overdueMembers: number;
+  contributionsCount: number;
+}
+
+interface PayoutReportRow {
+  id: string;
+  groupName: string;
+  memberName: string;
+  amount: number;
+  date: string;
+  method: string;
+  status: string;
+}
+
+// ---- Real CSV export helpers (Blob + download + revokeObjectURL) ----
+
+function escapeCsvField(value: string | number): string {
+  const s = String(value);
+  // Quote fields containing commas, quotes or newlines; escape inner quotes
+  if (/[",\n\r]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function downloadCsv(filename: string, header: string[], rows: (string | number)[][]) {
+  const csvContent = [
+    header.map(escapeCsvField).join(','),
+    ...rows.map((row) => row.map(escapeCsvField).join(',')),
+  ].join('\r\n');
+  // \uFEFF BOM so Excel detects UTF-8
+  const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 // Chart configs
 const collectionChartConfig = {
   expected: { label: 'Expected', color: 'hsl(var(--chart-2))' },
@@ -47,6 +99,8 @@ const participationChartConfig = {
 export function TreasurerReports() {
   const { managedGroups, allContributions, payouts } = useTreasurerStore();
   const [dateRange, setDateRange] = useState<DateRange>('this_month');
+  const [detailCollectionReport, setDetailCollectionReport] = useState<CollectionReportRow | null>(null);
+  const [detailPayoutReport, setDetailPayoutReport] = useState<PayoutReportRow | null>(null);
 
   // Date range calculations
   const getDateRange = () => {
@@ -172,12 +226,39 @@ export function TreasurerReports() {
     : dateRange === 'this_month' ? 'This Month'
     : 'Last Month';
 
-  const handleExportPDF = () => {
-    toast.success('PDF report generated! Download will start shortly.');
+  // Real CSV download — replaces the previous toast-only stub
+  const handleExportExcel = () => {
+    const stamp = new Date().toISOString().split('T')[0];
+    downloadCsv(
+      `isusupro-treasurer-report-${stamp}.csv`,
+      ['Section', 'Group', 'Detail', 'Amount', 'Status/Rate', 'Date/Period'],
+      [
+        ...collectionReport.map((r) => [
+          'Collection',
+          r.groupName,
+          `${r.contributionsCount} contributions, ${r.overdueMembers} overdue member(s)`,
+          r.collected,
+          `${r.rate}% (expected ${r.expected})`,
+          dateRangeLabel,
+        ]),
+        ...payoutReport.map((p) => [
+          'Payout',
+          p.groupName,
+          `${p.memberName} (${p.method})`,
+          p.amount,
+          p.status,
+          formatDate(p.date),
+        ]),
+      ],
+    );
+    toast.success('Report exported as CSV', {
+      description: `${collectionReport.length} collection rows, ${payoutReport.length} payout rows`,
+    });
   };
 
-  const handleExportExcel = () => {
-    toast.success('Excel report exported successfully!');
+  // Real print action — browser print dialog (Save as PDF); replaces toast-only stub
+  const handleExportPDF = () => {
+    window.print();
   };
 
   return (
@@ -273,7 +354,11 @@ export function TreasurerReports() {
                 </TableHeader>
                 <TableBody>
                   {collectionReport.map(report => (
-                    <TableRow key={report.groupId}>
+                    <TableRow
+                      key={report.groupId}
+                      onClick={() => setDetailCollectionReport(report)}
+                      className="cursor-pointer hover:bg-muted/30 transition-colors"
+                    >
                       <TableCell className="text-xs font-medium max-w-[180px] truncate">{report.groupName}</TableCell>
                       <TableCell className="text-xs">{formatGHS(report.expected)}</TableCell>
                       <TableCell className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{formatGHS(report.collected)}</TableCell>
@@ -358,7 +443,11 @@ export function TreasurerReports() {
                     </TableRow>
                   ) : (
                     payoutReport.map(p => (
-                      <TableRow key={p.id}>
+                      <TableRow
+                        key={p.id}
+                        onClick={() => setDetailPayoutReport(p)}
+                        className="cursor-pointer hover:bg-muted/30 transition-colors"
+                      >
                         <TableCell className="text-xs font-medium max-w-[150px] truncate">{p.groupName}</TableCell>
                         <TableCell className="text-xs">{p.memberName}</TableCell>
                         <TableCell className="text-xs font-bold">{formatGHS(p.amount)}</TableCell>
@@ -493,7 +582,7 @@ export function TreasurerReports() {
                   <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                   Excel Export
                 </Button>
-                <Button variant="outline" className="gap-2 min-h-[44px] touch-manipulation" onClick={() => toast.success('Report sent to printer!')}>
+                <Button variant="outline" className="gap-2 min-h-[44px] touch-manipulation" onClick={handleExportPDF}>
                   <Printer className="h-4 w-4" />
                   Print
                 </Button>
@@ -502,6 +591,179 @@ export function TreasurerReports() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Collection Report Detail Dialog */}
+      <Dialog open={!!detailCollectionReport} onOpenChange={() => setDetailCollectionReport(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Collection Report Details</DialogTitle>
+            <DialogDescription>Group collection breakdown for {dateRangeLabel}</DialogDescription>
+          </DialogHeader>
+          {detailCollectionReport && (() => {
+            const group = managedGroups.find((g) => g.id === detailCollectionReport.groupId);
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                      {getInitials(detailCollectionReport.groupName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold truncate">{detailCollectionReport.groupName}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="secondary" className="text-xs">{dateRangeLabel}</Badge>
+                      {group && (
+                        <Badge className={`text-xs capitalize ${getStatusColor(group.status)}`}>
+                          {group.status}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collection rate */}
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Collection Rate</span>
+                    <span className="font-bold">{detailCollectionReport.rate}%</span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-background overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${detailCollectionReport.rate >= 80 ? 'bg-emerald-500' : detailCollectionReport.rate >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                      style={{ width: `${Math.min(detailCollectionReport.rate, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Collected: {formatGHS(detailCollectionReport.collected)}</span>
+                    <span>Expected: {formatGHS(detailCollectionReport.expected)}</span>
+                  </div>
+                </div>
+
+                {/* Fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Expected Total</p>
+                    <p className="text-sm font-medium mt-0.5">{formatGHS(detailCollectionReport.expected)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Collected Total</p>
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(detailCollectionReport.collected)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Contributions Recorded</p>
+                    <p className="text-sm font-medium mt-0.5">{detailCollectionReport.contributionsCount}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Overdue Members</p>
+                    <p className={`text-sm font-bold mt-0.5 ${detailCollectionReport.overdueMembers > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                      {detailCollectionReport.overdueMembers}
+                    </p>
+                  </div>
+                  {group && (
+                    <>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Members</p>
+                        <p className="text-sm font-medium mt-0.5">{group.members} / {group.maxMembers}</p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Contribution</p>
+                        <p className="text-sm font-medium capitalize mt-0.5">{formatGHS(group.contributionAmount)} / {group.frequency}</p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Current Round</p>
+                        <p className="text-sm font-medium mt-0.5">{group.currentRound} / {group.totalRounds}</p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Branch</p>
+                        <p className="text-sm font-medium mt-0.5">{group.branch}</p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Treasurer</p>
+                        <p className="text-sm font-medium mt-0.5">{group.treasurerName}</p>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">Next Payout</p>
+                        <p className="text-sm font-medium mt-0.5 truncate">{formatDate(group.nextPayout)} — {group.nextPayoutMember}</p>
+                      </div>
+                    </>
+                  )}
+                  <div className="rounded-lg border p-3 col-span-2">
+                    <p className="text-xs text-muted-foreground">Group Reference</p>
+                    <p className="text-sm font-medium mt-0.5">{detailCollectionReport.groupId}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payout Report Detail Dialog */}
+      <Dialog open={!!detailPayoutReport} onOpenChange={() => setDetailPayoutReport(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Payout Report Details</DialogTitle>
+            <DialogDescription>Payout record for {dateRangeLabel}</DialogDescription>
+          </DialogHeader>
+          {detailPayoutReport && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {getInitials(detailPayoutReport.memberName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{detailPayoutReport.memberName}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`text-xs capitalize ${getStatusColor(detailPayoutReport.status)}`}>
+                      {detailPayoutReport.status}
+                    </Badge>
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      {formatGHS(detailPayoutReport.amount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fields */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Amount</p>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(detailPayoutReport.amount)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-sm font-medium capitalize mt-0.5">{detailPayoutReport.status}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Group</p>
+                  <p className="text-sm font-medium mt-0.5 truncate">{detailPayoutReport.groupName}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Method</p>
+                  <p className="text-sm font-medium mt-0.5">{detailPayoutReport.method}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Payout Date</p>
+                  <p className="text-sm font-medium mt-0.5">{formatDate(detailPayoutReport.date)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Report Period</p>
+                  <p className="text-sm font-medium mt-0.5">{dateRangeLabel}</p>
+                </div>
+                <div className="rounded-lg border p-3 col-span-2">
+                  <p className="text-xs text-muted-foreground">Reference ID</p>
+                  <p className="text-sm font-medium mt-0.5">{detailPayoutReport.id}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

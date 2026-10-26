@@ -8,8 +8,13 @@ import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import type { SusuGroup, SusuPayout } from '@/lib/types';
 import {
   Users, PiggyBank, Wallet, Clock, Shield, ArrowRight,
   TrendingUp, CalendarCheck, CircleDollarSign, BarChart3,
@@ -25,6 +30,9 @@ const fadeUp = {
 
 export function TreasurerDashboard() {
   const { user, managedGroups, allContributions, payouts, allMembers, processPayout, setActivePage } = useTreasurerStore();
+
+  const [detailGroup, setDetailGroup] = useState<SusuGroup | null>(null);
+  const [detailPayout, setDetailPayout] = useState<SusuPayout | null>(null);
 
   const pendingPayouts = payouts.filter(p => p.status === 'pending');
   const totalPoolValue = managedGroups.reduce((sum, g) => sum + g.totalPool, 0);
@@ -240,7 +248,19 @@ export function TreasurerDashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.08 }}
                 >
-                  <Card className="hover:shadow-md transition-shadow touch-manipulation h-full">
+                  <Card
+                    onClick={() => setDetailGroup(group)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setDetailGroup(group);
+                      }
+                    }}
+                    aria-label={`Open ${group.name} group details`}
+                    className="cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all touch-manipulation h-full"
+                  >
                     <CardContent className="p-3 lg:p-4 space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
@@ -307,7 +327,20 @@ export function TreasurerDashboard() {
               ) : (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto overscroll-contain">
                   {pendingPayouts.map((payout) => (
-                    <div key={payout.id} className="mobile-card rounded-lg border p-3 space-y-2 touch-manipulation">
+                    <div
+                      key={payout.id}
+                      onClick={() => setDetailPayout(payout)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailPayout(payout);
+                        }
+                      }}
+                      aria-label={`Open payout details for ${payout.memberName}`}
+                      className="mobile-card rounded-lg border p-3 space-y-2 touch-manipulation cursor-pointer hover:bg-muted/30 hover:border-primary/40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       <div className="flex items-start justify-between">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{payout.memberName}</p>
@@ -324,7 +357,10 @@ export function TreasurerDashboard() {
                       <Button
                         size="sm"
                         className="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white touch-manipulation"
-                        onClick={() => handleProcessPayout(payout.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProcessPayout(payout.id);
+                        }}
                       >
                         <CircleDollarSign className="mr-1 h-3.5 w-3.5" />
                         Process Payout
@@ -381,7 +417,20 @@ export function TreasurerDashboard() {
               const progress = collection.total > 0 ? Math.round((collection.paid / collection.total) * 100) : 0;
 
               return (
-                <div key={group.id} className="space-y-2">
+                <div
+                  key={group.id}
+                  onClick={() => setDetailGroup(group)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setDetailGroup(group);
+                    }
+                  }}
+                  aria-label={`Open ${group.name} collection status details`}
+                  className="space-y-2 rounded-lg cursor-pointer hover:bg-muted/30 transition-colors p-1 -m-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <div className="h-3 w-3 rounded-full bg-emerald-500" />
@@ -409,6 +458,203 @@ export function TreasurerDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Group Detail Dialog */}
+      <Dialog open={!!detailGroup} onOpenChange={() => setDetailGroup(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Group Details</DialogTitle>
+            <DialogDescription>Complete susu group information</DialogDescription>
+          </DialogHeader>
+          {detailGroup && (() => {
+            const groupProgress = Math.round((detailGroup.currentRound / detailGroup.totalRounds) * 100);
+            const collection = getGroupCollectionProgress(detailGroup.id, detailGroup.members);
+            const roundCollection = collection.total > 0 ? Math.round((collection.paid / collection.total) * 100) : 0;
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                      {getInitials(detailGroup.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-semibold truncate">{detailGroup.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className={`text-xs capitalize ${getStatusColor(detailGroup.status)}`}>
+                        {detailGroup.status}
+                      </Badge>
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        {detailGroup.members} members
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Round progress */}
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Round {detailGroup.currentRound} of {detailGroup.totalRounds}</span>
+                    <span className="font-bold">{groupProgress}%</span>
+                  </div>
+                  <Progress value={groupProgress} className="h-2.5" />
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Collection this round: {collection.paid}/{collection.total}</span>
+                    <span>{roundCollection}%</span>
+                  </div>
+                </div>
+
+                {/* Fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Total Pool</p>
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(detailGroup.totalPool)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Contribution</p>
+                    <p className="text-sm font-medium capitalize mt-0.5">{formatGHS(detailGroup.contributionAmount)} / {detailGroup.frequency}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Members</p>
+                    <p className="text-sm font-medium mt-0.5">{detailGroup.members} / {detailGroup.maxMembers}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Current Round</p>
+                    <p className="text-sm font-medium mt-0.5">{detailGroup.currentRound} / {detailGroup.totalRounds}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Next Payout</p>
+                    <p className="text-sm font-medium mt-0.5">{formatDate(detailGroup.nextPayout)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Next Payout Member</p>
+                    <p className="text-sm font-medium mt-0.5 truncate">{detailGroup.nextPayoutMember}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Round Start Date</p>
+                    <p className="text-sm font-medium mt-0.5">{formatDate(detailGroup.roundStartDate)}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Branch</p>
+                    <p className="text-sm font-medium mt-0.5">{detailGroup.branch}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Treasurer</p>
+                    <p className="text-sm font-medium mt-0.5">{detailGroup.treasurerName}</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <p className="text-sm font-medium capitalize mt-0.5">{detailGroup.status}</p>
+                  </div>
+                  <div className="rounded-lg border p-3 col-span-2">
+                    <p className="text-xs text-muted-foreground">Description</p>
+                    <p className="text-sm font-medium mt-0.5">{detailGroup.description}</p>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full min-h-[44px]"
+                  onClick={() => {
+                    setDetailGroup(null);
+                    setActivePage('groups');
+                  }}
+                >
+                  <Layers className="mr-1 h-4 w-4" />
+                  Manage in Groups
+                </Button>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Payout Detail Dialog */}
+      <Dialog open={!!detailPayout} onOpenChange={() => setDetailPayout(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Payout Details</DialogTitle>
+            <DialogDescription>Complete payout information</DialogDescription>
+          </DialogHeader>
+          {detailPayout && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {getInitials(detailPayout.memberName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{detailPayout.memberName}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={`text-xs capitalize ${getStatusColor(detailPayout.status)}`}>
+                      {detailPayout.status}
+                    </Badge>
+                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                      <CircleDollarSign className="h-3 w-3" />
+                      {formatGHS(detailPayout.amount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fields */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Amount</p>
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{formatGHS(detailPayout.amount)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="text-sm font-medium capitalize mt-0.5">{detailPayout.status}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Group</p>
+                  <p className="text-sm font-medium mt-0.5 truncate">{detailPayout.groupName}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Round</p>
+                  <p className="text-sm font-medium mt-0.5">{detailPayout.round}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Payout Date</p>
+                  <p className="text-sm font-medium mt-0.5">{formatDate(detailPayout.payoutDate)}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Method</p>
+                  <p className="text-sm font-medium mt-0.5">{detailPayout.disbursementMethod === 'momo' ? 'Mobile Money' : 'Bank Transfer'}</p>
+                </div>
+                {detailPayout.momoNumber && (
+                  <div className="rounded-lg border p-3 col-span-2">
+                    <p className="text-xs text-muted-foreground">Disbursement Number</p>
+                    <p className="text-sm font-medium mt-0.5">{detailPayout.momoNumber}</p>
+                  </div>
+                )}
+                <div className="rounded-lg border p-3 col-span-2">
+                  <p className="text-xs text-muted-foreground">Reference ID</p>
+                  <p className="text-sm font-medium mt-0.5">{detailPayout.id}</p>
+                </div>
+              </div>
+
+              {detailPayout.status === 'pending' && (
+                <Button
+                  className="w-full min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => {
+                    handleProcessPayout(detailPayout.id);
+                    setDetailPayout(null);
+                  }}
+                >
+                  <CheckCircle className="mr-1 h-4 w-4" />
+                  Process Payout
+                </Button>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

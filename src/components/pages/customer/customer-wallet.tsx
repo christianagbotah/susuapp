@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { useCustomerStore } from '@/store/app-store';
-import { formatGHS, formatDate, getStatusColor } from '@/lib/formatters';
+import { formatGHS, formatDate, formatDateTime, getStatusColor, getInitials } from '@/lib/formatters';
+import type { Transaction, Wallet as WalletData } from '@/lib/types';
 import { mobileMoneyProviders } from '@/lib/mock-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -106,6 +108,10 @@ export function CustomerWallet() {
   const [depositAmount, setDepositAmount] = useState('');
   const [momoOpen, setMomoOpen] = useState(false);
 
+  // ---- Detail dialog state (card → detail linkage) ----
+  const [detailWallet, setDetailWallet] = useState<WalletData | null>(null);
+  const [detailTxn, setDetailTxn] = useState<Transaction | null>(null);
+
   // ---- Withdraw state ----
   const [withdrawWalletId, setWithdrawWalletId] = useState('');
   const [withdrawProviderId, setWithdrawProviderId] = useState('');
@@ -196,6 +202,18 @@ export function CustomerWallet() {
     setConfirmDialog({ open: false, type: 'deposit', walletId: '', amount: 0, providerName: '' });
   }
 
+  // ---- Clipboard helper (wallet details dialog) ----
+  function copyToClipboard(value: string, label: string) {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(value)
+        .then(() => toast.success(`${label} copied to clipboard`))
+        .catch(() => toast.error(`Could not copy ${label.toLowerCase()}`));
+    } else {
+      toast.error('Clipboard is not available');
+    }
+  }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -275,7 +293,19 @@ export function CustomerWallet() {
                     whileHover={{ y: -3, scale: 1.01 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                   >
-                    <Card className="overflow-hidden border-slate-200/80 shadow-sm transition-shadow hover:shadow-md mobile-card">
+                    <Card
+                      onClick={() => setDetailWallet(wallet)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailWallet(wallet);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Open ${getWalletTypeLabel(wallet.type)} details`}
+                      className="mobile-card cursor-pointer overflow-hidden border-slate-200/80 shadow-sm transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       {/* Colored top strip */}
                       <div className={`h-2 bg-gradient-to-r ${getWalletTypeBg(wallet.type)}`} />
                       <CardContent className="p-5">
@@ -375,7 +405,17 @@ export function CustomerWallet() {
                             key={txn.id}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-slate-50/80"
+                            onClick={() => setDetailTxn(txn)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setDetailTxn(txn);
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Open transaction details"
+                            className="flex cursor-pointer items-center justify-between px-5 py-3.5 transition-all hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <div className="flex items-center gap-3">
                               <div className={`flex h-9 w-9 items-center justify-center rounded-full ${
@@ -1086,6 +1126,175 @@ export function CustomerWallet() {
               {confirmDialog.type === 'deposit' ? 'Confirm Deposit' : 'Confirm Withdrawal'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==============================
+          Wallet Detail Dialog (card → detail linkage)
+          ============================== */}
+      <Dialog open={!!detailWallet} onOpenChange={() => setDetailWallet(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Wallet Details</DialogTitle>
+            <DialogDescription>Full wallet information</DialogDescription>
+          </DialogHeader>
+          {detailWallet && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className={`bg-gradient-to-br text-sm font-bold text-white ${getWalletTypeBg(detailWallet.type)}`}>
+                    {getInitials(getWalletTypeLabel(detailWallet.type))}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{getWalletTypeLabel(detailWallet.type)}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge className={`${getStatusColor(detailWallet.status)} text-xs capitalize`}>
+                      {detailWallet.status}
+                    </Badge>
+                    {detailWallet.isDefault && (
+                      <Badge className="h-5 bg-emerald-100 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100">
+                        Default
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Balance */}
+              <div className="rounded-lg bg-muted p-4 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Balance</p>
+                <p className="text-2xl font-bold text-emerald-600">{formatGHS(detailWallet.balance)}</p>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="font-medium">{getWalletTypeLabel(detailWallet.type)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Currency</p>
+                  <p className="font-medium">{detailWallet.currency}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="font-medium capitalize">{detailWallet.status}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Default Wallet</p>
+                  <p className="font-medium">{detailWallet.isDefault ? 'Yes' : 'No'}</p>
+                </div>
+                {detailWallet.provider && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Provider</p>
+                    <p className="font-medium">{detailWallet.provider}</p>
+                  </div>
+                )}
+                {detailWallet.accountNumber && (
+                  <div className="col-span-2 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Account Number</p>
+                      <p className="truncate font-mono font-medium">{detailWallet.accountNumber}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1.5"
+                      onClick={() => {
+                        if (detailWallet.accountNumber) copyToClipboard(detailWallet.accountNumber, 'Account number');
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy
+                    </Button>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Wallet ID</p>
+                  <p className="font-mono text-xs">{detailWallet.id}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ==============================
+          Transaction Detail Dialog (recent activity → detail linkage)
+          ============================== */}
+      <Dialog open={!!detailTxn} onOpenChange={() => setDetailTxn(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+            <DialogDescription>Full details of this wallet transaction</DialogDescription>
+          </DialogHeader>
+          {detailTxn && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 text-emerald-700">
+                    {getInitials(detailTxn.counterpartName || detailTxn.description)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{detailTxn.description}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge className={`${getStatusColor(detailTxn.status)} text-xs capitalize`}>
+                      {detailTxn.status}
+                    </Badge>
+                    <Badge className={`${getTxnTypeBadge(detailTxn.type).variant} text-xs`}>
+                      {getTxnTypeBadge(detailTxn.type).label}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="rounded-lg bg-muted p-4 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Amount</p>
+                <p className={`text-2xl font-bold ${isPositiveAmount(detailTxn.type) ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {isPositiveAmount(detailTxn.type) ? '+' : '-'}{formatGHS(detailTxn.amount)}
+                </p>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium">{formatDateTime(detailTxn.date)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Balance After</p>
+                  <p className="font-medium">{formatGHS(detailTxn.balanceAfter)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Category</p>
+                  <p className="font-medium">{detailTxn.category}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="font-medium">{getTxnTypeBadge(detailTxn.type).label}</p>
+                </div>
+                {detailTxn.counterpartName && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Counterpart</p>
+                    <p className="font-medium">{detailTxn.counterpartName}</p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Reference</p>
+                  <p className="break-all font-mono text-xs">{detailTxn.reference}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Transaction ID</p>
+                  <p className="font-mono text-xs">{detailTxn.id}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </motion.div>

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Scale, CheckCircle2, AlertTriangle, Calculator, Printer } from 'lucide-react';
+import { Scale, CheckCircle2, AlertTriangle, Calculator, Download } from 'lucide-react';
 import type { EODReconciliationLine } from '@/lib/types';
 
 const categoryLabel: Record<EODReconciliationLine['category'], string> = {
@@ -22,10 +22,27 @@ const categoryLabel: Record<EODReconciliationLine['category'], string> = {
   float: 'Opening Float',
 };
 
+const openOnKey = (fn: () => void) => (e: React.KeyboardEvent<HTMLDivElement>): void => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fn();
+  }
+};
+
+function DetailField({ label, value, wide = false }: { label: string; value: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={`min-w-0 ${wide ? 'col-span-2' : ''}`}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="text-sm font-medium">{value}</div>
+    </div>
+  );
+}
+
 export function TellerReconciliation() {
   const { eodLines, setEODCounted, drawer } = useTellerStore();
   const [countOpen, setCountOpen] = useState(false);
   const [counts, setCounts] = useState<Record<number, string>>({});
+  const [detailLine, setDetailLine] = useState<EODReconciliationLine | null>(null);
 
   const totalSystem = eodLines.reduce((s, l) => s + l.systemTotal, 0);
   const totalCounted = eodLines.reduce((s, l) => s + l.countedTotal, 0);
@@ -41,6 +58,37 @@ export function TellerReconciliation() {
 
   const liveCounted = Object.entries(counts).reduce((sum, [note, count]) => sum + Number(note) * (Number(count) || 0), 0);
   const liveVariance = liveCounted - drawer.expectedBalance;
+
+  const escapeCsv = (value: string | number): string => {
+    const s = String(value);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const downloadEODCsv = () => {
+    const header = ['Line ID', 'Category', 'System Total (GHS)', 'Counted Total (GHS)', 'Variance (GHS)', 'Transactions'];
+    const rows = eodLines.map(l => [l.id, categoryLabel[l.category], l.systemTotal.toFixed(2), l.countedTotal.toFixed(2), l.variance.toFixed(2), l.txCount]);
+    const summary: (string | number)[][] = [
+      [],
+      ['Summary', '25 Oct 2026'],
+      ['System Total', '', '', totalSystem.toFixed(2)],
+      ['Counted Total', '', '', totalCounted.toFixed(2)],
+      ['Variance', '', '', totalVariance.toFixed(2)],
+      ['Status', balanced ? 'BALANCED' : 'VARIANCE — BM CO-APPROVAL REQUIRED'],
+    ];
+    const csv = [header, ...rows, ...summary].map(r => r.map(escapeCsv).join(',')).join('\r\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'eod-reconciliation-2026-10-25.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success('EOD sheet exported', {
+      description: `CSV downloaded — ${eodLines.length} lines · variance ${totalVariance > 0 ? '+' : ''}${formatGHS(totalVariance)}.`,
+    });
+  };
 
   const saveCashCount = () => {
     const notes = drawer.currencyNotes.map(n => ({ note: n.note, count: Number(counts[n.note]) || 0 }));
@@ -94,7 +142,14 @@ export function TellerReconciliation() {
             const hasVariance = l.variance !== 0;
             return (
               <motion.div key={l.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.25, delay: i * 0.05 }}>
-                <div className={`flex flex-col gap-2 rounded-lg border p-3.5 sm:flex-row sm:items-center sm:justify-between ${hasVariance ? 'border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10' : ''}`}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open reconciliation line details — ${categoryLabel[l.category]}`}
+                  onClick={() => setDetailLine(l)}
+                  onKeyDown={openOnKey(() => setDetailLine(l))}
+                  className={`flex cursor-pointer flex-col gap-2 rounded-lg border p-3.5 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-row sm:items-center sm:justify-between ${hasVariance ? 'border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10' : ''}`}
+                >
                   <div className="min-w-0">
                     <p className="flex items-center gap-2 text-sm font-semibold">
                       {categoryLabel[l.category]}
@@ -124,8 +179,8 @@ export function TellerReconciliation() {
           })}
 
           <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:justify-end">
-            <Button variant="outline" className="min-h-[44px] touch-manipulation" onClick={() => toast.info('Reconciliation sheet sent to printer / PDF exported.')}>
-              <Printer className="mr-2 h-4 w-4" /> Print EOD Sheet
+            <Button variant="outline" className="min-h-[44px] touch-manipulation" onClick={downloadEODCsv}>
+              <Download className="mr-2 h-4 w-4" /> Export EOD CSV
             </Button>
             <Button
               className={`min-h-[44px] touch-manipulation ${balanced ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'}`}
@@ -180,6 +235,50 @@ export function TellerReconciliation() {
             <Button variant="outline" className="min-h-[44px]" onClick={() => setCountOpen(false)}>Cancel</Button>
             <Button className="min-h-[44px] touch-manipulation" onClick={saveCashCount}>Save Count</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* EOD line detail dialog */}
+      <Dialog open={!!detailLine} onOpenChange={() => setDetailLine(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Reconciliation Line</DialogTitle>
+            <DialogDescription>End-of-day channel record — system vs counted figures.</DialogDescription>
+          </DialogHeader>
+          {detailLine && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${detailLine.variance === 0 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+                  <Scale className={`h-5 w-5 ${detailLine.variance === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{categoryLabel[detailLine.category]}</p>
+                  <Badge className={`mt-1 text-[10px] ${detailLine.variance === 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}`}>
+                    {detailLine.variance === 0 ? 'Balanced' : 'Variance flagged'}
+                  </Badge>
+                </div>
+              </div>
+              <div className="rounded-lg bg-muted p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <DetailField label="Line ID" value={detailLine.id} />
+                  <DetailField label="Category" value={categoryLabel[detailLine.category]} />
+                  <DetailField label="System total" value={formatGHS(detailLine.systemTotal)} />
+                  <DetailField label="Counted total" value={formatGHS(detailLine.countedTotal)} />
+                  <DetailField label="Variance" value={
+                    <span className={`font-semibold ${detailLine.variance === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      {detailLine.variance > 0 ? '+' : ''}{formatGHS(detailLine.variance)}
+                    </span>
+                  } />
+                  <DetailField label="Transactions" value={String(detailLine.txCount)} />
+                </div>
+              </div>
+              <p className={`text-xs ${detailLine.variance === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                {detailLine.variance === 0
+                  ? 'Counted cash/float matches the system figure — no action required.'
+                  : 'Variance must be reported to the Branch Manager before EOD sign-off.'}
+              </p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

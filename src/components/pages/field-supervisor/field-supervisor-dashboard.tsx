@@ -1,14 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import { useFieldSupervisorStore } from '@/store/staff-stores';
 import { toast } from 'sonner';
-import { formatGHS, formatDate } from '@/lib/formatters';
+import { formatGHS, formatDate, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCard } from '@/components/shared/kpi-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import type { SupervisedAgent } from '@/lib/types';
 import {
   Route, Users, Wallet, ClipboardCheck, TrendingUp, TrendingDown,
   MapPin, Radio, Bell, ArrowRight, AlertTriangle, Percent,
@@ -22,8 +26,25 @@ const statusMeta: Record<string, { badge: string; dot: string }> = {
   offline: { badge: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', dot: 'bg-slate-400' },
 };
 
+const openOnKey = (fn: () => void) => (e: React.KeyboardEvent<HTMLDivElement>): void => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fn();
+  }
+};
+
+function DetailField({ label, value, wide = false }: { label: string; value: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={`min-w-0 ${wide ? 'col-span-2' : ''}`}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="text-sm font-medium">{value}</div>
+    </div>
+  );
+}
+
 export function FieldSupervisorDashboard() {
   const { user, agents, routes, spotChecks, setActivePage, nudgeAgent } = useFieldSupervisorStore();
+  const [detailAgent, setDetailAgent] = useState<SupervisedAgent | null>(null);
 
   const totalExpected = agents.reduce((s, a) => s + a.expectedToday, 0);
   const totalCollected = agents.reduce((s, a) => s + a.todayCollections, 0);
@@ -119,7 +140,15 @@ export function FieldSupervisorDashboard() {
             {agents.slice(0, 4).map(a => {
               const meta = statusMeta[a.status];
               return (
-                <Card key={a.id} className="mobile-card">
+                <Card
+                  key={a.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open agent status details — ${a.name}`}
+                  onClick={() => setDetailAgent(a)}
+                  onKeyDown={openOnKey(() => setDetailAgent(a))}
+                  className="mobile-card cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+                >
                   <CardContent className="flex items-center gap-3 p-3.5">
                     <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} />
                     <div className="min-w-0 flex-1">
@@ -193,6 +222,59 @@ export function FieldSupervisorDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Agent status detail dialog */}
+      <Dialog open={!!detailAgent} onOpenChange={() => setDetailAgent(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Agent Live Status</DialogTitle>
+            <DialogDescription>Field agent record — position, collections and sync state.</DialogDescription>
+          </DialogHeader>
+          {detailAgent && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-green-100 text-sm font-bold text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                    {getInitials(detailAgent.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{detailAgent.name}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Badge className={`text-[9px] capitalize ${statusMeta[detailAgent.status].badge}`}>{detailAgent.status.replace('_', ' ')}</Badge>
+                    <span className="text-xs text-muted-foreground">sync {detailAgent.lastSync}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg bg-muted p-4">
+                <div className="mb-3 flex items-center justify-between text-sm">
+                  <span className="font-medium">Collection progress</span>
+                  <span className={`font-bold ${detailAgent.collectionRate >= 85 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{detailAgent.collectionRate}%</span>
+                </div>
+                <Progress value={detailAgent.collectionRate} className="h-2.5" />
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                  <span>Collected: {formatGHS(detailAgent.todayCollections)}</span>
+                  <span>Expected: {formatGHS(detailAgent.expectedToday)}</span>
+                </div>
+              </div>
+              <div className="rounded-lg bg-muted p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <DetailField label="Agent code" value={detailAgent.agentCode} />
+                  <DetailField label="Area" value={detailAgent.area} />
+                  <DetailField label="Status" value={<span className="capitalize">{detailAgent.status.replace('_', ' ')}</span>} />
+                  <DetailField label="Customers" value={String(detailAgent.customers)} />
+                  <DetailField label="Today collections" value={<span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatGHS(detailAgent.todayCollections)}</span>} />
+                  <DetailField label="Expected today" value={formatGHS(detailAgent.expectedToday)} />
+                  <DetailField label="Float balance" value={formatGHS(detailAgent.floatBalance)} />
+                  <DetailField label="Pending verify" value={String(detailAgent.pendingVerify)} />
+                  <DetailField label="Collection rate" value={`${detailAgent.collectionRate}%`} />
+                  <DetailField label="Last sync" value={detailAgent.lastSync} />
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

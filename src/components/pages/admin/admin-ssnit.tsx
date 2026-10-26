@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useAdminExtendedStore } from '@/store/app-store';
-import { formatGHS, formatDate, getStatusColor } from '@/lib/formatters';
+import { formatGHS, formatDate, getStatusColor, getInitials } from '@/lib/formatters';
 import { motion } from 'framer-motion';
 import {
   Landmark, Clock, Users, CalendarClock, AlertCircle,
@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -31,7 +32,7 @@ import {
 } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { toast } from 'sonner';
-import type { SSNITFiling } from '@/lib/types';
+import type { SSNITContribution, SSNITFiling } from '@/lib/types';
 
 // ---- Status helpers ----
 const filingStatusVariant: Record<string, string> = {
@@ -59,6 +60,8 @@ export function AdminSSNIT() {
   const [activeTab, setActiveTab] = useState('filings');
   const [periodFilter, setPeriodFilter] = useState('all');
   const [receiptFiling, setReceiptFiling] = useState<SSNITFiling | null>(null);
+  const [detailFiling, setDetailFiling] = useState<SSNITFiling | null>(null);
+  const [detailContribution, setDetailContribution] = useState<SSNITContribution | null>(null);
 
   // ---- Computed values ----
   const totalYTD = useMemo(
@@ -276,7 +279,11 @@ export function AdminSSNIT() {
                     </TableHeader>
                     <TableBody>
                       {ssnitFilings.map((filing) => (
-                        <TableRow key={filing.id} className="hover:bg-muted/30">
+                        <TableRow
+                          key={filing.id}
+                          className="cursor-pointer hover:bg-muted/30 transition-colors"
+                          onClick={() => setDetailFiling(filing)}
+                        >
                           <TableCell className="font-medium">{filing.period}</TableCell>
                           <TableCell className="text-right">{filing.totalEmployees}</TableCell>
                           <TableCell className="text-right">{formatGHS(filing.totalEmployeeContributions)}</TableCell>
@@ -295,7 +302,7 @@ export function AdminSSNIT() {
                                 size="sm"
                                 variant="outline"
                                 className="h-7 px-2 text-xs"
-                                onClick={() => setReceiptFiling(filing)}
+                                onClick={(e) => { e.stopPropagation(); setReceiptFiling(filing); }}
                               >
                                 <Receipt className="mr-1 h-3 w-3" /> View Receipt
                               </Button>
@@ -310,7 +317,15 @@ export function AdminSSNIT() {
                 {/* Mobile Cards */}
                 <div className="lg:hidden divide-y">
                   {ssnitFilings.map((filing) => (
-                    <div key={filing.id} className="mobile-card p-4 space-y-3">
+                    <div
+                      key={filing.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View SSNIT filing details for ${filing.period}`}
+                      className="mobile-card p-4 space-y-3 cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+                      onClick={() => setDetailFiling(filing)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailFiling(filing); } }}
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold text-sm">{filing.period}</p>
@@ -348,7 +363,7 @@ export function AdminSSNIT() {
                           size="sm"
                           variant="outline"
                           className="w-full h-9 text-xs min-h-[44px] lg:min-h-0"
-                          onClick={() => setReceiptFiling(filing)}
+                          onClick={(e) => { e.stopPropagation(); setReceiptFiling(filing); }}
                         >
                           <Receipt className="mr-1 h-3 w-3" /> View Receipt
                         </Button>
@@ -426,7 +441,11 @@ export function AdminSSNIT() {
                     </TableHeader>
                     <TableBody>
                       {filteredContributions.map((c) => (
-                        <TableRow key={c.id} className="hover:bg-muted/30">
+                        <TableRow
+                          key={c.id}
+                          className="cursor-pointer hover:bg-muted/30 transition-colors"
+                          onClick={() => setDetailContribution(c)}
+                        >
                           <TableCell className="font-medium">{c.employeeName}</TableCell>
                           <TableCell className="font-mono text-xs text-muted-foreground">{c.ssnitNumber}</TableCell>
                           <TableCell className="text-right">{formatGHS(c.basicSalary)}</TableCell>
@@ -458,7 +477,15 @@ export function AdminSSNIT() {
                 {/* Mobile Cards */}
                 <div className="lg:hidden divide-y">
                   {filteredContributions.map((c) => (
-                    <div key={c.id} className="mobile-card p-4 space-y-3">
+                    <div
+                      key={c.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View SSNIT contribution details for ${c.employeeName}`}
+                      className="mobile-card p-4 space-y-3 cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+                      onClick={() => setDetailContribution(c)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailContribution(c); } }}
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold text-sm">{c.employeeName}</p>
@@ -848,6 +875,148 @@ export function AdminSSNIT() {
                 <p className="text-xs text-muted-foreground">
                   Keep this receipt for your records. Contact SSNIT if there are discrepancies.
                 </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ========== Filing Detail Dialog ========== */}
+      <Dialog open={!!detailFiling} onOpenChange={() => setDetailFiling(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>SSNIT Filing Details</DialogTitle>
+            <DialogDescription>Complete filing and payment information for this period</DialogDescription>
+          </DialogHeader>
+          {detailFiling && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    <Landmark className="h-5 w-5" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{detailFiling.period}</p>
+                  <Badge variant="secondary" className={`text-xs capitalize ${filingStatusVariant[detailFiling.status] || ''}`}>
+                    {detailFiling.status}
+                  </Badge>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Filing amounts */}
+              <div className="rounded-lg bg-muted p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Total Employees</span><span className="font-medium">{detailFiling.totalEmployees}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Employee Contrib.</span><span>{formatGHS(detailFiling.totalEmployeeContributions)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Employer Contrib.</span><span>{formatGHS(detailFiling.totalEmployerContributions)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Tier 2</span><span>{formatGHS(detailFiling.totalTier2)}</span></div>
+                </div>
+                <Separator className="my-3" />
+                <div className="flex justify-between text-sm">
+                  <span className="font-semibold">Grand Total</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatGHS(detailFiling.grandTotal)}</span>
+                </div>
+              </div>
+
+              {/* Dates & reference */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Filing Date</p>
+                  <p className="font-medium">{formatDate(detailFiling.filingDate)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Payment Date</p>
+                  <p className="font-medium">{detailFiling.paymentDate ? formatDate(detailFiling.paymentDate) : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Reference</p>
+                  <p className="font-medium font-mono text-xs">{detailFiling.reference}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Receipt Number</p>
+                  <p className="font-medium font-mono text-xs">{detailFiling.ssnitReceiptNumber || '—'}</p>
+                </div>
+              </div>
+
+              {detailFiling.status === 'paid' && detailFiling.ssnitReceiptNumber && (
+                <Button
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 min-h-[44px]"
+                  onClick={() => { setReceiptFiling(detailFiling); setDetailFiling(null); }}
+                >
+                  <Receipt className="mr-2 h-4 w-4" /> View Payment Receipt
+                </Button>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ========== Contribution Detail Dialog ========== */}
+      <Dialog open={!!detailContribution} onOpenChange={() => setDetailContribution(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>SSNIT Contribution Details</DialogTitle>
+            <DialogDescription>Employee contribution breakdown for this period</DialogDescription>
+          </DialogHeader>
+          {detailContribution && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {getInitials(detailContribution.employeeName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-semibold truncate">{detailContribution.employeeName}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className={`text-xs capitalize ${getStatusColor(detailContribution.status)}`}>
+                      {detailContribution.status}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{detailContribution.period}</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Contribution breakdown */}
+              <div className="rounded-lg bg-muted p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Basic Salary</span><span className="font-medium">{formatGHS(detailContribution.basicSalary)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Employee (5.5%)</span><span>{formatGHS(detailContribution.employeeContribution)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Employer (13.5%)</span><span>{formatGHS(detailContribution.employerContribution)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Tier 2 (5%)</span><span>{formatGHS(detailContribution.tier2Employer)}</span></div>
+                </div>
+                <Separator className="my-3" />
+                <div className="flex justify-between text-sm">
+                  <span className="font-semibold">Total Contribution</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">{formatGHS(detailContribution.totalContribution)}</span>
+                </div>
+              </div>
+
+              {/* Employee & payment info */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Employee ID</p>
+                  <p className="font-medium font-mono text-xs">{detailContribution.employeeId}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">SSNIT Number</p>
+                  <p className="font-medium font-mono text-xs">{detailContribution.ssnitNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Payment Date</p>
+                  <p className="font-medium">{detailContribution.paymentDate ? formatDate(detailContribution.paymentDate) : '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Reference</p>
+                  <p className="font-medium font-mono text-xs">{detailContribution.reference}</p>
+                </div>
               </div>
             </div>
           )}

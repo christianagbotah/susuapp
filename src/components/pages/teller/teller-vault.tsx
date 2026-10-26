@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useTellerStore } from '@/store/staff-stores';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useConfirm } from '@/components/shared/confirm-dialog';
-import { Vault, Landmark, ArrowRightLeft, Send, ShieldCheck } from 'lucide-react';
+import { Vault, Landmark, ArrowRightLeft, Send, ShieldCheck, Check } from 'lucide-react';
 import type { VaultTransfer } from '@/lib/types';
 
 const directionMeta: Record<VaultTransfer['direction'], { label: string; icon: React.ElementType; color: string; bg: string }> = {
@@ -30,9 +30,28 @@ const statusBadge = (s: VaultTransfer['status']) => ({
   completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
 }[s]);
 
+const statusFlow: VaultTransfer['status'][] = ['requested', 'approved', 'in_transit', 'completed'];
+
+const openOnKey = (fn: () => void) => (e: React.KeyboardEvent<HTMLDivElement>): void => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fn();
+  }
+};
+
+function DetailField({ label, value, wide = false }: { label: string; value: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={`min-w-0 ${wide ? 'col-span-2' : ''}`}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="text-sm font-medium">{value}</div>
+    </div>
+  );
+}
+
 export function TellerVault() {
   const { transfers, requestTransfer, markTransferStatus, user } = useTellerStore();
   const [open, setOpen] = useState(false);
+  const [detailTransfer, setDetailTransfer] = useState<VaultTransfer | null>(null);
   const [form, setForm] = useState({ direction: 'to_vault' as VaultTransfer['direction'], amount: '', bank: '', note: '' });
 
   // Confirmation dialog for sensitive actions
@@ -100,7 +119,14 @@ export function TellerVault() {
           const meta = directionMeta[t.direction];
           return (
             <motion.div key={t.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.04 }}>
-              <Card className="mobile-card">
+              <Card
+                role="button"
+                tabIndex={0}
+                aria-label={`Open transfer details — ${meta.label} ${formatGHS(t.amount)}`}
+                onClick={() => setDetailTransfer(t)}
+                onKeyDown={openOnKey(() => setDetailTransfer(t))}
+                className="mobile-card cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+              >
                 <CardContent className="flex flex-col gap-2.5 p-3.5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${meta.bg}`}>
@@ -115,7 +141,7 @@ export function TellerVault() {
                   <div className="flex items-center justify-between gap-2 sm:justify-end">
                     <Badge className={`text-[10px] capitalize ${statusBadge(t.status)}`}>{t.status.replace(/_/g, ' ')}</Badge>
                     {t.status !== 'completed' && (
-                      <Button size="sm" variant="outline" className="min-h-[40px] touch-manipulation" onClick={() => advance(t)}>
+                      <Button size="sm" variant="outline" className="min-h-[40px] touch-manipulation" onClick={e => { e.stopPropagation(); advance(t); }}>
                         {t.status === 'requested' ? 'Approve (BM)' : t.status === 'approved' ? 'Mark In Transit' : 'Confirm Delivered'}
                       </Button>
                     )}
@@ -183,6 +209,66 @@ export function TellerVault() {
             <Button variant="outline" className="min-h-[44px]" onClick={() => setOpen(false)}>Cancel</Button>
             <Button className="min-h-[44px] touch-manipulation" onClick={handleSubmit}><Send className="mr-2 h-4 w-4" /> Submit Request</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transfer detail dialog */}
+      <Dialog open={!!detailTransfer} onOpenChange={() => setDetailTransfer(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Transfer Details</DialogTitle>
+            <DialogDescription>Dual-controlled cash movement — full record &amp; status timeline.</DialogDescription>
+          </DialogHeader>
+          {detailTransfer && (() => {
+            const meta = directionMeta[detailTransfer.direction];
+            const step = statusFlow.indexOf(detailTransfer.status);
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${meta.bg}`}>
+                    <meta.icon className={`h-5 w-5 ${meta.color}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-semibold">{meta.label} — {formatGHS(detailTransfer.amount)}</p>
+                    <Badge className={`mt-1 text-[10px] capitalize ${statusBadge(detailTransfer.status)}`}>
+                      {detailTransfer.status.replace(/_/g, ' ')}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <h4 className="mb-3 text-sm font-semibold">Status Timeline</h4>
+                  <div className="flex items-start">
+                    {statusFlow.map((s, i) => (
+                      <Fragment key={s}>
+                        <div className="flex flex-col items-center gap-1">
+                          <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${i <= step ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground'}`}>
+                            {i < step ? <Check className="h-3 w-3" /> : i + 1}
+                          </div>
+                          <span className={`text-[10px] capitalize ${i <= step ? 'font-medium text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                            {s.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        {i < statusFlow.length - 1 && <div className={`mx-1 mt-3 h-0.5 flex-1 ${i < step ? 'bg-emerald-500' : 'bg-muted'}`} />}
+                      </Fragment>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-muted p-4">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <DetailField label="Reference" value={detailTransfer.id} />
+                    <DetailField label="Date" value={formatDate(detailTransfer.date)} />
+                    <DetailField label="Amount" value={<span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatGHS(detailTransfer.amount)}</span>} />
+                    <DetailField label="Direction" value={meta.label} />
+                    <DetailField label="Bank" value={detailTransfer.bank ?? '—'} />
+                    <DetailField label="Status" value={<span className="capitalize">{detailTransfer.status.replace(/_/g, ' ')}</span>} />
+                    <DetailField label="Requested by" value={detailTransfer.requestedBy} />
+                    <DetailField label="Approved by" value={detailTransfer.approvedBy ?? 'Awaiting BM approval'} />
+                    <DetailField label="Note" value={detailTransfer.note ?? '—'} wide />
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTellerStore } from '@/store/staff-stores';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,11 +13,37 @@ import {
   Wallet, Users, ArrowDownToLine, ArrowUpFromLine, Scale,
   Landmark, Vault, Clock, CheckCircle2, TrendingUp, Landmark as BankIcon,
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import type { VaultTransfer } from '@/lib/types';
 
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.4 } };
 
+const transferStatusBadge = (s: VaultTransfer['status']) =>
+  s === 'requested'
+    ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+    : s === 'approved'
+      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+
+const openOnKey = (fn: () => void) => (e: React.KeyboardEvent<HTMLDivElement>): void => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fn();
+  }
+};
+
+function DetailField({ label, value, wide = false }: { label: string; value: React.ReactNode; wide?: boolean }) {
+  return (
+    <div className={`min-w-0 ${wide ? 'col-span-2' : ''}`}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="text-sm font-medium">{value}</div>
+    </div>
+  );
+}
+
 export function TellerDashboard() {
   const { user, drawer, queue, transfers, setActivePage } = useTellerStore();
+  const [detailTransfer, setDetailTransfer] = useState<VaultTransfer | null>(null);
 
   const waiting = queue.filter(q => q.status === 'waiting').length;
   const processedToday = queue.filter(q => q.status === 'completed').length;
@@ -114,7 +141,15 @@ export function TellerDashboard() {
           </div>
           <div className="space-y-2">
             {pendingTransfers.map(t => (
-              <Card key={t.id} className="mobile-card">
+              <Card
+                key={t.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open transfer details — ${t.direction.replace(/_/g, ' ')} ${formatGHS(t.amount)}`}
+                onClick={() => setDetailTransfer(t)}
+                onKeyDown={openOnKey(() => setDetailTransfer(t))}
+                className="mobile-card cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+              >
                 <CardContent className="flex items-center justify-between gap-3 p-3.5">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${t.direction.includes('bank') ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
@@ -125,7 +160,7 @@ export function TellerDashboard() {
                       <p className="truncate text-xs text-muted-foreground">{t.note ?? t.bank}</p>
                     </div>
                   </div>
-                  <Badge className={`shrink-0 text-[10px] capitalize ${t.status === 'requested' ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' : t.status === 'approved' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'}`}>
+                  <Badge className={`shrink-0 text-[10px] capitalize ${transferStatusBadge(t.status)}`}>
                     {t.status.replace(/_/g, ' ')}
                   </Badge>
                 </CardContent>
@@ -162,6 +197,44 @@ export function TellerDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Transfer detail dialog */}
+      <Dialog open={!!detailTransfer} onOpenChange={() => setDetailTransfer(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Cash Transfer Details</DialogTitle>
+            <DialogDescription>Dual-controlled vault & bank movement record.</DialogDescription>
+          </DialogHeader>
+          {detailTransfer && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${detailTransfer.direction.includes('bank') ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+                  {detailTransfer.direction.includes('bank') ? <BankIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" /> : <Vault className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold capitalize">{detailTransfer.direction.replace(/_/g, ' ')} — {formatGHS(detailTransfer.amount)}</p>
+                  <Badge className={`mt-1 text-[10px] capitalize ${transferStatusBadge(detailTransfer.status)}`}>
+                    {detailTransfer.status.replace(/_/g, ' ')}
+                  </Badge>
+                </div>
+              </div>
+              <div className="rounded-lg bg-muted p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <DetailField label="Reference" value={detailTransfer.id} />
+                  <DetailField label="Date" value={formatDate(detailTransfer.date)} />
+                  <DetailField label="Amount" value={<span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatGHS(detailTransfer.amount)}</span>} />
+                  <DetailField label="Direction" value={<span className="capitalize">{detailTransfer.direction.replace(/_/g, ' ')}</span>} />
+                  <DetailField label="Bank" value={detailTransfer.bank ?? '—'} />
+                  <DetailField label="Requested by" value={detailTransfer.requestedBy} />
+                  <DetailField label="Approved by" value={detailTransfer.approvedBy ?? 'Awaiting BM approval'} />
+                  <DetailField label="Status" value={<span className="capitalize">{detailTransfer.status.replace(/_/g, ' ')}</span>} />
+                  <DetailField label="Note" value={detailTransfer.note ?? '—'} wide />
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

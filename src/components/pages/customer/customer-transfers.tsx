@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useCustomerStore } from '@/store/app-store';
-import { formatGHS, formatDate, formatDateTime, getStatusColor } from '@/lib/formatters';
+import { formatGHS, formatDate, formatDateTime, formatPhoneGH, getStatusColor, getInitials } from '@/lib/formatters';
 import { mobileMoneyProviders } from '@/lib/mock-data';
 import type { Transfer } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,13 +18,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
-  Send, ArrowLeftRight, Smartphone, Building2, Clock,
+  Send, ArrowLeftRight, Smartphone, Building2,
   CheckCircle2, XCircle, AlertCircle, Info, Copy, Check,
   Shield, Users, TrendingUp, Receipt, Filter, ArrowUpRight,
   Banknote, Search,
@@ -101,16 +102,6 @@ const mockTransfers: Transfer[] = [
 ];
 
 // ---- Helper: Status badge config ----
-function getStatusIcon(status: string) {
-  switch (status) {
-    case 'completed': return CheckCircle2;
-    case 'pending': return Clock;
-    case 'failed': return XCircle;
-    case 'reversed': return AlertCircle;
-    default: return Clock;
-  }
-}
-
 function getStatusText(status: string): string {
   switch (status) {
     case 'completed': return 'Completed';
@@ -188,6 +179,9 @@ export function CustomerTransfers() {
   // ---- Confirmation dialog ----
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // ---- Detail dialog state (card → detail linkage) ----
+  const [detailTransfer, setDetailTransfer] = useState<Transfer | null>(null);
+
   // ---- Handle send submit ----
   function handleSendSubmit() {
     if (!recipientPhone || recipientPhone.length < 10) {
@@ -226,6 +220,18 @@ export function CustomerTransfers() {
     setSendMethod('momo');
     setSendNote('');
     setConfirmOpen(false);
+  }
+
+  // ---- Clipboard helper (transfer receipt dialog) ----
+  function copyReference(reference: string) {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(reference)
+        .then(() => toast.success('Reference copied to clipboard'))
+        .catch(() => toast.error('Could not copy reference'));
+    } else {
+      toast.error('Clipboard is not available');
+    }
   }
 
   // ---- History filter state ----
@@ -796,9 +802,12 @@ export function CustomerTransfers() {
                       </TableRow>
                     ) : (
                       filteredTransfers.map((transfer) => {
-                        const StatusIcon = getStatusIcon(transfer.status);
                         return (
-                          <TableRow key={transfer.id} className="group">
+                          <TableRow
+                            key={transfer.id}
+                            onClick={() => setDetailTransfer(transfer)}
+                            className="group cursor-pointer border-b hover:bg-muted/30 transition-colors"
+                          >
                             <TableCell className="text-sm whitespace-nowrap">
                               {formatDateTime(transfer.date)}
                             </TableCell>
@@ -865,14 +874,25 @@ export function CustomerTransfers() {
               </Card>
             ) : (
               filteredTransfers.map((transfer) => {
-                const StatusIcon = getStatusIcon(transfer.status);
                 return (
                   <motion.div
                     key={transfer.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                   >
-                    <Card className="border-slate-200/80 dark:border-slate-700/50 shadow-sm mobile-card">
+                    <Card
+                      onClick={() => setDetailTransfer(transfer)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailTransfer(transfer);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Open transfer receipt"
+                      className="mobile-card cursor-pointer border-slate-200/80 dark:border-slate-700/50 shadow-sm transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       <CardContent className="p-4 mobile-list-item">
                         <div className="flex items-start gap-3 min-h-[60px]">
                           <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
@@ -1007,6 +1027,99 @@ export function CustomerTransfers() {
               Confirm Transfer
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==============================
+          Transfer Receipt Dialog (history → detail linkage)
+          ============================== */}
+      <Dialog open={!!detailTransfer} onOpenChange={() => setDetailTransfer(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Transfer Receipt</DialogTitle>
+            <DialogDescription>Details of this money transfer</DialogDescription>
+          </DialogHeader>
+          {detailTransfer && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 text-emerald-700">
+                    {getInitials(detailTransfer.recipientName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{detailTransfer.recipientName}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs capitalize ${getStatusColor(detailTransfer.status)}`}
+                    >
+                      {getStatusText(detailTransfer.status)}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs font-normal">
+                      {detailTransfer.recipientPhone.startsWith('0') ? 'MoMo' : 'Bank'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="rounded-lg bg-muted p-4 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Amount Sent</p>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  -{formatGHS(detailTransfer.amount)}
+                </p>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Recipient Phone</p>
+                  <p className="font-mono font-medium">{formatPhoneGH(detailTransfer.recipientPhone)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium">{formatDateTime(detailTransfer.date)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <p className="font-medium">{getStatusText(detailTransfer.status)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Sender</p>
+                  <p className="font-medium">{detailTransfer.senderName}</p>
+                </div>
+                <div className="col-span-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Reference</p>
+                    <p className="truncate font-mono font-medium">{detailTransfer.reference}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 shrink-0 gap-1.5"
+                    onClick={() => copyReference(detailTransfer.reference)}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Copy
+                  </Button>
+                </div>
+                {detailTransfer.note && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Note</p>
+                    <p className="rounded bg-slate-50 dark:bg-slate-800/50 px-2 py-1.5 text-sm">
+                      {detailTransfer.note}
+                    </p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Transfer ID</p>
+                  <p className="font-mono text-xs">{detailTransfer.id}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </motion.div>

@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useCustomerStore } from '@/store/app-store';
-import { formatGHS, formatDate, formatDateTime, getStatusColor } from '@/lib/formatters';
+import { formatGHS, formatDate, formatDateTime, getStatusColor, getInitials } from '@/lib/formatters';
+import type { Transaction } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, PiggyBank, Gift, Landmark, CreditCard, BadgeDollarSign, Receipt, Download, Filter, Calendar } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, PiggyBank, Gift, Landmark, CreditCard, BadgeDollarSign, Receipt, Download, Filter, Calendar, ShieldAlert } from 'lucide-react';
 import { MobileSearchBar } from '@/components/shared/mobile-components';
 import { toast } from 'sonner';
 
@@ -44,12 +47,16 @@ function getTransactionTypeInfo(type: string) {
 }
 
 export function CustomerTransactions() {
-  const { transactions } = useCustomerStore();
+  const { transactions, disputes, fileDispute } = useCustomerStore();
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // ---- Detail dialog state (card → detail linkage) ----
+  const [detailTxn, setDetailTxn] = useState<Transaction | null>(null);
+  const [disputeType, setDisputeType] = useState('other');
 
   const filtered = useMemo(() => {
     return transactions.filter((txn) => {
@@ -76,9 +83,54 @@ export function CustomerTransactions() {
   );
 
   const handleExport = () => {
-    toast.success('Transaction export started', {
-      description: 'Your CSV file will be ready for download shortly.',
+    // Build a real CSV from the currently filtered transactions and trigger a download
+    const escapeCsv = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+    const header = [
+      'Date', 'Type', 'Description', 'Category', 'Counterpart',
+      'Amount (GHS)', 'Status', 'Reference', 'Balance After (GHS)',
+    ];
+    const rows = filtered.map((txn) => [
+      txn.date,
+      txn.type,
+      txn.description,
+      txn.category,
+      txn.counterpartName ?? '',
+      txn.amount.toFixed(2),
+      txn.status,
+      txn.reference,
+      txn.balanceAfter.toFixed(2),
+    ]);
+    const csv = [header, ...rows].map((row) => row.map(escapeCsv).join(',')).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'transactions.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast.success(`Exported ${rows.length} transaction${rows.length !== 1 ? 's' : ''}`, {
+      description: 'transactions.csv has been downloaded.',
     });
+  };
+
+  const openDetail = (txn: Transaction) => {
+    setDisputeType('other');
+    setDetailTxn(txn);
+  };
+
+  const handleFileDispute = () => {
+    if (!detailTxn) return;
+    fileDispute(
+      detailTxn.id,
+      disputeType,
+      `${disputeType.replace('_', ' ')} — ${detailTxn.description} (${formatGHS(detailTxn.amount)})`,
+    );
+    toast.success('Dispute filed successfully', {
+      description: `Our team will review transaction ${detailTxn.reference} and get back to you.`,
+    });
+    setDetailTxn(null);
   };
 
   const resetFilters = () => {
@@ -254,7 +306,11 @@ export function CustomerTransactions() {
                   const isCredit = creditTypes.includes(txn.type);
 
                   return (
-                    <TableRow key={txn.id} className="group">
+                    <TableRow
+                      key={txn.id}
+                      onClick={() => openDetail(txn)}
+                      className="group cursor-pointer border-b hover:bg-muted/30 transition-colors"
+                    >
                       <TableCell className="text-sm whitespace-nowrap">
                         {formatDateTime(txn.date)}
                       </TableCell>
@@ -337,7 +393,20 @@ export function CustomerTransactions() {
             const isCredit = creditTypes.includes(txn.type);
 
             return (
-              <Card key={txn.id} className="mobile-card">
+              <Card
+                key={txn.id}
+                onClick={() => openDetail(txn)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openDetail(txn);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Open transaction details"
+                className="mobile-card cursor-pointer transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 <CardContent className="p-4 mobile-list-item">
                   <div className="flex items-start gap-3 min-h-[60px]">
                     <span
@@ -412,6 +481,119 @@ export function CustomerTransactions() {
           </div>
         </div>
       )}
+
+      {/* Transaction Detail Dialog */}
+      <Dialog open={!!detailTxn} onOpenChange={() => setDetailTxn(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+            <DialogDescription>Receipt and dispute options for this transaction</DialogDescription>
+          </DialogHeader>
+          {detailTxn && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 text-emerald-700">
+                    {getInitials(detailTxn.counterpartName || detailTxn.description)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{detailTxn.description}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs capitalize ${getStatusColor(detailTxn.status)}`}
+                    >
+                      {detailTxn.status}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {getTransactionTypeInfo(detailTxn.type).label}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="rounded-lg bg-muted p-4 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Amount</p>
+                <p
+                  className={`text-2xl font-bold ${
+                    creditTypes.includes(detailTxn.type)
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {creditTypes.includes(detailTxn.type) ? '+' : '-'}{formatGHS(detailTxn.amount)}
+                </p>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium">{formatDateTime(detailTxn.date)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Balance After</p>
+                  <p className="font-medium">{formatGHS(detailTxn.balanceAfter)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Category</p>
+                  <p className="font-medium">{detailTxn.category}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="font-medium">{getTransactionTypeInfo(detailTxn.type).label}</p>
+                </div>
+                {detailTxn.counterpartName && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Counterpart</p>
+                    <p className="font-medium">{detailTxn.counterpartName}</p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Reference</p>
+                  <p className="break-all font-mono text-xs">{detailTxn.reference}</p>
+                </div>
+              </div>
+
+              {/* Dispute flow — debit transactions that completed or failed */}
+              {!creditTypes.includes(detailTxn.type) &&
+                (detailTxn.status === 'completed' || detailTxn.status === 'failed') &&
+                !disputes.some((d) => d.transactionId === detailTxn.id) && (
+                  <div className="space-y-2.5 rounded-lg border p-3">
+                    <p className="flex items-center gap-1.5 text-sm font-medium">
+                      <ShieldAlert className="h-4 w-4 text-amber-500" />
+                      Something wrong with this transaction?
+                    </p>
+                    <Select value={disputeType} onValueChange={setDisputeType}>
+                      <SelectTrigger className="h-10" aria-label="Dispute type">
+                        <SelectValue placeholder="Select dispute type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unauthorized">Unauthorized transaction</SelectItem>
+                        <SelectItem value="duplicate">Duplicate charge</SelectItem>
+                        <SelectItem value="incorrect_amount">Incorrect amount</SelectItem>
+                        <SelectItem value="not_received">Not received</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" className="w-full gap-2" onClick={handleFileDispute}>
+                      <ShieldAlert className="h-4 w-4" />
+                      File Dispute
+                    </Button>
+                  </div>
+                )}
+              {disputes.some((d) => d.transactionId === detailTxn.id) && (
+                <p className="text-xs text-muted-foreground">
+                  A dispute has already been filed for this transaction. Our team will contact you.
+                </p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

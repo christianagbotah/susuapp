@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useCustomerStore } from '@/store/app-store';
-import { formatGHS, formatDate, getStatusColor } from '@/lib/formatters';
+import { formatGHS, formatDate, getStatusColor, getInitials } from '@/lib/formatters';
+import type { SavingsGoal, SusuGroup } from '@/lib/types';
 import { susuGroups as allGroups } from '@/lib/mock-data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -91,6 +93,10 @@ export function CustomerSusu() {
   const [addFundsDialogOpen, setAddFundsDialogOpen] = useState(false);
   const [addFundsGoalId, setAddFundsGoalId] = useState('');
   const [addFundsAmount, setAddFundsAmount] = useState('');
+
+  // ---- Detail dialog state (card → detail linkage) ----
+  const [groupDetail, setGroupDetail] = useState<SusuGroup | null>(null);
+  const [goalDetail, setGoalDetail] = useState<SavingsGoal | null>(null);
 
   const [createGoalDialogOpen, setCreateGoalDialogOpen] = useState(false);
   const [newGoal, setNewGoal] = useState({
@@ -394,7 +400,14 @@ export function CustomerSusu() {
                       whileHover={{ y: -3, scale: 1.01 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md mobile-card">
+                      <Card
+                        onClick={() => setGroupDetail(group)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGroupDetail(group); } }}
+                        aria-label={`View ${group.name} details`}
+                        className="h-full border-slate-200/80 bg-white shadow-sm transition-all cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mobile-card"
+                      >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
@@ -459,7 +472,7 @@ export function CustomerSusu() {
 
                           {/* Contribute Button */}
                           <Button
-                            onClick={() => openContributeDialog(group.id)}
+                            onClick={(e) => { e.stopPropagation(); openContributeDialog(group.id); }}
                             className="w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700 h-11 min-h-[44px] lg:h-auto lg:min-h-0"
                             size="sm"
                           >
@@ -908,7 +921,14 @@ export function CustomerSusu() {
                       whileHover={{ y: -3, scale: 1.01 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <Card className="h-full border-slate-200/80 bg-white shadow-sm transition-shadow hover:shadow-md">
+                      <Card
+                        onClick={() => setGoalDetail(goal)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGoalDetail(goal); } }}
+                        aria-label={`View ${goal.name} details`}
+                        className="h-full border-slate-200/80 bg-white shadow-sm transition-all cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-3">
@@ -988,7 +1008,7 @@ export function CustomerSusu() {
 
                           {/* Add Funds Button */}
                           <Button
-                            onClick={() => openAddFundsDialog(goal.id)}
+                            onClick={(e) => { e.stopPropagation(); openAddFundsDialog(goal.id); }}
                             className="w-full gap-2 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
                             variant="outline"
                             size="sm"
@@ -1070,6 +1090,171 @@ export function CustomerSusu() {
               Add Funds
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ==============================
+          Susu Group Detail Dialog
+          ============================== */}
+      <Dialog open={!!groupDetail} onOpenChange={() => setGroupDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Susu Group Details</DialogTitle>
+            <DialogDescription>
+              Full group information, round progress and payout schedule
+            </DialogDescription>
+          </DialogHeader>
+          {groupDetail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700">
+                    {getInitials(groupDetail.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-lg font-semibold">{groupDetail.name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className={`text-xs capitalize ${getStatusColor(groupDetail.status)}`}>
+                      {groupDetail.status}
+                    </Badge>
+                    <Badge className={`${getFrequencyBadge(groupDetail.frequency)} text-[10px] font-medium capitalize`}>
+                      {groupDetail.frequency}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">{groupDetail.description}</p>
+
+              {/* Round progress */}
+              <div className="space-y-2 rounded-lg bg-muted p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">
+                    Round {groupDetail.currentRound} of {groupDetail.totalRounds}
+                  </span>
+                  <span className="font-bold text-emerald-600">
+                    {Math.round((groupDetail.currentRound / groupDetail.totalRounds) * 100)}%
+                  </span>
+                </div>
+                <Progress
+                  value={Math.round((groupDetail.currentRound / groupDetail.totalRounds) * 100)}
+                  className="h-2.5"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Pool: {formatGHS(groupDetail.totalPool)}</span>
+                  <span>{groupDetail.members}/{groupDetail.maxMembers} members</span>
+                </div>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Contribution</span><span className="font-medium">{formatGHS(groupDetail.contributionAmount)}/{getFrequencyLabel(groupDetail.frequency)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Total Pool</span><span className="font-medium">{formatGHS(groupDetail.totalPool)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Members</span><span>{groupDetail.members}/{groupDetail.maxMembers}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Rounds</span><span>{groupDetail.currentRound}/{groupDetail.totalRounds}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Next Payout</span><span>{formatDate(groupDetail.nextPayout)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Next Recipient</span><span className="truncate">{groupDetail.nextPayoutMember}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Round Started</span><span>{formatDate(groupDetail.roundStartDate)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Treasurer</span><span className="truncate">{groupDetail.treasurerName}</span></div>
+                <div className="flex justify-between gap-2 sm:col-span-2"><span className="text-muted-foreground">Branch</span><span>{groupDetail.branch}</span></div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  className="w-full gap-2 bg-emerald-600 text-white hover:bg-emerald-700 min-h-[44px]"
+                  onClick={() => { openContributeDialog(groupDetail.id); setGroupDetail(null); }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Contribute Now
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ==============================
+          Savings Goal Detail Dialog
+          ============================== */}
+      <Dialog open={!!goalDetail} onOpenChange={() => setGoalDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Savings Goal Details</DialogTitle>
+            <DialogDescription>
+              Progress and contribution plan for this goal
+            </DialogDescription>
+          </DialogHeader>
+          {goalDetail && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-xl bg-amber-100 dark:bg-amber-900/30">
+                    {goalDetail.icon}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-lg font-semibold">{goalDetail.name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px] font-medium capitalize dark:bg-emerald-900/30 dark:text-emerald-400">
+                      <Clock className="mr-0.5 h-3 w-3" />
+                      {goalDetail.contributionFrequency}
+                    </Badge>
+                    {goalDetail.autoContribute && (
+                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px] dark:bg-emerald-900/30 dark:text-emerald-400">
+                        Auto
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted-foreground">{goalDetail.description}</p>
+
+              {/* Progress */}
+              <div className="space-y-2 rounded-lg bg-muted p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">
+                    {formatGHS(goalDetail.currentAmount)} of {formatGHS(goalDetail.targetAmount)}
+                  </span>
+                  <span className="font-bold text-emerald-600">
+                    {Math.round((goalDetail.currentAmount / goalDetail.targetAmount) * 100)}%
+                  </span>
+                </div>
+                <Progress
+                  value={Math.round((goalDetail.currentAmount / goalDetail.targetAmount) * 100)}
+                  className="h-2.5"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Remaining: {formatGHS(Math.max(goalDetail.targetAmount - goalDetail.currentAmount, 0))}</span>
+                  <span>Deadline: {formatDate(goalDetail.deadline)}</span>
+                </div>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Saved</span><span className="font-medium text-emerald-600">{formatGHS(goalDetail.currentAmount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Target</span><span className="font-medium">{formatGHS(goalDetail.targetAmount)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Remaining</span><span>{formatGHS(Math.max(goalDetail.targetAmount - goalDetail.currentAmount, 0))}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Deadline</span><span>{formatDate(goalDetail.deadline)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Contribution</span><span className="font-medium">{formatGHS(goalDetail.contributionAmount)}/{getFrequencyLabel(goalDetail.contributionFrequency)}</span></div>
+                <div className="flex justify-between gap-2"><span className="text-muted-foreground">Auto Contribute</span><span>{goalDetail.autoContribute ? 'On' : 'Off'}</span></div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 min-h-[44px]"
+                  onClick={() => { openAddFundsDialog(goalDetail.id); setGoalDetail(null); }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Funds
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

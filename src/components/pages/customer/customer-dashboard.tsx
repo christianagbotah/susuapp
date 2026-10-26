@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   PiggyBank, Landmark, Wallet, TrendingUp,
@@ -16,12 +16,16 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useCustomerStore, useCustomerExtendedStore } from '@/store/app-store';
 import { AiInsightsCard } from '@/components/pages/customer/ai-insights-card';
 import { formatGHS, formatDate, formatCompactNumber, getStatusColor, getInitials } from '@/lib/formatters';
 import { monthlyRevenueData } from '@/lib/mock-data';
+import type { Transaction, SusuPayout, SavingsGoal, SusuGroup } from '@/lib/types';
 
 // ---- Animation variants ----
 const containerVariants = {
@@ -78,6 +82,12 @@ export function CustomerDashboard() {
     user, wallets, susuGroups: mySusuGroups, myLoans, transactions, savingsGoals, susuPayouts, notifications, setActivePage,
   } = useCustomerStore();
   const { budgets } = useCustomerExtendedStore();
+
+  // ---- Detail dialog state (card → detail linkage) ----
+  const [detailTxn, setDetailTxn] = useState<Transaction | null>(null);
+  const [detailPayout, setDetailPayout] = useState<SusuPayout | null>(null);
+  const [detailGoal, setDetailGoal] = useState<SavingsGoal | null>(null);
+  const [detailGroup, setDetailGroup] = useState<SusuGroup | null>(null);
 
   // ---- Computed stats ----
   const unreadNotifications = notifications.filter((n) => !n.read).length;
@@ -546,8 +556,17 @@ export function CustomerDashboard() {
                     <motion.div
                       key={group.id}
                       whileHover={{ x: 2 }}
-                      className="group flex cursor-pointer items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 transition-colors hover:border-emerald-200 hover:bg-emerald-50/40 mobile-card"
-                      onClick={() => setActivePage('susu')}
+                      className="group flex cursor-pointer items-center gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 transition-all hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mobile-card"
+                      onClick={() => setDetailGroup(group)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailGroup(group);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Open ${group.name} details`}
                     >
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
                         <Users className="h-5 w-5 text-emerald-600" />
@@ -570,6 +589,16 @@ export function CustomerDashboard() {
                         <p className="text-xs text-slate-500">Next payout</p>
                         <p className="text-sm font-medium text-slate-700">{formatDate(group.nextPayout)}</p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hidden h-7 shrink-0 gap-1 px-2 text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 sm:inline-flex"
+                        onClick={(e) => { e.stopPropagation(); setActivePage('susu'); }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        Open Susu
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
                       <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-emerald-500" />
                     </motion.div>
                   ))}
@@ -602,7 +631,20 @@ export function CustomerDashboard() {
                   {savingsGoals.map((goal) => {
                     const percent = Math.round((goal.currentAmount / goal.targetAmount) * 100);
                     return (
-                      <div key={goal.id} className="space-y-2">
+                      <div
+                        key={goal.id}
+                        className="cursor-pointer space-y-2 rounded-xl transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => setDetailGoal(goal)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setDetailGoal(goal);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open ${goal.name} goal details`}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-base">{goal.icon}</span>
@@ -673,7 +715,11 @@ export function CustomerDashboard() {
                           const typeInfo = getTxnTypeBadge(txn.type);
                           const positive = isPositiveAmount(txn.type);
                           return (
-                            <TableRow key={txn.id} className="border-slate-50 hover:bg-slate-50/50">
+                            <TableRow
+                              key={txn.id}
+                              onClick={() => setDetailTxn(txn)}
+                              className="cursor-pointer border-b border-slate-50 hover:bg-muted/30 transition-colors"
+                            >
                               <TableCell className="whitespace-nowrap text-xs text-slate-600">
                                 {formatDate(txn.date)}
                               </TableCell>
@@ -712,7 +758,17 @@ export function CustomerDashboard() {
                       return (
                         <div
                           key={txn.id}
-                          className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3 touch-manipulation mobile-list-item"
+                          onClick={() => setDetailTxn(txn)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setDetailTxn(txn);
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          aria-label="Open transaction details"
+                          className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3 transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-manipulation mobile-list-item"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-xs font-medium text-slate-800">
@@ -789,7 +845,17 @@ export function CustomerDashboard() {
                   {upcomingPayouts.map((payout) => (
                     <div
                       key={payout.id}
-                      className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-teal-50/40 p-4 h-full"
+                      onClick={() => setDetailPayout(payout)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setDetailPayout(payout);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Open payout details"
+                      className="h-full cursor-pointer rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 to-teal-50/40 p-4 transition-all hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
@@ -863,27 +929,339 @@ export function CustomerDashboard() {
               ].map((tip) => (
                 <div
                   key={tip.title}
-                  className={`min-w-[220px] shrink-0 rounded-xl border border-blue-100/60 bg-white/80 backdrop-blur-sm p-4 shadow-sm transition-shadow hover:shadow-md lg:min-w-0${tip.page ? ' cursor-pointer' : ''}`}
-                  onClick={tip.page ? () => setActivePage(tip.page) : undefined}
+                  className="min-w-[220px] shrink-0 rounded-xl border border-blue-100/60 bg-white/80 backdrop-blur-sm p-4 shadow-sm transition-shadow hover:shadow-md lg:min-w-0"
                 >
                   <span className="text-2xl">{tip.emoji}</span>
                   <h4 className="mt-3 text-sm font-semibold text-slate-800">{tip.title}</h4>
                   <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{tip.description}</p>
-                  <button
-                    className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (tip.page) setActivePage(tip.page);
-                    }}
-                  >
-                    Learn More →
-                  </button>
+                  {tip.page ? (
+                    <button
+                      type="button"
+                      className="mt-3 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                      onClick={() => setActivePage(tip.page)}
+                    >
+                      Learn More →
+                    </button>
+                  ) : (
+                    <span className="mt-3 block text-xs font-medium text-slate-400">Good to know</span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </Card>
       </motion.div>
+
+      {/* ==============================
+          7. Detail Dialogs (card → detail linkage)
+          ============================== */}
+
+      {/* Transaction Detail */}
+      <Dialog open={!!detailTxn} onOpenChange={() => setDetailTxn(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+            <DialogDescription>Full details of this transaction</DialogDescription>
+          </DialogHeader>
+          {detailTxn && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 text-emerald-700">
+                    {getInitials(detailTxn.counterpartName || detailTxn.description)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{detailTxn.description}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge className={`${getStatusColor(detailTxn.status)} text-xs capitalize`}>
+                      {detailTxn.status}
+                    </Badge>
+                    <Badge className={`${getTxnTypeBadge(detailTxn.type).variant} text-xs`}>
+                      {getTxnTypeBadge(detailTxn.type).label}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="rounded-lg bg-muted p-4 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Amount</p>
+                <p className={`text-2xl font-bold ${isPositiveAmount(detailTxn.type) ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {isPositiveAmount(detailTxn.type) ? '+' : '-'}{formatGHS(detailTxn.amount)}
+                </p>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Date</p>
+                  <p className="font-medium">{formatDate(detailTxn.date)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Balance After</p>
+                  <p className="font-medium">{formatGHS(detailTxn.balanceAfter)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Category</p>
+                  <p className="font-medium">{detailTxn.category}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Transaction ID</p>
+                  <p className="font-mono text-xs">{detailTxn.id}</p>
+                </div>
+                {detailTxn.counterpartName && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Counterpart</p>
+                    <p className="font-medium">{detailTxn.counterpartName}</p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Reference</p>
+                  <p className="break-all font-mono text-xs">{detailTxn.reference}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Upcoming Payout Detail */}
+      <Dialog open={!!detailPayout} onOpenChange={() => setDetailPayout(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Upcoming Payout</DialogTitle>
+            <DialogDescription>Your scheduled susu payout</DialogDescription>
+          </DialogHeader>
+          {detailPayout && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 text-emerald-700">
+                    {getInitials(detailPayout.groupName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{detailPayout.groupName}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge className="bg-amber-100 text-xs font-medium text-amber-700 capitalize">
+                      {detailPayout.status}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">Round {detailPayout.round}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="rounded-lg bg-muted p-4 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Payout Amount</p>
+                <p className="text-2xl font-bold text-emerald-600">{formatGHS(detailPayout.amount)}</p>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Payout Date</p>
+                  <p className="font-medium">{formatDate(detailPayout.payoutDate)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Round</p>
+                  <p className="font-medium">{detailPayout.round}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Member</p>
+                  <p className="font-medium">{detailPayout.memberName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Method</p>
+                  <p className="font-medium">
+                    {detailPayout.disbursementMethod === 'momo' ? 'Mobile Money' : 'Bank Transfer'}
+                  </p>
+                </div>
+                {detailPayout.momoNumber && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Mobile Money Number</p>
+                    <p className="font-mono font-medium">{detailPayout.momoNumber}</p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Payout ID</p>
+                  <p className="font-mono text-xs">{detailPayout.id}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Savings Goal Detail */}
+      <Dialog open={!!detailGoal} onOpenChange={() => setDetailGoal(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Savings Goal</DialogTitle>
+            <DialogDescription>Progress and settings for this goal</DialogDescription>
+          </DialogHeader>
+          {detailGoal && (() => {
+            const percent = Math.round((detailGoal.currentAmount / detailGoal.targetAmount) * 100);
+            const remaining = Math.max(0, detailGoal.targetAmount - detailGoal.currentAmount);
+            return (
+              <div className="space-y-4">
+                {/* Identity header */}
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="bg-emerald-100 text-lg">
+                      {detailGoal.icon}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-semibold">{detailGoal.name}</p>
+                    <Badge className={`${getStatusColor(percent >= 100 ? 'completed' : 'active')} text-xs`}>
+                      {percent >= 100 ? 'Goal reached' : `${percent}% saved`}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Progress */}
+                <div className="space-y-2 rounded-lg bg-muted p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Progress</span>
+                    <span className="font-bold text-emerald-600">{percent}%</span>
+                  </div>
+                  <Progress value={percent} className="h-2.5" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Saved: {formatGHS(detailGoal.currentAmount)}</span>
+                    <span>Remaining: {formatGHS(remaining)}</span>
+                  </div>
+                </div>
+
+                {/* All fields */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Current Amount</p>
+                    <p className="font-medium">{formatGHS(detailGoal.currentAmount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Target Amount</p>
+                    <p className="font-medium">{formatGHS(detailGoal.targetAmount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Deadline</p>
+                    <p className="font-medium">{formatDate(detailGoal.deadline)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Auto-Contribute</p>
+                    <p className="font-medium">
+                      {detailGoal.autoContribute
+                        ? `${formatGHS(detailGoal.contributionAmount)} ${detailGoal.contributionFrequency}`
+                        : 'Off'}
+                    </p>
+                  </div>
+                  {detailGoal.description && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-muted-foreground">About</p>
+                      <p className="text-sm">{detailGoal.description}</p>
+                    </div>
+                  )}
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Goal ID</p>
+                    <p className="font-mono text-xs">{detailGoal.id}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Susu Group Detail */}
+      <Dialog open={!!detailGroup} onOpenChange={() => setDetailGroup(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle>Susu Group Details</DialogTitle>
+            <DialogDescription>Group contribution and payout information</DialogDescription>
+          </DialogHeader>
+          {detailGroup && (
+            <div className="space-y-4">
+              {/* Identity header */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 text-emerald-700">
+                    {getInitials(detailGroup.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-semibold">{detailGroup.name}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge className={`h-5 text-[10px] font-medium capitalize ${getFrequencyBadge(detailGroup.frequency)}`}>
+                      {detailGroup.frequency}
+                    </Badge>
+                    <Badge className={`${getStatusColor(detailGroup.status)} text-xs capitalize`}>
+                      {detailGroup.status}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* All fields */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Contribution</p>
+                  <p className="font-medium">
+                    {formatGHS(detailGroup.contributionAmount)}/{' '}
+                    {detailGroup.frequency === 'daily' ? 'day' : detailGroup.frequency === 'weekly' ? 'week' : 'month'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Next Payout</p>
+                  <p className="font-medium">{formatDate(detailGroup.nextPayout)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Next Payout Member</p>
+                  <p className="font-medium">{detailGroup.nextPayoutMember}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Members</p>
+                  <p className="font-medium">{detailGroup.members} of {detailGroup.maxMembers}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Current Round</p>
+                  <p className="font-medium">{detailGroup.currentRound} of {detailGroup.totalRounds}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Pool</p>
+                  <p className="font-medium text-emerald-600">{formatGHS(detailGroup.totalPool)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Treasurer</p>
+                  <p className="font-medium">{detailGroup.treasurerName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Branch</p>
+                  <p className="font-medium">{detailGroup.branch}</p>
+                </div>
+                {detailGroup.description && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">About</p>
+                    <p className="text-sm">{detailGroup.description}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="gap-1 font-medium text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+              onClick={() => { setDetailGroup(null); setActivePage('susu'); }}
+            >
+              Open Susu
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
