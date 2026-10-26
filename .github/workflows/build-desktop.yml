@@ -19,13 +19,16 @@ jobs:
         include:
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+            rust_targets: x86_64-unknown-linux-gnu
             label: linux
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
             label: windows
           - os: macos-latest
-            target: aarch64-apple-darwin
-            label: macos-arm64
+            target: universal-apple-darwin
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+            label: macos-universal
 
     name: Build Desktop (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
@@ -41,7 +44,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.rust_targets }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -70,7 +73,7 @@ jobs:
           args: --target ${{ matrix.target }}
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: 'iSusuPro Desktop ${{ github.ref_name }}'
-          releaseBody: 'Desktop installers (Windows MSI/NSIS, macOS DMG, Linux AppImage/DEB) — the app loads the live iSusuPro server.'
+          releaseBody: 'Desktop installers (Windows MSI/NSIS, macOS Universal DMG — Intel & Apple Silicon, Linux AppImage/DEB) — the app loads the live iSusuPro server.'
           releaseDraft: true
           prerelease: false
 

@@ -1,4 +1,4 @@
-name: Build Android App
+name: Build Mobile Apps
 
 on:
   workflow_dispatch:
@@ -82,5 +82,70 @@ jobs:
           files: |
             artifacts/iSusuPro-debug.apk
             artifacts/iSusuPro-release-unsigned.aab
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  ios:
+    name: Build iOS IPA (unsigned, sideload-ready)
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build native shell
+        env:
+          APP_SERVER_URL: ${{ github.event.inputs.server_url || 'https://isusupro.com' }}
+        run: bun run shell:build
+
+      - name: Sync Capacitor iOS (web assets + SPM plugins)
+        run: bunx cap sync ios
+
+      - name: Re-apply iSusuPro brand assets
+        run: python3 scripts/brand-ios.py
+
+      - name: Archive (no code signing — no Apple Developer cert required)
+        run: |
+          cd ios/App
+          xcodebuild archive \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath ../build/iSusuPro.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Package unsigned IPA
+        run: |
+          cd ios/App/build
+          mkdir -p Payload
+          cp -R iSusuPro.xcarchive/Products/Applications/App.app Payload/
+          zip -qry iSusuPro-ios-unsigned.ipa Payload
+          ls -la iSusuPro-ios-unsigned.ipa
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iSusuPro-ios-unsigned-ipa
+          path: ios/App/build/iSusuPro-ios-unsigned.ipa
+          if-no-files-found: error
+
+      - name: Attach to release (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ios/App/build/iSusuPro-ios-unsigned.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
