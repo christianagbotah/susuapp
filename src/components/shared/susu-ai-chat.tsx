@@ -149,10 +149,10 @@ export function SusuAiChat() {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.96 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
             className="fixed bottom-36 right-2 z-[69] flex h-[min(560px,72vh)] w-[min(400px,calc(100vw-1rem))] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl lg:bottom-24 lg:right-6"
             role="dialog"
             aria-label="Susu AI chat"

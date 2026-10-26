@@ -114,6 +114,7 @@ export function PwaProvider() {
             initial={{ opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 60 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
             className="fixed bottom-24 right-4 z-[70] lg:bottom-6"
           >
             <div className="flex items-center gap-3 rounded-xl border bg-card p-3.5 shadow-xl">
@@ -138,10 +139,10 @@ export function PwaProvider() {
             initial={{ opacity: 0, y: 80 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 80 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed inset-x-3 bottom-24 z-[70] lg:inset-x-auto lg:right-6 lg:bottom-6 lg:w-[380px]"
           >
-            <div className="rounded-2xl border bg-card/95 p-4 shadow-2xl backdrop-blur-lg">
+            <div className="rounded-2xl border bg-card p-4 shadow-2xl">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
                   {platform === 'ios' ? <Share className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> : <MonitorSmartphone className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}

@@ -180,7 +180,7 @@ export function BottomSheet({ open, onClose, title, children, className = '' }: 
             initial={{ y: '100%' }}
             animate={{ y: dragOffset }}
             exit={{ y: '100%' }}
-            transition={dragOffset === 0 ? { type: 'spring', damping: 30, stiffness: 300 } : { duration: 0 }}
+            transition={dragOffset === 0 ? { duration: 0.2, ease: 'easeOut' } : { duration: 0 }}
             className="bottom-sheet-content fixed bottom-0 left-0 right-0 z-[70] bg-background shadow-2xl safe-area-bottom"
             style={{ touchAction: 'none' }}
             onPointerDown={handleDragStart}
@@ -295,7 +295,7 @@ export function MobileDrawer({ open, onClose, children, side = 'left', className
             initial={{ x: isRight ? '100%' : '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: isRight ? '100%' : '-100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             className={cn(
               'fixed top-0 bottom-0 z-[60] w-[85%] max-w-[320px] bg-background shadow-2xl',
               isRight ? 'right-0 safe-area-right' : 'left-0 safe-area-left',
