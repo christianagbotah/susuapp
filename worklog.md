@@ -784,3 +784,24 @@ Stage Summary:
 - Counter receipts now have stable references: generated once at completion and persisted on the transaction (reference field reused; no store/type changes), so toast and receipt dialog always match; seed refs preserved.
 - EOD export is a real CSV download (BOM/CRLF/escaped/header/summary) instead of a toast; EOD lines double as clickable detail records.
 - Suggested next: apply the same linkage to remaining staff portals (BM/LO/accountant/compliance) if not already covered by parallel tasks 2-a…2-e.
+
+---
+Task ID: full-system-card-linkage
+Agent: main-agent (Z.ai) + 7 parallel general-purpose agents (2-a..2-g)
+Task: "go through the entire system and implement card linkages to details pages. and fix any other things deem necessary"
+
+Work Log:
+- Explore agent mapped all 10 portals: existing detail views, unlinked cards/rows, shared patterns (admin-loans dialog pattern, KpiCard a11y, ConfirmDialog/NotificationPanel portal recipe)
+- Dispatched 7 parallel implementation agents (2-a customer pt1, 2-b customer pt2, 2-c agent+treasurer, 2-d admin, 2-e branch-manager+loan-officer, 2-f teller+field-supervisor, 2-g accountant+compliance); ~39 page files + app-store.ts touched, +5547/-226
+- Every entity card/list row/table row (desktop + mobile variants) now opens a detail dialog following the admin-loans pattern (row onClick + stopPropagation on inner buttons, role=button/tabIndex/Enter-Space a11y, max-w-lg max-h-[90vh] overscroll dialog, identity header + grid-cols-2 fields)
+- Dead features wired: customer fileDispute (with type Select + duplicate guard), real CSV exports replacing toast stubs (transactions, treasurer reports, admin analytics, teller EOD, accountant statements, STR reports), teller stable receipt refs, treasurer Start New Round real mutation (increments round, advances nextPayout by frequency, rolls over unpaid contributions)
+- Main-agent fixes: staff demo accounts fell back to demo login on API 401 (branch/office accounts not in API seed previously hard-failed when API reachable), removed dead external-link View Details button in notification panel, fixed nested-interactive financial tips on customer dashboard, fixed admin formatDate(id.slice(-4)) bug, eslint-disable for intentional client-mount guard (react-hooks/set-state-in-effect false positive) in confirm-dialog + notification-panel
+
+Verification:
+- npx tsc --noEmit clean (src/), eslint clean on all 43 changed files
+- Browser (agent-browser): customer (Ama) transaction detail + dispute filing + duplicate guard; branch-manager (Nana) approval preview + staff details; admin (Daniel, API auth) pending-loan detail incl. date-bug fallback, branch details; treasurer (Patricia, API auth) group details + Manage in Groups + Start New Round 12→13 persisted; mobile 390px layout + tap verified; no console/page errors
+
+Stage Summary:
+- Commit 8a90e42 pushed to main (43 files)
+- All 10 portals now have complete card-to-detail linkage
+- Demo login works for all 11 accounts regardless of API reachability
