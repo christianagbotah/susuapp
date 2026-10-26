@@ -586,3 +586,26 @@ Stage Summary:
 - Native builds are now functional end-to-end: push a vX.Y.Z tag or run the workflows manually to get Android APK/AAB + Windows/macOS/Linux desktop installers from GitHub Actions
 - Key decision: remote-URL architecture (server.url / shell redirect) because the app cannot be statically exported
 - iOS platform requires macOS to generate (documented); Rust/webkit not available in this environment so desktop compiles happen in CI
+
+---
+Task ID: ios-macos-builds
+Agent: main-agent (Z.ai)
+Task: "how about ios and macos" — add iOS and macOS native builds to complement the existing Android + Windows/Linux infrastructure.
+
+Work Log:
+- Restored 115 mode-only permission changes (cap sync side-effect noise) via git checkout
+- Installed @capacitor/ios@8.5.3; ran `cap add ios` on Linux (works — template copy only; Capacitor 8 integrates plugins via Swift Package Manager, so no CocoaPods needed anywhere)
+- Built native shell (dist/) and ran `cap sync ios` — 8 Capacitor plugins wired into ios/App/CapApp-SPM/Package.swift
+- Created scripts/brand-ios.py (idempotent, mirrors brand-android.py): 1024px App Store icon flattened to RGB (alpha-free per App Store rules, reused Tauri icon set), 2732px branded splash ×3 scales, emerald LaunchScreen.storyboard background, Info.plist permission strings (camera/Ghana Card OCR, photo library ±add, location/agent routes, Face ID, microphone) + UIBackgroundModes remote-notification + ITSAppUsesNonExemptEncryption=false
+- Added shared Xcode scheme ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme (template ships none; required for CI xcodebuild -scheme App)
+- build-mobile.yml renamed "Build Mobile Apps": new ios job on macos-latest — shell:build → cap sync ios → brand-ios.py → xcodebuild archive unsigned (CODE_SIGNING_ALLOWED=NO) → Payload zip → iSusuPro-ios-unsigned.ipa artifact + release attach on v* tags
+- build-desktop.yml: macOS matrix entry upgraded aarch64-apple-darwin → universal-apple-darwin (rust_targets: aarch64+x86_64); tauri:build:macos script now universal too
+- package.json: added cap:sync:ios + ios:brand scripts
+- NATIVE_BUILDS.md: iOS section rewritten (committed project, CI unsigned IPA path, local Mac build, App Store release steps), macOS Universal DMG notes, updated file map + release checklist
+- Validated: Info.plist via plistlib (26 keys), storyboard/scheme XML, both workflow YAMLs, icon modes RGB; verified no PAT/secrets in staged diff
+
+Stage Summary:
+- Commit d9441f2 pushed to main: iOS Xcode project (SPM, branded, permission-ready) + macOS Universal DMG pipeline
+- All 5 native targets now covered by one repo: Android (APK/AAB), iOS (unsigned IPA), Windows (MSI/NSIS), macOS (Universal DMG), Linux (AppImage/DEB)
+- iOS bundle id com.isusupro.ghana, deployment target iOS 15, MARKETING_VERSION 1.0
+- iOS unsigned IPA is sideload-ready (Sideloadly/AltStore); App Store requires signing team in Xcode (documented)
