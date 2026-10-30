@@ -964,3 +964,17 @@ Stage Summary:
 - Tapped Twi → `aria-pressed=true`, header shows "Online · Live data · Twi", placeholder "Ask Susu AI (Twi or English)…"
 - Sent "How does susu work?" → live AI reply returned in Asante Twi
 - `npx tsc --noEmit` + `npx eslint` clean
+
+## Task ID: 2026-10-31-ai-voice-localization
+**Commit:** c5525e4 — feat(ai-chat): voice input (speech-to-text) + localized greetings & suggestions
+
+**Scope:** "go on working on the susu app" — continued AI-enhancement track from ab2f02e/d751d77.
+
+**New AI capabilities:**
+1. **Voice input (speech-to-text)** — `POST /api/ai/transcribe` (ZAI ASR, `zai.audio.asr.create({ file_base64 })`). Client records PCM via Web Audio API + ScriptProcessorNode and hand-encodes 16-bit mono WAV (universal browser support — avoids MediaRecorder's webm/mp4/ogg codec lottery). Mic button in Susu AI chat: red pulsing recording state, ⏹ to stop, 45s auto-stop, transcription flows into the input box; graceful amber notices for denied mic / silent capture / service failure.
+2. **Localized chat UI** — `POST /api/ai/localize` translates the portal greeting + 4 suggestion prompts into the selected Ghana language (Twi/Ga/Ewe/Hausa/Pidgin) with strict-JSON contract and count validation. Greeting re-seeds live when language switches while only the greeting is on screen. Cached per language in localStorage (`isusupro-ai-ui-strings-v1`) → instant localized open on return visits; English fallback on any failure; "Translating…" spinner in the language row.
+
+**Verification:**
+- Route tests (`scripts/test-ai-routes.py`): TTS-generated "What is my wallet balance today?" → exact transcription; empty body → 400; localize(twi) → count-matched Twi strings, 👋 preserved
+- Browser (390px + 1280px, logged in as Ama): mic visible in form; headless no-mic → amber notice, no crash; tap Twi → translating indicator → Twi greeting + Twi chips; reload+login → Twi restored instantly from cache (no refetch); Twi suggestion → Twi AI reply; `overflow: []` both widths; no page errors
+- `npx tsc --noEmit` + `npx eslint` clean (auto-fixed 2 unused eslint-disable directives)
