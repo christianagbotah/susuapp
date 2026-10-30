@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Bot, User, Languages } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User, Languages, Mic, Square, Loader2, AlertCircle } from 'lucide-react';
 import {
   useNavigationStore,
   useCustomerStore,
@@ -29,8 +29,37 @@ const LANGUAGES: { id: string; label: string }[] = [
   { id: 'pidgin', label: 'Pidgin' },
 ];
 const LANGUAGE_STORAGE_KEY = 'isusupro-ai-lang';
+const LOCALIZE_STORAGE_KEY = 'isusupro-ai-ui-strings-v1';
+const MAX_RECORD_MS = 45_000;
 
 const cedi = (n: number) => `₵${Number(n).toLocaleString()}`;
+
+// ---- Voice input helpers: capture PCM via Web Audio API → 16-bit mono WAV.
+// WAV is universally accepted by the ASR service, unlike MediaRecorder's
+// browser-specific container formats (webm/mp4/ogg).
+function encodeWav(samples: Int16Array, sampleRate: number): ArrayBuffer {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  const writeStr = (offset: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(offset + i, s.charCodeAt(i));
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true); // chunk size
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
+  writeStr(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++, offset += 2) view.setInt16(offset, samples[i], true);
+  return buffer;
+}
 
 /**
  * Collect a small, live data snapshot for the signed-in portal so the AI can
@@ -242,29 +271,108 @@ export function SusuAiChat() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [language, setLanguage] = useState('en');
+  const [localized, setLocalized] = useState<Record<string, { greeting: string; suggestions: string[] }>>({});
+  const [translating, setTranslating] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [micNotice, setMicNotice] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const portal = useNavigationStore((s) => s.currentPortal) || 'customer';
   const config = PORTAL_CONFIG[portal] || PORTAL_CONFIG.customer;
   const activeLanguage = LANGUAGES.find((l) => l.id === language) ?? LANGUAGES[0];
 
-  // Restore the chosen reply language across sessions
+  // Localized widget strings for the chosen language (English until translated)
+  const strings = {
+    greeting: language === 'en' ? config.greeting : localized[language]?.greeting ?? config.greeting,
+    suggestions: language === 'en' ? config.suggestions : localized[language]?.suggestions ?? config.suggestions,
+  };
+
+  // Restore the chosen reply language + cached translations across sessions
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if (saved && LANGUAGES.some((l) => l.id === saved)) setLanguage(saved);
+    try {
+      const raw = window.localStorage.getItem(LOCALIZE_STORAGE_KEY);
+      if (raw) setLocalized(JSON.parse(raw));
+    } catch {
+      // corrupted cache — keep English fallback
+    }
   }, []);
+
+  // Mirrors `localized` for use inside async callbacks without re-subscribing
+  const localizedRef = useRef(localized);
+  useEffect(() => {
+    localizedRef.current = localized;
+  }, [localized]);
+  const localizingRef = useRef<Set<string>>(new Set());
+  const recorderRef = useRef<{
+    ctx: AudioContext;
+    stream: MediaStream;
+    source: MediaStreamAudioSourceNode;
+    processor: ScriptProcessorNode;
+    stopTimer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const pcmRef = useRef<Int16Array[]>([]);
+  const finishRecordingRef = useRef<() => void>(() => {});
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const ensureLocalized = async (id: string) => {
+    if (id === 'en' || localizingRef.current.has(id) || localizedRef.current[id]) return;
+    localizingRef.current.add(id);
+    setTranslating(true);
+    try {
+      const res = await fetch('/api/ai/localize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: id,
+          greeting: config.greeting,
+          suggestions: config.suggestions,
+        }),
+      });
+      const data = await res.json();
+      if (data?.greeting && Array.isArray(data?.suggestions) && data.suggestions.length === config.suggestions.length) {
+        const pack = { greeting: data.greeting as string, suggestions: data.suggestions as string[] };
+        setLocalized((prev) => {
+          const next = { ...prev, [id]: pack };
+          try {
+            if (typeof window !== 'undefined') window.localStorage.setItem(LOCALIZE_STORAGE_KEY, JSON.stringify(next));
+          } catch {
+            // storage full — session-only cache is fine
+          }
+          return next;
+        });
+      }
+    } catch {
+      // network/AI failure — English strings stay as fallback
+    } finally {
+      localizingRef.current.delete(id);
+      setTranslating(false);
+    }
+  };
 
   const chooseLanguage = (id: string) => {
     setLanguage(id);
     if (typeof window !== 'undefined') window.localStorage.setItem(LANGUAGE_STORAGE_KEY, id);
+    if (id !== 'en') void ensureLocalized(id);
+    setMicNotice(null);
   };
 
-  // Seed greeting whenever the widget opens (or portal changes while open)
+  // Translate the widget strings when the panel opens in a local language
   useEffect(() => {
-    if (open && messages.length === 0) {
-      setMessages([{ role: 'assistant', content: config.greeting }]);
+    if (open && language !== 'en' && !localized[language]) void ensureLocalized(language);
+     
+  }, [open, language, localized]);
+
+  // Seed greeting whenever the widget opens (or portal changes while open).
+  // While only the greeting is on screen, switching language re-seeds it live.
+  useEffect(() => {
+    if (open && messages.length <= 1) {
+      setMessages([{ role: 'assistant', content: strings.greeting }]);
     }
-  }, [open, portal]);
+     
+  }, [open, portal, strings.greeting]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -295,6 +403,98 @@ export function SusuAiChat() {
       setMessages((m) => [...m, { role: 'assistant', content: 'I could not reach the AI service. Please check your connection and try again.' }]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ---- Voice input: record PCM → WAV → /api/ai/transcribe → input box ----
+  const transcribeWav = async (wav: ArrayBuffer) => {
+    setTranscribing(true);
+    setMicNotice(null);
+    try {
+      let binary = '';
+      const bytes = new Uint8Array(wav);
+      const CHUNK = 0x8000;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
+      const res = await fetch('/api/ai/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioBase64: btoa(binary) }),
+      });
+      const data = await res.json();
+      if (data?.text) {
+        setInput((prev) => (prev.trim() ? `${prev.trim()} ${data.text}` : data.text));
+        inputRef.current?.focus();
+      } else {
+        setMicNotice(data?.error || 'Could not transcribe that — please try again or type.');
+      }
+    } catch {
+      setMicNotice('Voice input is unavailable right now. Please type instead.');
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const finishRecording = () => {
+    const rec = recorderRef.current;
+    recorderRef.current = null;
+    setRecording(false);
+    if (rec) {
+      clearTimeout(rec.stopTimer);
+      try {
+        rec.processor.disconnect();
+        rec.source.disconnect();
+      } catch {
+        // graph already torn down
+      }
+      rec.stream.getTracks().forEach((t) => t.stop());
+      void rec.ctx.close().catch(() => {});
+    }
+    const total = pcmRef.current.reduce((a, c) => a + c.length, 0);
+    if (total === 0) {
+      setMicNotice('No sound captured — tap the mic and speak clearly.');
+      return;
+    }
+    const merged = new Int16Array(total);
+    let offset = 0;
+    for (const chunk of pcmRef.current) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
+    pcmRef.current = [];
+    void transcribeWav(encodeWav(merged, rec ? rec.ctx.sampleRate : 16000));
+  };
+  finishRecordingRef.current = finishRecording;
+
+  const startRecording = async () => {
+    if (recording || transcribing || loading) return;
+    setMicNotice(null);
+    try {
+      const AudioCtx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const source = ctx.createMediaStreamSource(stream);
+      const processor = ctx.createScriptProcessor(4096, 1, 1);
+      pcmRef.current = [];
+      processor.onaudioprocess = (e) => {
+        const input = e.inputBuffer.getChannelData(0);
+        const chunk = new Int16Array(input.length);
+        for (let i = 0; i < input.length; i++) {
+          const s = Math.max(-1, Math.min(1, input[i]));
+          chunk[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+        }
+        pcmRef.current.push(chunk);
+      };
+      source.connect(processor);
+      processor.connect(ctx.destination); // keeps the graph pulling on every browser
+      const stopTimer = setTimeout(() => finishRecordingRef.current(), MAX_RECORD_MS);
+      recorderRef.current = { ctx, stream, source, processor, stopTimer };
+      setRecording(true);
+    } catch {
+      setMicNotice('Microphone unavailable. Please allow mic access or type your question.');
     }
   };
 
@@ -410,7 +610,7 @@ export function SusuAiChat() {
                 and tappable inside the modal (no hidden horizontal scroll) */}
             {messages.length <= 1 && !loading && (
               <div className="flex flex-wrap gap-1.5 border-t bg-background px-3 py-2.5">
-                {config.suggestions.map((s) => (
+                {strings.suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
@@ -428,6 +628,12 @@ export function SusuAiChat() {
             <div className="border-t bg-background px-3 py-1.5" role="group" aria-label="Reply language">
               <div className="flex flex-wrap items-center gap-1">
                 <Languages className="mr-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                {translating && (
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                    Translating…
+                  </span>
+                )}
                 {LANGUAGES.map((l) => (
                   <button
                     key={l.id}
@@ -445,6 +651,14 @@ export function SusuAiChat() {
               </div>
             </div>
 
+            {/* Voice notice */}
+            {micNotice && (
+              <p className="flex items-center gap-1.5 border-t bg-amber-50 px-3 py-1.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {micNotice}
+              </p>
+            )}
+
             {/* Input */}
             <form
               onSubmit={(e) => {
@@ -453,22 +667,53 @@ export function SusuAiChat() {
               }}
               className="flex items-center gap-2 border-t bg-background p-3"
             >
+              <button
+                type="button"
+                onClick={() => (recording ? finishRecordingRef.current() : void startRecording())}
+                disabled={transcribing || loading}
+                aria-label={recording ? 'Stop voice recording' : 'Start voice input'}
+                className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition disabled:opacity-40 ${
+                  recording
+                    ? 'bg-red-600 text-white shadow'
+                    : 'border bg-card text-muted-foreground hover:border-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400'
+                }`}
+              >
+                {recording && <span className="absolute inset-0 animate-ping rounded-xl bg-red-500/40" aria-hidden />}
+                {recording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+              </button>
               <input
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={language === 'en' ? 'Ask Susu AI anything…' : `Ask Susu AI (${activeLanguage.label} or English)…`}
-                className="h-10 flex-1 rounded-xl border bg-muted/50 px-3.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                placeholder={
+                  recording
+                    ? 'Listening… tap ⏹ when done'
+                    : language === 'en'
+                      ? 'Ask Susu AI anything…'
+                      : `Ask Susu AI (${activeLanguage.label} or English)…`
+                }
+                className="h-10 min-w-0 flex-1 rounded-xl border bg-muted/50 px-3.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 disabled={loading}
               />
-              <motion.button
-                type="submit"
-                whileTap={{ scale: 0.92 }}
-                disabled={!input.trim() || loading}
-                aria-label="Send message"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow transition disabled:opacity-40"
-              >
-                <Send className="h-4 w-4" />
-              </motion.button>
+              {transcribing ? (
+                <div
+                  aria-label="Transcribing your voice"
+                  role="status"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : (
+                <motion.button
+                  type="submit"
+                  whileTap={{ scale: 0.92 }}
+                  disabled={!input.trim() || loading}
+                  aria-label="Send message"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow transition disabled:opacity-40"
+                >
+                  <Send className="h-4 w-4" />
+                </motion.button>
+              )}
             </form>
           </motion.div>
         )}
