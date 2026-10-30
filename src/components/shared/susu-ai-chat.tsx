@@ -32,6 +32,27 @@ const LANGUAGE_STORAGE_KEY = 'isusupro-ai-lang';
 const LOCALIZE_STORAGE_KEY = 'isusupro-ai-ui-strings-v1';
 const MAX_RECORD_MS = 45_000;
 
+// ---- TTS audio cache (module-level so it survives chat re-opens) ----
+// Repeat plays of the same reply skip the network entirely — important for
+// metered mobile data in Ghana. Small LRU: WAV base64 is ~350KB per entry.
+const TTS_CACHE_LIMIT = 8;
+const ttsCache = new Map<string, string>();
+function ttsCacheGet(key: string): string | undefined {
+  const hit = ttsCache.get(key);
+  if (hit) {
+    ttsCache.delete(key);
+    ttsCache.set(key, hit); // touch → most-recently-used
+  }
+  return hit;
+}
+function ttsCacheSet(key: string, value: string) {
+  if (ttsCache.size >= TTS_CACHE_LIMIT) {
+    const oldest = ttsCache.keys().next().value;
+    if (oldest !== undefined) ttsCache.delete(oldest);
+  }
+  ttsCache.set(key, value);
+}
+
 const cedi = (n: number) => `₵${Number(n).toLocaleString()}`;
 
 // ---- Voice input helpers: capture PCM via Web Audio API → 16-bit mono WAV.
@@ -319,6 +340,9 @@ export function SusuAiChat() {
   const finishRecordingRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Hands-free voice mode: when the current turn began with the microphone,
+  // the reply is read aloud automatically (vital for low-literacy users).
+  const voiceTurnRef = useRef(false);
 
   // Other parts of the app (e.g. the Financial Health card) can open the chat
   useEffect(() => {
@@ -401,6 +425,9 @@ export function SusuAiChat() {
     setMessages(next);
     setInput('');
     setLoading(true);
+    // Capture (and consume) the voice-turn flag for this request only.
+    const viaVoice = voiceTurnRef.current;
+    voiceTurnRef.current = false;
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -414,9 +441,13 @@ export function SusuAiChat() {
         }),
       });
       const data = await res.json();
-      setMessages((m) => [...m, { role: 'assistant', content: data.reply || data.error || 'Sorry, please try again.' }]);
+      const reply = data.reply || data.error || 'Sorry, please try again.';
+      setMessages((m) => [...m, { role: 'assistant', content: reply }]);
+      // Hands-free: the question came in by voice, so answer by voice.
+      if (viaVoice) void speakMessage(next.length, reply);
     } catch {
-      setMessages((m) => [...m, { role: 'assistant', content: 'I could not reach the AI service. Please check your connection and try again.' }]);
+      const offline = 'I could not reach the AI service. Please check your connection and try again.';
+      setMessages((m) => [...m, { role: 'assistant', content: offline }]);
     } finally {
       setLoading(false);
     }
@@ -442,6 +473,7 @@ export function SusuAiChat() {
       if (data?.text) {
         setInput((prev) => (prev.trim() ? `${prev.trim()} ${data.text}` : data.text));
         inputRef.current?.focus();
+        voiceTurnRef.current = true; // answer this turn by voice too
       } else {
         setMicNotice(data?.error || 'Could not transcribe that — please try again or type.');
       }
@@ -526,14 +558,21 @@ export function SusuAiChat() {
     setTtsLoadingIdx(idx);
     setMicNotice(null);
     try {
-      const res = await fetch('/api/ai/speak', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      const data = await res.json();
-      if (!data?.audioBase64) throw new Error(data?.error || 'TTS unavailable');
-      const audio = new Audio(`data:audio/wav;base64,${data.audioBase64}`);
+      // Cache hit → instant playback, no network round-trip.
+      const key = `${language}|${text}`;
+      let b64 = ttsCacheGet(key);
+      if (!b64) {
+        const res = await fetch('/api/ai/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, language }),
+        });
+        const data = await res.json();
+        if (!data?.audioBase64) throw new Error(data?.error || 'TTS unavailable');
+        b64 = data.audioBase64 as string;
+        ttsCacheSet(key, b64);
+      }
+      const audio = new Audio(`data:audio/wav;base64,${b64}`);
       audio.onended = () => setTtsPlayingIdx(null);
       audioRef.current = audio;
       await audio.play();

@@ -995,3 +995,20 @@ Stage Summary:
 - `npx tsc --noEmit` + `npx eslint` (7 files) clean
 
 **Notes:** TTS voices are general-purpose — Twi/Ga/Ewe text is read with English-leaning pronunciation (acceptable best-effort; English/Pidgin sound natural). First TTS call after idle can 500 once (cold start); UI notice invites retry and retry succeeds.
+
+## Task ID: 2026-10-31-tts-ghana-voice-polish
+**Commit:** (this commit) — feat(ai-voice): Ghana phonetic respelling, hands-free replies, TTS cache & health-card read-aloud
+
+**Scope:** User: "go ahead and keep refining the susu app". Refined the voice experience end-to-end, addressing the two limitations noted in the previous batch (English-leaning TTS pronunciation of local languages; cold-start TTS 500) plus a latent cap bug (input capped at 1200 > the engine's 1024 max → long replies could fail).
+
+**Improvements:**
+1. **Ghanaian phonetic respelling** — new pure module `src/lib/ghana-tts.ts` + `/api/ai/speak` now accepts `language` and returns `spokenText`. Before TTS: emoji/markdown stripped, ₵/GHS → "cedis", tone diacritics normalised (á→a), special letters respelled (Twi/Ga/Ewe: ɛ→eh, ɔ→aw, ŋ→ng; Ewe ɖƒɣʋ→dfgv; Hausa ɓɗƙƴ→bdky) and word-initial Twi digraphs fixed (ky→ch, gy→j, hy→sh, tw→chw, dw→j) so "Kyerɛ" is spoken "chereh", not "kai-why-ree". English/Pidgin pass through with cleanup only.
+2. **Hands-free voice mode** — a turn that began with the mic is answered by voice automatically (mic → transcribe → send → reply auto-read). The speaker button shows the playing state and one tap stops it.
+3. **TTS resilience & cost** — route retries once (900ms backoff) to mask cold-start failures; input capped 900 / spoken capped 1000 chars (inside the 1024 engine limit); client keeps an 8-entry LRU audio cache so repeat plays cost zero data.
+4. **Financial Health read-aloud** — "Read aloud" button speaks "Your financial health score is X out of 100. Grade … summary" (uses the saved chat language for respelling); stop/mid-card-unmount handled.
+5. Fixed a pre-existing strict-index tsc error in financial-health-card (`GRADE_RING[result?.grade]`).
+
+**Verification:**
+- `scripts/test-ai-routes.py` → 9 cases ALL OK; new: twi respell (`boɔ→boaw`, `**Kyerɛ**→chereh`, `₵→cedis`, emoji gone), English clean (`₵1,240.50 → cedis 1,240.50`, bullets/markdown stripped), 2,900-char input capped to 899 spoken chars
+- Browser (390px & 1280px, Ama): health-card Read aloud → `POST /api/ai/speak 200` → Stop state → back; chat Twi reply speaker → plays; replay from cache = zero new requests; hands-free verified with stubbed mic + mocked transcribe route → dev.log shows `chat 200` immediately followed by auto `speak 200` with no manual speaker click; long auto-speak playback persisted until stopped; no console/page errors; chat modal & health card have zero overflow (page-level scroll carousels unaffected, pre-existing)
+- `npx tsc --noEmit` 0 errors (excl. skills/), `npx eslint` on 4 changed files clean

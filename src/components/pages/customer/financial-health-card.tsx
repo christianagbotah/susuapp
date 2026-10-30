@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   HeartPulse, RefreshCw, Loader2, Sparkles, TrendingUp,
   AlertTriangle, ShieldAlert, CheckCircle2, MessageCircleQuestion,
+  Volume2, Square,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,18 @@ export function FinancialHealthCard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<HealthResult | null>(null);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Stop playback if the card unmounts mid-sentence
+  useEffect(
+    () => () => {
+      audioRef.current?.pause();
+      audioRef.current = null;
+    },
+    [],
+  );
 
   // Restore a recent score so the card is useful instantly on return visits
   useEffect(() => {
@@ -118,10 +131,46 @@ export function FinancialHealthCard({
 
   const openSusuAi = () => window.dispatchEvent(new CustomEvent('susu-ai:open'));
 
+  // ---- Read the score aloud (low-literacy accessibility) ----
+  const stopSpeaking = () => {
+    audioRef.current?.pause();
+    setSpeaking(false);
+  };
+
+  const speakScore = async () => {
+    if (!result || ttsLoading) return;
+    if (speaking) {
+      stopSpeaking();
+      return;
+    }
+    setTtsLoading(true);
+    setError(null);
+    try {
+      const language = window.localStorage.getItem('isusupro-ai-lang') || 'en';
+      const text = `Your financial health score is ${result.score} out of 100. Grade: ${result.grade}. ${result.summary}`;
+      const res = await fetch('/api/ai/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, language }),
+      });
+      const data = await res.json();
+      if (!data?.audioBase64) throw new Error(data?.error || 'TTS unavailable');
+      const audio = new Audio(`data:audio/wav;base64,${data.audioBase64}`);
+      audio.onended = () => setSpeaking(false);
+      audioRef.current = audio;
+      await audio.play();
+      setSpeaking(true);
+    } catch {
+      setError('Could not read the score aloud right now. Please try again.');
+    } finally {
+      setTtsLoading(false);
+    }
+  };
+
   const score = result?.score ?? 0;
   const RADIUS = 34;
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-  const ringClass = GRADE_RING[result?.grade] ?? 'stroke-emerald-500';
+  const ringClass = GRADE_RING[result?.grade ?? ''] ?? 'stroke-emerald-500';
 
   return (
     <Card className="overflow-hidden border-0 shadow-md shadow-emerald-900/5">
@@ -261,15 +310,35 @@ export function FinancialHealthCard({
                   </div>
                 )}
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={openSusuAi}
-                  className="gap-1.5 rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
-                >
-                  <MessageCircleQuestion className="h-4 w-4" />
-                  Ask Susu AI how to improve
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={openSusuAi}
+                    className="gap-1.5 rounded-xl border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+                  >
+                    <MessageCircleQuestion className="h-4 w-4" />
+                    Ask Susu AI how to improve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void speakScore()}
+                    disabled={ttsLoading}
+                    aria-label={speaking ? 'Stop reading score aloud' : 'Read my score aloud'}
+                    title={speaking ? 'Stop reading score aloud' : 'Read my score aloud'}
+                    className="gap-1.5 rounded-xl"
+                  >
+                    {ttsLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : speaking ? (
+                      <Square className="h-3.5 w-3.5 fill-current" />
+                    ) : (
+                      <Volume2 className="h-4 w-4" />
+                    )}
+                    <span className="hidden sm:inline">{speaking ? 'Stop' : 'Read aloud'}</span>
+                  </Button>
+                </div>
               </motion.div>
             )}
 

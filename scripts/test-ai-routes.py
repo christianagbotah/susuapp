@@ -73,6 +73,40 @@ audio_len = len(data.get('audioBase64', ''))
 ok5 = status == 200 and audio_len > 50000
 print('5 SPEAK:', status, 'audioBase64 chars =', audio_len, 'OK' if ok5 else 'CHECK')
 
+# 7) Speak in Twi: special letters must be respelled for English-leaning TTS voices
+#    (kyerɛ → chereh, ɔ → aw, ŋ → ng, ₵ → cedis, emoji stripped)
+twi_text = 'Akwaaba! Wo sika boɔ yɛ ₵500. **Kyerɛ** me sika a wɔde awɔ nkyɛn. 😊'
+status, data = post('/api/ai/speak', {'text': twi_text, 'language': 'twi'})
+spoken = data.get('spokenText', '')
+audio_len = len(data.get('audioBase64', ''))
+ok7 = (
+    status == 200 and audio_len > 50000
+    and all(ch not in spoken for ch in 'ɛɔŋ')
+    and 'eh' in spoken and 'cedis' in spoken
+    and '**' not in spoken
+)
+print('7 SPEAK(twi):', status, 'audio chars =', audio_len, 'spoken =', repr(spoken), 'OK' if ok7 else 'CHECK')
+
+# 8) Speak English with markdown/emoji/cedi sign -> cleaned spokenText
+status, data = post('/api/ai/speak', {
+    'text': '**Your balance**: ₵1,240.50 \n- Susu pot: ₵800\n- 💰 Keep saving!',
+    'language': 'en',
+})
+spoken = data.get('spokenText', '')
+ok8 = (
+    status == 200
+    and '₵' not in spoken and '**' not in spoken and '-' not in spoken
+    and spoken.count('cedis') == 2
+)
+print('8 SPEAK(en clean):', status, 'spoken =', repr(spoken), 'OK' if ok8 else 'CHECK')
+
+# 9) Speak long text: must stay under the engine's 1024-char input limit
+long_text = ('Ama saves fifty cedis every market day with her susu group. ' * 40) + '₵2,000'
+status, data = post('/api/ai/speak', {'text': long_text, 'language': 'en'})
+spoken = data.get('spokenText', '')
+ok9 = status == 200 and 0 < len(spoken) <= 1024
+print('9 SPEAK(long capped):', status, 'spoken chars =', len(spoken), 'OK' if ok9 else 'CHECK')
+
 # 6) Appraisal draft note: includeDraftNote=true -> expect scores + rationale + draftNote
 status, data = post('/api/ai/appraisal-assist', {
     'applicant': {
@@ -89,3 +123,5 @@ note = data.get('draftNote', '')
 ok6 = status == 200 and 'suggestedScores' in data and len(note) > 200
 print('6 APPRAISAL+NOTE:', status, 'scores=', 'suggestedScores' in data, 'note chars =', len(note), 'OK' if ok6 else 'CHECK')
 print('  note preview:', note[:180].replace('\n', ' '))
+
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok5, ok7, ok8, ok9]) else 'SOME CHECKS FAILED')
