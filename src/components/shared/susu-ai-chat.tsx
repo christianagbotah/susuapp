@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Bot, User, Languages, Mic, Square, Loader2, AlertCircle } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User, Languages, Mic, Square, Loader2, AlertCircle, Volume2 } from 'lucide-react';
 import {
   useNavigationStore,
   useCustomerStore,
@@ -276,6 +276,8 @@ export function SusuAiChat() {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [micNotice, setMicNotice] = useState<string | null>(null);
+  const [ttsLoadingIdx, setTtsLoadingIdx] = useState<number | null>(null);
+  const [ttsPlayingIdx, setTtsPlayingIdx] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const portal = useNavigationStore((s) => s.currentPortal) || 'customer';
   const config = PORTAL_CONFIG[portal] || PORTAL_CONFIG.customer;
@@ -316,6 +318,20 @@ export function SusuAiChat() {
   const pcmRef = useRef<Int16Array[]>([]);
   const finishRecordingRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Other parts of the app (e.g. the Financial Health card) can open the chat
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener('susu-ai:open', handler);
+    return () => window.removeEventListener('susu-ai:open', handler);
+  }, []);
+
+  // Stop any playback when the widget unmounts
+  useEffect(() => () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+  }, []);
 
   const ensureLocalized = async (id: string) => {
     if (id === 'en' || localizingRef.current.has(id) || localizedRef.current[id]) return;
@@ -498,6 +514,37 @@ export function SusuAiChat() {
     }
   };
 
+  // ---- Read a reply aloud (text-to-speech) ----
+  const stopSpeaking = () => {
+    audioRef.current?.pause();
+    setTtsPlayingIdx(null);
+  };
+
+  const speakMessage = async (idx: number, text: string) => {
+    if (ttsLoadingIdx !== null) return;
+    stopSpeaking();
+    setTtsLoadingIdx(idx);
+    setMicNotice(null);
+    try {
+      const res = await fetch('/api/ai/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!data?.audioBase64) throw new Error(data?.error || 'TTS unavailable');
+      const audio = new Audio(`data:audio/wav;base64,${data.audioBase64}`);
+      audio.onended = () => setTtsPlayingIdx(null);
+      audioRef.current = audio;
+      await audio.play();
+      setTtsPlayingIdx(idx);
+    } catch {
+      setMicNotice('Could not read that aloud right now. Please try again.');
+    } finally {
+      setTtsLoadingIdx(null);
+    }
+  };
+
   return (
     <>
       {/* Floating action button */}
@@ -583,6 +630,26 @@ export function SusuAiChat() {
                     }`}
                   >
                     <MessageBody text={m.content} />
+                    {m.role === 'assistant' && (
+                      <div className="mt-1.5 flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => (ttsPlayingIdx === i ? stopSpeaking() : void speakMessage(i, m.content))}
+                          disabled={ttsLoadingIdx === i}
+                          aria-label={ttsPlayingIdx === i ? 'Stop reading aloud' : 'Read reply aloud'}
+                          title={ttsPlayingIdx === i ? 'Stop reading aloud' : 'Read reply aloud'}
+                          className="flex h-6 w-6 items-center justify-center rounded-full text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50 dark:hover:bg-emerald-950/40"
+                        >
+                          {ttsLoadingIdx === i ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : ttsPlayingIdx === i ? (
+                            <Square className="h-3 w-3 fill-current" />
+                          ) : (
+                            <Volume2 className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}

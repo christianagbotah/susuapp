@@ -57,6 +57,7 @@ export function LoanOfficerAppraisals() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
+  const [noteLoading, setNoteLoading] = useState(false);
   const [aiForm, setAiForm] = useState({
     businessType: '',
     purpose: '',
@@ -97,33 +98,40 @@ export function LoanOfficerAppraisals() {
     setAiPanelOpen(true);
   };
 
+  /** Shared applicant context for both AI features (works even if the AI panel was never opened — fields fall back to the application on file). */
+  const buildAiPayload = () => {
+    if (!activeApp) return null;
+    const count = Number(aiForm.existingLoansCount) || 0;
+    const outstanding = Number(aiForm.existingOutstanding) || 0;
+    return {
+      applicant: {
+        businessType: aiForm.businessType.trim() || undefined,
+        purpose: aiForm.purpose.trim() || activeApp.purpose,
+        amount: Number(aiForm.amount) || activeApp.amount,
+        tenorMonths: Number(aiForm.tenorMonths) || activeApp.tenorMonths,
+        existingLoans: count > 0 || outstanding > 0 ? [{ count, outstanding }] : undefined,
+        susuHistory: activeApp.dailyRate ? `Susu-linked daily savings of about GHS ${activeApp.dailyRate}` : undefined,
+      },
+      partialScores: {
+        character: scores.character,
+        capacity: scores.capacity,
+        capital: scores.capital,
+        collateral: scores.collateral,
+        condition: scores.conditions,
+      },
+    };
+  };
+
   const runAiSuggest = async () => {
     if (!activeApp) return;
     setAiLoading(true);
     setAiError(null);
     try {
-      const count = Number(aiForm.existingLoansCount) || 0;
-      const outstanding = Number(aiForm.existingOutstanding) || 0;
+      const payload = buildAiPayload();
       const res = await fetch('/api/ai/appraisal-assist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          applicant: {
-            businessType: aiForm.businessType.trim() || undefined,
-            purpose: aiForm.purpose.trim() || activeApp.purpose,
-            amount: Number(aiForm.amount) || activeApp.amount,
-            tenorMonths: Number(aiForm.tenorMonths) || activeApp.tenorMonths,
-            existingLoans: count > 0 || outstanding > 0 ? [{ count, outstanding }] : undefined,
-            susuHistory: activeApp.dailyRate ? `Susu-linked daily savings of about GHS ${activeApp.dailyRate}` : undefined,
-          },
-          partialScores: {
-            character: scores.character,
-            capacity: scores.capacity,
-            capital: scores.capital,
-            collateral: scores.collateral,
-            condition: scores.conditions,
-          },
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'AI unavailable');
@@ -147,6 +155,34 @@ export function LoanOfficerAppraisals() {
       toast.error('AI unavailable');
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  /** AI-drafted appraisal note → fills the officer's Field visit notes for review/editing. */
+  const runAiDraftNote = async () => {
+    if (!activeApp) return;
+    setNoteLoading(true);
+    try {
+      const payload = buildAiPayload();
+      const res = await fetch('/api/ai/appraisal-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, includeDraftNote: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'AI unavailable');
+      if (typeof data?.draftNote === 'string' && data.draftNote.trim()) {
+        setNotes(data.draftNote.trim());
+        toast.success('Draft note added to field notes', {
+          description: 'Susu AI drafted it from the 5C scores — review and edit before saving.',
+        });
+      } else {
+        throw new Error('No note returned');
+      }
+    } catch {
+      toast.error('Could not draft the note — please try again or write it yourself.');
+    } finally {
+      setNoteLoading(false);
     }
   };
 
@@ -405,7 +441,20 @@ export function LoanOfficerAppraisals() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Field visit notes</label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium">Field visit notes</label>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 shrink-0 gap-1 border-amber-400 px-2 text-xs text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                  disabled={noteLoading}
+                  onClick={runAiDraftNote}
+                  title="Susu AI drafts a professional appraisal note from the 5C scores"
+                >
+                  {noteLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  {noteLoading ? 'Drafting…' : 'Draft with AI'}
+                </Button>
+              </div>
               <Textarea rows={3} placeholder="Stock observed, guarantors met, cash-count results..." value={notes} onChange={e => setNotes(e.target.value)} />
             </div>
           </div>

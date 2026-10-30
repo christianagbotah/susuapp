@@ -23,6 +23,7 @@ import {
 } from 'recharts';
 import { useCustomerStore, useCustomerExtendedStore } from '@/store/app-store';
 import { AiInsightsCard } from '@/components/pages/customer/ai-insights-card';
+import { FinancialHealthCard } from '@/components/pages/customer/financial-health-card';
 import { formatGHS, formatDate, formatCompactNumber, getStatusColor, getInitials } from '@/lib/formatters';
 import { monthlyRevenueData } from '@/lib/mock-data';
 import type { Transaction, SusuPayout, SavingsGoal, SusuGroup } from '@/lib/types';
@@ -262,6 +263,21 @@ export function CustomerDashboard() {
           ============================== */}
       <motion.div variants={itemVariants}>
         <AiInsightsCard transactions={transactions} wallets={wallets} budgets={budgets} />
+      </motion.div>
+
+      {/* ==============================
+          1c. AI Financial Health Score
+          ============================== */}
+      <motion.div variants={itemVariants}>
+        <FinancialHealthCard
+          wallets={wallets}
+          transactions={transactions}
+          budgets={budgets}
+          savingsGoals={savingsGoals}
+          myLoans={myLoans}
+          susuGroups={mySusuGroups}
+          susuPayouts={susuPayouts}
+        />
       </motion.div>
 
       {/* ==============================

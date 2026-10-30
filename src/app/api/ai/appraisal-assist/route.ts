@@ -24,6 +24,12 @@ Return STRICT JSON only (no markdown fences, no commentary before or after):
   "flags": ["at most 3 short concerns the officer should verify in the field; empty array if none"]
 }`;
 
+const DRAFT_NOTE_SPEC = `
+
+DRAFT APPRAISAL NOTE (required this time):
+The JSON must additionally include this field:
+"draftNote": "a professional 120-180 word appraisal note written in the neutral voice of the loan officer for the credit file — summarize the applicant's business and request, the 5C findings quoting their actual figures, key risks from the flags, and end with one clear recommendation sentence matching the scores. Plain prose, no headings, no bullet points."`;
+
 const SCORE_KEYS = ['character', 'capacity', 'capital', 'collateral', 'condition'] as const;
 type ScoreKey = (typeof SCORE_KEYS)[number];
 
@@ -55,6 +61,7 @@ export async function POST(request: Request) {
     const applicant = body?.applicant && typeof body.applicant === 'object' && !Array.isArray(body.applicant)
       ? body.applicant
       : {};
+    const includeDraftNote = body?.includeDraftNote === true;
 
     const amount = Number(applicant.amount || 0);
     if (!amount) {
@@ -116,7 +123,7 @@ export async function POST(request: Request) {
     const zai = await ZAI.create();
     const completion = await zai.chat.completions.create({
       messages: [
-        { role: 'assistant', content: SYSTEM_PROMPT },
+        { role: 'assistant', content: SYSTEM_PROMPT + (includeDraftNote ? DRAFT_NOTE_SPEC : '') },
         {
           role: 'user',
           content: JSON.stringify({
@@ -134,6 +141,7 @@ export async function POST(request: Request) {
     // Defensive parse: strip fences, dig out the object, clamp every score —
     // but never fabricate scores, so a hopeless parse becomes a 502 the UI can toast.
     let suggestion: Suggestion;
+    let draftNote: string | undefined;
     try {
       const parsed = extractJsonObject(raw);
       const rawScores =
@@ -156,12 +164,18 @@ export async function POST(request: Request) {
               .slice(0, 3)
           : [],
       };
+      if (includeDraftNote && typeof parsed.draftNote === 'string' && parsed.draftNote.trim()) {
+        draftNote = parsed.draftNote.trim().slice(0, 2000);
+      }
     } catch (parseError) {
       console.error('AI appraisal-assist parse error:', parseError);
       return Response.json({ error: 'The AI suggestion could not be parsed' }, { status: 502 });
     }
 
-    return Response.json({ ...suggestion });
+    return Response.json({
+      ...suggestion,
+      ...(draftNote ? { draftNote } : {}),
+    });
   } catch (error) {
     console.error('AI appraisal-assist error:', error);
     return Response.json({ error: 'AI 5C assist is temporarily unavailable' }, { status: 500 });
