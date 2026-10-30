@@ -978,3 +978,20 @@ Stage Summary:
 - Route tests (`scripts/test-ai-routes.py`): TTS-generated "What is my wallet balance today?" → exact transcription; empty body → 400; localize(twi) → count-matched Twi strings, 👋 preserved
 - Browser (390px + 1280px, logged in as Ama): mic visible in form; headless no-mic → amber notice, no crash; tap Twi → translating indicator → Twi greeting + Twi chips; reload+login → Twi restored instantly from cache (no refetch); Twi suggestion → Twi AI reply; `overflow: []` both widths; no page errors
 - `npx tsc --noEmit` + `npx eslint` clean (auto-fixed 2 unused eslint-disable directives)
+
+## Task ID: 2026-10-31-ai-health-score-appraisal-tts
+**Commit:** 3486b49 — feat(ai): financial health score, appraisal draft notes, reply read-aloud
+
+**Scope:** User approved the three proposed next steps after the voice/localization batch.
+
+**New features:**
+1. **AI Financial Health Score** (customer dashboard) — `POST /api/ai/financial-health` grades the customer 0-100 from a live snapshot (wallets, transactions, budgets, savings goals, loans, susu groups, payouts) using a strict rubric: Saving discipline 25 / Liquidity buffer 20 / Budget control 20 / Loan pressure 20 / Susu participation 15. Strict-JSON contract, score clamping, grade fallback, factor/status whitelists. `FinancialHealthCard` renders an animated SVG score ring + grade badge, summary, 5 factor tiles, 2-3 Ghana-specific tips, Refresh, and "Ask Susu AI how to improve" → dispatches `susu-ai:open` window event that the chat widget listens for. Result cached 6h in localStorage (`isusupro-fin-health-v1`).
+2. **AI-drafted appraisal notes** (loan officer) — `POST /api/ai/appraisal-assist` extended with optional `includeDraftNote` → returns a 120-180 word credit-file note in the officer's neutral voice, quoting actual figures and ending with a recommendation sentence (request-scoped parse, backward compatible). "Draft with AI" button beside Field visit notes fills the textarea with a review/edit toast; shared `buildAiPayload()` used by both AI buttons, works with the AI panel never opened (falls back to application-on-file fields).
+3. **Read replies aloud** (chat, all portals) — `POST /api/ai/speak` via ZAI TTS (voice tongtong, WAV, input capped 1200 chars) returns base64 audio; speaker button on every assistant bubble with play/stop/loading states, single-audio lifecycle (pause on new play + unmount cleanup), failure surfaces via the existing voice notice.
+
+**Verification:**
+- `scripts/test-ai-routes.py` extended to 6 cases, all green: transcribe exact-text; transcribe empty→400; localize(twi); fin-health → 72/Good, exactly 5 factors + 2 tips; speak → 257KB WAV; appraisal+note → 542-char note
+- Browser (390px & 1280px): card renders + generates (ring/grade/5 factors/tips/Ask-Susu-AI), deep-link opens chat, TTS retry after one transient 500 cold-start plays with stop state, draft note (636 chars, barber/₵5,000 applicant) fills the textarea; cached score restored instantly on desktop re-login; no console errors
+- `npx tsc --noEmit` + `npx eslint` (7 files) clean
+
+**Notes:** TTS voices are general-purpose — Twi/Ga/Ewe text is read with English-leaning pronunciation (acceptable best-effort; English/Pidgin sound natural). First TTS call after idle can 500 once (cold start); UI notice invites retry and retry succeeds.
