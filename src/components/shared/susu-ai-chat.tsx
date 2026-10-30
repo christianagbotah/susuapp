@@ -406,14 +406,15 @@ export function SusuAiChat() {
               )}
             </div>
 
-            {/* Suggestions */}
+            {/* Suggestions — wrap onto multiple rows so every prompt is visible
+                and tappable inside the modal (no hidden horizontal scroll) */}
             {messages.length <= 1 && !loading && (
-              <div className="flex gap-2 overflow-x-auto border-t bg-background px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex flex-wrap gap-1.5 border-t bg-background px-3 py-2.5">
                 {config.suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="shrink-0 rounded-full border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950"
+                    className="rounded-lg border bg-card px-2.5 py-1.5 text-left text-xs font-medium leading-snug text-foreground transition hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950"
                   >
                     {s}
                   </button>
@@ -421,16 +422,18 @@ export function SusuAiChat() {
               </div>
             )}
 
-            {/* Reply language — Ghana languages for financial inclusion */}
-            <div className="flex items-center gap-1.5 border-t bg-background px-3 py-1.5" role="group" aria-label="Reply language">
-              <Languages className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-              <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* Reply language — Ghana languages for financial inclusion.
+                Chips wrap so ALL six languages (incl. Twi) are visible and
+                tappable instead of being cut off beyond a hidden scrollbar. */}
+            <div className="border-t bg-background px-3 py-1.5" role="group" aria-label="Reply language">
+              <div className="flex flex-wrap items-center gap-1">
+                <Languages className="mr-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
                 {LANGUAGES.map((l) => (
                   <button
                     key={l.id}
                     onClick={() => chooseLanguage(l.id)}
                     aria-pressed={language === l.id}
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
                       language === l.id
                         ? 'bg-emerald-600 text-white'
                         : 'border bg-card text-muted-foreground hover:border-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400'
