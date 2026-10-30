@@ -40,6 +40,21 @@ RULES:
 const FACTOR_LABELS = ['Saving discipline', 'Liquidity buffer', 'Budget control', 'Loan pressure', 'Susu participation'] as const;
 const STATUSES = ['good', 'fair', 'poor'] as const;
 const GRADES = ['Excellent', 'Good', 'Fair', 'Struggling'] as const;
+const LANGUAGES = ['en', 'twi', 'ga', 'ewe', 'hausa', 'pidgin'] as const;
+
+/** Extra directive when the customer wants the score in a Ghanaian language. */
+function languageDirective(language: string): string {
+  if (language === 'en') return '';
+  const name =
+    language === 'twi' ? 'Twi (Asante Twi)' :
+    language === 'ga' ? 'Ga' :
+    language === 'ewe' ? 'Ewe' :
+    language === 'hausa' ? 'Hausa' :
+    'Ghanaian Pidgin';
+  return `
+
+LANGUAGE: Write "summary", each factor's "label" and "detail", and all "tips" in ${name}, written natively with its own letters (for Twi use ɛ, ɔ, ŋ as needed). This overrides the "exact labels" rule above — translate the five factor labels into short ${name} phrases (2-4 words each), and every label MUST be different from the others. Keep JSON keys, "grade" and "status" values exactly as specified (English). The first sentence of "summary" MUST state the overall score out of 100 and the grade in ${name}. Keep Ghanaian English loanwords like susu, MoMo and cedi as-is. Never mix sentences: everything the customer reads must be ${name}. Never repeat the same phrase twice.`;
+}
 
 function clampScore(value: unknown): number {
   const n = Math.round(Number(value));
@@ -63,8 +78,9 @@ function extractJsonObject(raw: string): Record<string, unknown> {
 
 /**
  * POST /api/ai/financial-health
- * Body: { wallets, transactions, budgets, savingsGoals, loans, susuGroups, susuPayouts }
+ * Body: { wallets, transactions, budgets, savingsGoals, loans, susuGroups, susuPayouts, language? }
  * Returns: { score, grade, summary, factors[], tips[] }
+ * `language` localises summary / factor labels / details / tips (grade + statuses stay English for the UI colour mapping).
  */
 export async function POST(request: Request) {
   try {
@@ -72,11 +88,12 @@ export async function POST(request: Request) {
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return Response.json({ error: 'Request body is required' }, { status: 400 });
     }
+    const language = LANGUAGES.includes(body?.language) ? body.language : 'en';
 
     const zai = await ZAI.create();
     const completion = await zai.chat.completions.create({
       messages: [
-        { role: 'assistant', content: SYSTEM_PROMPT },
+        { role: 'assistant', content: SYSTEM_PROMPT + languageDirective(language) },
         { role: 'user', content: JSON.stringify(body) },
       ],
       thinking: { type: 'disabled' },
@@ -94,7 +111,7 @@ export async function POST(request: Request) {
     const score = clampScore(parsed.score);
 
     const rawFactors = Array.isArray(parsed.factors) ? parsed.factors : [];
-    const factors = rawFactors
+    let factors = rawFactors
       .map((f, i) => {
         const item = (f && typeof f === 'object' && !Array.isArray(f) ? f : {}) as Record<string, unknown>;
         const status = STATUSES.includes(item.status as (typeof STATUSES)[number])
@@ -107,16 +124,28 @@ export async function POST(request: Request) {
         };
       })
       .slice(0, 5);
+
+    // Guard against degenerate localised output: if the model repeated the
+    // same label, five distinct English labels beat five identical Twi ones.
+    const labels = new Set(factors.map((f) => f.label.toLowerCase()));
+    if (factors.length > 1 && labels.size < factors.length) {
+      factors = factors.map((f, i) => ({ ...f, label: FACTOR_LABELS[i] ?? f.label }));
+    }
+
     if (factors.length === 0) {
       return Response.json({ error: 'The health score could not be parsed' }, { status: 502 });
     }
 
-    const tips = Array.isArray(parsed.tips)
-      ? parsed.tips
-          .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-          .map((t) => t.trim().slice(0, 160))
-          .slice(0, 4)
-      : [];
+    const tips = (
+      Array.isArray(parsed.tips)
+        ? parsed.tips
+            .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+            .map((t) => t.trim().slice(0, 160))
+        : []
+    )
+      // drop verbatim duplicate tips (a known failure mode in local languages)
+      .filter((t, i, arr) => arr.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i)
+      .slice(0, 4);
 
     return Response.json({
       score,

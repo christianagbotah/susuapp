@@ -41,6 +41,7 @@ const GRADE_RING: Record<string, string> = {
 
 const CACHE_KEY = 'isusupro-fin-health-v1';
 const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+const LANG_STORAGE_KEY = 'isusupro-ai-lang'; // shared with the Susu AI chat widget
 
 export function FinancialHealthCard({
   wallets,
@@ -65,6 +66,32 @@ export function FinancialHealthCard({
   const [ttsLoading, setTtsLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Score language follows the chat widget's reply language so the whole
+  // customer experience is vernacular-first.
+  const [language, setLanguage] = useState('en');
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(LANG_STORAGE_KEY);
+    if (saved) setLanguage(saved);
+  }, []);
+
+  // Restore a recent score in the CURRENT language so the card is useful
+  // instantly on return visits (an English score is never restored for a
+  // Twi user and vice versa).
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(`${CACHE_KEY}-${language}`);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as HealthResult;
+      if (parsed && typeof parsed.score === 'number' && Date.now() - parsed.at < CACHE_TTL) {
+        setResult(parsed);
+      } else {
+        setResult(null);
+      }
+    } catch {
+      // corrupted cache — start fresh
+    }
+  }, [language]);
 
   // Stop playback if the card unmounts mid-sentence
   useEffect(
@@ -97,6 +124,7 @@ export function FinancialHealthCard({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          language,
           wallets: wallets.map((w) => ({ type: w.type, balance: w.balance })),
           transactions: transactions.slice(0, 20).map((t) => ({ type: t.type, amount: t.amount, category: t.category, date: t.date })),
           budgets: budgets.map((b) => ({ category: b.category, allocatedAmount: b.allocatedAmount, spentAmount: b.spentAmount })),
@@ -118,7 +146,7 @@ export function FinancialHealthCard({
       };
       setResult(pack);
       try {
-        window.localStorage.setItem(CACHE_KEY, JSON.stringify(pack));
+        window.localStorage.setItem(`${CACHE_KEY}-${language}`, JSON.stringify(pack));
       } catch {
         // storage full — session-only result is fine
       }
@@ -127,7 +155,7 @@ export function FinancialHealthCard({
     } finally {
       setLoading(false);
     }
-  }, [wallets, transactions, budgets, savingsGoals, myLoans, susuGroups, susuPayouts]);
+  }, [wallets, transactions, budgets, savingsGoals, myLoans, susuGroups, susuPayouts, language]);
 
   const openSusuAi = () => window.dispatchEvent(new CustomEvent('susu-ai:open'));
 
@@ -146,8 +174,13 @@ export function FinancialHealthCard({
     setTtsLoading(true);
     setError(null);
     try {
-      const language = window.localStorage.getItem('isusupro-ai-lang') || 'en';
-      const text = `Your financial health score is ${result.score} out of 100. Grade: ${result.grade}. ${result.summary}`;
+      // In Ghanaian languages the summary already opens with the score and
+      // grade sentence (see the API prompt), so it is spoken as-is; English
+      // and Pidgin keep the explicit prefix.
+      const text =
+        language === 'en' || language === 'pidgin'
+          ? `Your financial health score is ${result.score} out of 100. Grade: ${result.grade}. ${result.summary}`
+          : result.summary;
       const res = await fetch('/api/ai/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

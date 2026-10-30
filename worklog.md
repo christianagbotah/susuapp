@@ -1012,3 +1012,18 @@ Stage Summary:
 - `scripts/test-ai-routes.py` → 9 cases ALL OK; new: twi respell (`boɔ→boaw`, `**Kyerɛ**→chereh`, `₵→cedis`, emoji gone), English clean (`₵1,240.50 → cedis 1,240.50`, bullets/markdown stripped), 2,900-char input capped to 899 spoken chars
 - Browser (390px & 1280px, Ama): health-card Read aloud → `POST /api/ai/speak 200` → Stop state → back; chat Twi reply speaker → plays; replay from cache = zero new requests; hands-free verified with stubbed mic + mocked transcribe route → dev.log shows `chat 200` immediately followed by auto `speak 200` with no manual speaker click; long auto-speak playback persisted until stopped; no console/page errors; chat modal & health card have zero overflow (page-level scroll carousels unaffected, pre-existing)
 - `npx tsc --noEmit` 0 errors (excl. skills/), `npx eslint` on 4 changed files clean
+
+## Task ID: 2026-10-31-fin-health-localization
+**Commit:** (this commit) — feat(ai): Financial Health Score in the customer's language
+
+**Scope:** Continuation of "keep refining the susu app". The chat was multilingual but the flagship customer card was English-only; a Twi user could *hear* Twi replies yet *read* an English score. Completed the vernacular-first loop.
+
+**Changes:**
+1. `/api/ai/financial-health` accepts `language` (en/twi/ga/ewe/hausa/pidgin, default en) — summary, factor labels/details and tips are generated natively in that language (native letters ɛ ɔ ŋ encouraged, loanwords susu/MoMo/cedi preserved, first summary sentence must state the score+grade); grade and statuses stay English for the UI colour mapping.
+2. Degenerate-output guards: if the model repeats factor labels (seen with thinking disabled), the five canonical English labels are restored; verbatim duplicate tips are dropped.
+3. `FinancialHealthCard` follows the shared chat language (`isusupro-ai-lang`): passes it to the API, caches per language (`isusupro-fin-health-v1-<lang>`), and read-aloud speaks the localized summary directly for Ghanaian languages (the summary opens with the score sentence); en/pidgin keep the explicit English prefix.
+
+**Verification:**
+- Route tests now 10 checks ALL OK incl. `4b FIN-HEALTH(twi)`: 200, score 75/Good, 5 distinct Twi labels, Twi summary stating "ɔha mu nkyem aduonum num (75)", tips in Twi, grade English; repeated runs give distinct labels (guard confirmed after one early degenerate sample)
+- Browser (390px, Ama, lang=twi): card generates fully in Twi (5 Twi factor labels, ɛ/ɔ chars, Good badge), Read aloud → `POST /api/ai/speak 200` → playing → stop; cache key `isusupro-fin-health-v1-twi`; chat re-opens in Twi (shared preference); no page errors
+- `npx tsc --noEmit` 0 errors, `npx eslint` clean on both changed files

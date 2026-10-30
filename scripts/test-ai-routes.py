@@ -67,6 +67,47 @@ ok4 = status == 200 and 0 <= data.get('score', -1) <= 100 and len(data.get('fact
 print('4 FIN-HEALTH:', status, 'score=', data.get('score'), data.get('grade'), 'factors=', len(data.get('factors', [])), 'tips=', len(data.get('tips', [])), 'OK' if ok4 else 'CHECK')
 print('  summary:', (data.get('summary') or '')[:160])
 
+# 4b) Financial health in Twi: summary/factors/tips localised, grade stays English
+payload_twi = {
+    'language': 'twi',
+    'wallets': [{'type': 'main', 'balance': 1240.5}, {'type': 'savings', 'balance': 3150}, {'type': 'susu', 'balance': 800}],
+    'transactions': [
+        {'type': 'susu_contribution', 'amount': 50, 'category': 'susu', 'date': '2026-10-30'},
+        {'type': 'susu_contribution', 'amount': 50, 'category': 'susu', 'date': '2026-10-29'},
+        {'type': 'deposit', 'amount': 500, 'category': 'income', 'date': '2026-10-28'},
+        {'type': 'withdrawal', 'amount': 120, 'category': 'food', 'date': '2026-10-27'},
+        {'type': 'loan_repayment', 'amount': 210, 'category': 'loan', 'date': '2026-10-26'},
+        {'type': 'bill_payment', 'amount': 85, 'category': 'utilities', 'date': '2026-10-25'},
+    ],
+    'budgets': [
+        {'category': 'food', 'allocatedAmount': 600, 'spentAmount': 540},
+        {'category': 'transport', 'allocatedAmount': 200, 'spentAmount': 90},
+        {'category': 'utilities', 'allocatedAmount': 150, 'spentAmount': 85},
+    ],
+    'savingsGoals': [
+        {'name': 'Children School Fees', 'currentAmount': 1900, 'targetAmount': 3000},
+        {'name': 'Emergency Fund', 'currentAmount': 800, 'targetAmount': 2000},
+    ],
+    'loans': [{'status': 'active', 'amount': 2500, 'remainingBalance': 1450}],
+    'susuGroups': [{'name': 'Makola Traders Circle', 'contributionAmount': 50, 'frequency': 'daily', 'status': 'active'}],
+    'susuPayouts': [{'groupName': 'Makola Traders Circle', 'amount': 1450, 'status': 'pending', 'payoutDate': '2026-11-15'}],
+}
+status, data = post('/api/ai/financial-health', payload_twi, timeout=180)
+summary_twi = data.get('summary') or ''
+labels_twi = [f.get('label', '') for f in data.get('factors', [])]
+tips_twi = data.get('tips') or []
+twi_markers = any(ch in (summary_twi + ' '.join(labels_twi) + ' '.join(tips_twi)) for ch in 'ɛɔŋ')
+ok4b = (
+    status == 200 and 0 <= data.get('score', -1) <= 100
+    and len(data.get('factors', [])) == 5
+    and data.get('grade') in ('Excellent', 'Good', 'Fair', 'Struggling')
+    and twi_markers
+)
+print('4b FIN-HEALTH(twi):', status, 'score=', data.get('score'), 'grade=', data.get('grade'), 'twi chars=', twi_markers, 'OK' if ok4b else 'CHECK')
+print('  twi summary:', summary_twi[:170])
+print('  twi labels:', labels_twi)
+print('  twi tips:', [t[:70] for t in tips_twi[:3]])
+
 # 5) Speak: short text -> expect base64 WAV
 status, data = post('/api/ai/speak', {'text': 'Your wallet balance is one thousand two hundred cedis.'})
 audio_len = len(data.get('audioBase64', ''))
@@ -124,4 +165,4 @@ ok6 = status == 200 and 'suggestedScores' in data and len(note) > 200
 print('6 APPRAISAL+NOTE:', status, 'scores=', 'suggestedScores' in data, 'note chars =', len(note), 'OK' if ok6 else 'CHECK')
 print('  note preview:', note[:180].replace('\n', ' '))
 
-print('\nSUMMARY:', 'ALL OK' if all([ok4, ok5, ok7, ok8, ok9]) else 'SOME CHECKS FAILED')
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9]) else 'SOME CHECKS FAILED')
