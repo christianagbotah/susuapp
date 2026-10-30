@@ -946,3 +946,21 @@ Verification:
 Stage Summary:
 - Multilingual (6 Ghana languages), data-grounded Susu AI across all 10 portals + structured AI credit assessment + 5C officer assist
 - Money flows now honest end-to-end; ledger balances; sessions reset on logout
+
+## Task ID: 2026-10-30-ai-chat-lang-ux-fix
+**Commit:** d751d77 — fix(ai-chat): make all 6 Ghana language chips visible & wrap suggestions
+
+**User feedback:** "there is no where to tap Twi. also the suggested messages are in same row making them overflow the size of the chat modal"
+
+**Root cause:** Both the language chip row and the suggestion chip row in `susu-ai-chat.tsx` used `overflow-x-auto` with hidden scrollbars inside a ~400px modal. Twi/Ga/Ewe/Hausa/Pidgin sat beyond the cut-off with zero scroll affordance (untappable), and the 4 long suggestion prompts rendered as one overflowing horizontal row.
+
+**Fixes:**
+1. Language row: `flex-wrap` replaces hidden horizontal scroll — all 6 Ghana languages (English, Twi, Ga, Ewe, Hausa, Pidgin) now always visible and tappable; wraps to 2 rows on very narrow screens.
+2. Suggestions: `flex flex-wrap` with `rounded-lg text-left leading-snug` chips — prompts wrap onto multiple rows inside the modal, long text wraps within a chip.
+
+**Verification (agent-browser, logged in as Ama Mensah/customer):**
+- Mobile 390px: suggestions on 3 wrapped rows, all 6 language chips on one visible row, `overflow: []` (geometry check vs dialog rect)
+- Desktop 1280px (400px modal): zero overflow; no console/page errors
+- Tapped Twi → `aria-pressed=true`, header shows "Online · Live data · Twi", placeholder "Ask Susu AI (Twi or English)…"
+- Sent "How does susu work?" → live AI reply returned in Asante Twi
+- `npx tsc --noEmit` + `npx eslint` clean
