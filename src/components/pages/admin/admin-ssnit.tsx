@@ -283,6 +283,10 @@ export function AdminSSNIT() {
                           key={filing.id}
                           className="cursor-pointer hover:bg-muted/30 transition-colors"
                           onClick={() => setDetailFiling(filing)}
+                          tabIndex={0}
+                          role="button"
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailFiling(filing); } }}
+                          aria-label={`View SSNIT filing details for ${filing.period}`}
                         >
                           <TableCell className="font-medium">{filing.period}</TableCell>
                           <TableCell className="text-right">{filing.totalEmployees}</TableCell>
@@ -445,6 +449,10 @@ export function AdminSSNIT() {
                           key={c.id}
                           className="cursor-pointer hover:bg-muted/30 transition-colors"
                           onClick={() => setDetailContribution(c)}
+                          tabIndex={0}
+                          role="button"
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailContribution(c); } }}
+                          aria-label={`View SSNIT contribution details for ${c.employeeName}`}
                         >
                           <TableCell className="font-medium">{c.employeeName}</TableCell>
                           <TableCell className="font-mono text-xs text-muted-foreground">{c.ssnitNumber}</TableCell>

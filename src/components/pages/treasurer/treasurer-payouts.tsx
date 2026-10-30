@@ -71,6 +71,8 @@ export function TreasurerPayouts() {
   const [processDialogId, setProcessDialogId] = useState<string | null>(null);
   const [receiptDialogId, setReceiptDialogId] = useState<string | null>(null);
   const [batchConfirm, setBatchConfirm] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
   const pendingPayouts = payouts.filter(p => p.status === 'pending');
   const processingPayouts = payouts.filter(p => p.status === 'processing');
@@ -108,17 +110,39 @@ export function TreasurerPayouts() {
   const receiptPayout = payouts.find(p => p.id === receiptDialogId);
 
   const handleProcessPayout = () => {
-    if (processDialogId) {
+    if (!processDialogId || isProcessing) return;
+    setIsProcessing(true);
+    // Brief processing phase to simulate MoMo/bank disbursement rails
+    setTimeout(() => {
       processPayout(processDialogId);
+      setIsProcessing(false);
       setProcessDialogId(null);
       toast.success('Payout processed successfully!');
-    }
+    }, 500);
   };
 
   const handleBatchProcess = () => {
-    pendingPayouts.forEach(p => processPayout(p.id));
-    setBatchConfirm(false);
-    toast.success(`${pendingPayouts.length} payouts processed successfully!`);
+    if (isBatchProcessing || pendingPayouts.length === 0) return;
+    setIsBatchProcessing(true);
+    setTimeout(() => {
+      let processed = 0;
+      let failed = 0;
+      pendingPayouts.forEach((p) => {
+        try {
+          processPayout(p.id);
+          processed += 1;
+        } catch {
+          failed += 1;
+        }
+      });
+      setIsBatchProcessing(false);
+      setBatchConfirm(false);
+      if (failed === 0) {
+        toast.success(`${processed} payout${processed !== 1 ? 's' : ''} processed successfully!`);
+      } else {
+        toast.warning(`${processed} processed, ${failed} failed`);
+      }
+    }, 500);
   };
 
   const filterButtons: { label: string; value: PayoutStatus; count: number }[] = [
@@ -383,9 +407,19 @@ export function TreasurerPayouts() {
                 <Button
                   className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white touch-manipulation"
                   onClick={handleProcessPayout}
+                  disabled={isProcessing}
                 >
-                  <CheckCircle className="mr-1.5 h-4 w-4" />
-                  Confirm Payout
+                  {isProcessing ? (
+                    <>
+                      <span className="mr-1.5 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="mr-1.5 h-4 w-4" />
+                      Confirm Payout
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </div>
@@ -470,13 +504,23 @@ export function TreasurerPayouts() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="outline" className="min-h-[44px] touch-manipulation" onClick={() => setBatchConfirm(false)}>Cancel</Button>
+            <Button variant="outline" className="min-h-[44px] touch-manipulation" onClick={() => setBatchConfirm(false)} disabled={isBatchProcessing}>Cancel</Button>
             <Button
               className="min-h-[44px] bg-amber-600 hover:bg-amber-700 text-white touch-manipulation"
               onClick={handleBatchProcess}
+              disabled={isBatchProcessing}
             >
-              <Zap className="mr-1.5 h-4 w-4" />
-              Process {pendingPayouts.length} Payouts
+              {isBatchProcessing ? (
+                <>
+                  <span className="mr-1.5 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Zap className="mr-1.5 h-4 w-4" />
+                  Process {pendingPayouts.length} Payouts
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

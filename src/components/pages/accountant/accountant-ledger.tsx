@@ -12,17 +12,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { BookOpen, Plus, Undo2, Check, Search } from 'lucide-react';
+import { BookOpen, Plus, Undo2, Check, Search, Filter } from 'lucide-react';
 import type { LedgerEntry } from '@/lib/types';
 
 export function AccountantLedger() {
   const { ledger, coa, postEntry, reverseEntry } = useAccountantStore();
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | LedgerEntry['status']>('all');
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<LedgerEntry | null>(null);
-  const [form, setForm] = useState({ accountCode: '', debit: '', credit: '', narration: '', reference: '' });
+  const [form, setForm] = useState({ amount: '', debitAccount: '', creditAccount: '', narration: '', reference: '' });
 
   const filtered = ledger.filter(l =>
+    (statusFilter === 'all' || l.status === statusFilter) &&
     `${l.reference} ${l.accountName} ${l.accountCode} ${l.narration}`.toLowerCase().includes(query.toLowerCase())
   );
 
@@ -31,23 +33,26 @@ export function AccountantLedger() {
   const balanced = totalDebit === totalCredit;
 
   const handlePost = () => {
-    const account = coa.find(a => a.code === form.accountCode);
-    if (!account) { toast.error('Select an account to post to.'); return; }
-    const debit = Number(form.debit) || 0;
-    const credit = Number(form.credit) || 0;
-    if (debit === 0 && credit === 0) { toast.error('Enter a debit or credit amount.'); return; }
-    if (debit > 0 && credit > 0) { toast.error('Post either a debit OR a credit — not both in one line.'); return; }
+    const debitAcc = coa.find(a => a.code === form.debitAccount);
+    const creditAcc = coa.find(a => a.code === form.creditAccount);
+    if (!debitAcc) { toast.error('Select a debit account.'); return; }
+    if (!creditAcc) { toast.error('Select a credit account.'); return; }
+    if (debitAcc.code === creditAcc.code) { toast.error('Debit and credit accounts must be different — a journal moves value between two accounts.'); return; }
+    const amount = Number(form.amount);
+    if (!(amount > 0)) { toast.error('Enter an amount greater than 0.'); return; }
+    const refInput = form.reference.trim();
     postEntry({
-      reference: form.reference.trim() || `JV-${1043 + ledger.length}`,
-      accountCode: account.code,
-      accountName: account.name,
-      debit,
-      credit,
+      reference: refInput || undefined,
       narration: form.narration.trim() || 'Manual journal entry',
+      amount,
+      debitAccountCode: debitAcc.code,
+      debitAccountName: debitAcc.name,
+      creditAccountCode: creditAcc.code,
+      creditAccountName: creditAcc.name,
     });
-    toast.success('Journal entry posted', { description: `${account.name} — ${debit > 0 ? `Dr ${formatGHS(debit)}` : `Cr ${formatGHS(credit)}`} · reference ${form.reference.trim() || `JV-${1043 + ledger.length}`}` });
+    toast.success('Journal entry posted', { description: `Dr ${debitAcc.name} / Cr ${creditAcc.name} · ${formatGHS(amount)}${refInput ? ` · ${refInput}` : ''}` });
     setOpen(false);
-    setForm({ accountCode: '', debit: '', credit: '', narration: '', reference: '' });
+    setForm({ amount: '', debitAccount: '', creditAccount: '', narration: '', reference: '' });
   };
 
   const statusBadge = (s: LedgerEntry['status']) => ({
@@ -64,6 +69,18 @@ export function AccountantLedger() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search entries by reference, account or narration..." value={query} onChange={e => setQuery(e.target.value)} className="pl-9 min-h-[44px]" />
         </div>
+        <Select value={statusFilter} onValueChange={v => setStatusFilter(v as 'all' | LedgerEntry['status'])}>
+          <SelectTrigger className="w-full min-h-[44px] sm:w-[170px]">
+            <Filter className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="posted">Posted</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="reversed">Reversed</SelectItem>
+          </SelectContent>
+        </Select>
         <Button className="min-h-[44px] touch-manipulation" onClick={() => setOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Post Journal Entry
         </Button>
@@ -172,32 +189,37 @@ export function AccountantLedger() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Post Journal Entry</DialogTitle>
-            <DialogDescription>Double-entry posting to the chart of accounts. Accountant authority: ledger.post.</DialogDescription>
+            <DialogDescription>Double-entry posting — one amount, one debit account, one credit account. Accountant authority: ledger.post.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Reference</Label>
-                <Input placeholder="JV-1050" value={form.reference} onChange={e => setForm(f => ({ ...f, reference: e.target.value }))} className="min-h-[44px]" />
+                <Input placeholder="Auto (JV-…)" value={form.reference} onChange={e => setForm(f => ({ ...f, reference: e.target.value }))} className="min-h-[44px]" />
               </div>
               <div className="space-y-1.5">
-                <Label>Account</Label>
-                <Select value={form.accountCode} onValueChange={v => setForm(f => ({ ...f, accountCode: v }))}>
+                <Label>Amount (₵)</Label>
+                <Input type="number" placeholder="0.00" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="min-h-[44px]" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Debit account (Dr)</Label>
+                <Select value={form.debitAccount} onValueChange={v => setForm(f => ({ ...f, debitAccount: v }))}>
                   <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
                     {coa.map(a => <SelectItem key={a.code} value={a.code}>{a.code} — {a.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Debit (₵)</Label>
-                <Input type="number" placeholder="0.00" value={form.debit} onChange={e => setForm(f => ({ ...f, debit: e.target.value, credit: '' }))} className="min-h-[44px]" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Credit (₵)</Label>
-                <Input type="number" placeholder="0.00" value={form.credit} onChange={e => setForm(f => ({ ...f, credit: e.target.value, debit: '' }))} className="min-h-[44px]" />
+                <Label>Credit account (Cr)</Label>
+                <Select value={form.creditAccount} onValueChange={v => setForm(f => ({ ...f, creditAccount: v }))}>
+                  <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {coa.map(a => <SelectItem key={a.code} value={a.code}>{a.code} — {a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1.5">

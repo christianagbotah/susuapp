@@ -629,7 +629,7 @@ export function CustomerDashboard() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {savingsGoals.map((goal) => {
-                    const percent = Math.round((goal.currentAmount / goal.targetAmount) * 100);
+                    const percent = goal.targetAmount > 0 ? Math.round((goal.currentAmount / goal.targetAmount) * 100) : 0;
                     return (
                       <div
                         key={goal.id}
@@ -719,6 +719,10 @@ export function CustomerDashboard() {
                               key={txn.id}
                               onClick={() => setDetailTxn(txn)}
                               className="cursor-pointer border-b border-slate-50 hover:bg-muted/30 transition-colors"
+                              tabIndex={0}
+                              role="button"
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailTxn(txn); } }}
+                              aria-label="Open transaction details"
                             >
                               <TableCell className="whitespace-nowrap text-xs text-slate-600">
                                 {formatDate(txn.date)}
@@ -727,7 +731,7 @@ export function CustomerDashboard() {
                                 {txn.description}
                               </TableCell>
                               <TableCell>
-                                <Badge className={`${typeInfo.variant} h-5 text-[10px] font-medium hover:${typeInfo.variant}`}>
+                                <Badge className={`${typeInfo.variant} h-5 text-[10px] font-medium hover:opacity-80`}>
                                   {typeInfo.label}
                                 </Badge>
                               </TableCell>
@@ -775,7 +779,7 @@ export function CustomerDashboard() {
                               {txn.description}
                             </p>
                             <div className="mt-1 flex items-center gap-2">
-                              <Badge className={`${typeInfo.variant} h-4 text-[9px] font-medium px-1.5 hover:${typeInfo.variant}`}>
+                              <Badge className={`${typeInfo.variant} h-4 text-[9px] font-medium px-1.5 hover:opacity-80`}>
                                 {typeInfo.label}
                               </Badge>
                               <span className="text-[10px] text-slate-400">{formatDate(txn.date)}</span>
@@ -1104,7 +1108,7 @@ export function CustomerDashboard() {
             <DialogDescription>Progress and settings for this goal</DialogDescription>
           </DialogHeader>
           {detailGoal && (() => {
-            const percent = Math.round((detailGoal.currentAmount / detailGoal.targetAmount) * 100);
+            const percent = detailGoal.targetAmount > 0 ? Math.round((detailGoal.currentAmount / detailGoal.targetAmount) * 100) : 0;
             const remaining = Math.max(0, detailGoal.targetAmount - detailGoal.currentAmount);
             return (
               <div className="space-y-4">

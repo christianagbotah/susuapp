@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useCustomerExtendedStore } from '@/store/app-store';
+import { useCustomerExtendedStore, useCustomerStore } from '@/store/app-store';
 import { formatGHS, formatDate, getStatusColor } from '@/lib/formatters';
 import type { TelcoProvider, AirtimeProduct, AirtimeTransaction } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,7 @@ import {
   Shield,
   Send,
   Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 
 // ============================================
@@ -110,6 +111,8 @@ function getStatusIcon(status: string) {
 export function CustomerAirtime() {
   const { airtimeProducts, airtimeTransactions, purchaseAirtime } =
     useCustomerExtendedStore();
+  const { wallets } = useCustomerStore();
+  const mainWallet = wallets.find((w) => w.type === 'main');
 
   // ---- Local State ----
   const [selectedProvider, setSelectedProvider] = useState<TelcoProvider | null>(null);
@@ -118,6 +121,7 @@ export function CustomerAirtime() {
   const [activeTab, setActiveTab] = useState<'airtime' | 'data' | 'bundle'>('airtime');
   const [selectedProduct, setSelectedProduct] = useState<AirtimeProduct | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   // ---- Detail dialog state (row → detail linkage) ----
   const [topupDetail, setTopupDetail] = useState<AirtimeTransaction | null>(null);
@@ -141,6 +145,9 @@ export function CustomerAirtime() {
   // ---- Can buy check ----
   const canBuy = selectedProvider && fullPhone.length >= 14 && selectedProduct;
 
+  // ---- Balance check (before submitting) ----
+  const insufficientBalance = !!selectedProduct && !!mainWallet && selectedProduct.price > mainWallet.balance;
+
   // ---- Handle purchase click ----
   function handleBuyClick() {
     if (!canBuy) {
@@ -153,19 +160,48 @@ export function CustomerAirtime() {
       }
       return;
     }
+    if (insufficientBalance) {
+      toast.error('Insufficient wallet balance for this purchase', {
+        description: `Available: ${formatGHS(mainWallet?.balance ?? 0)} — needed: ${formatGHS(selectedProduct?.price ?? 0)}`,
+      });
+      return;
+    }
     setConfirmOpen(true);
   }
 
   // ---- Handle confirm purchase ----
   function handleConfirmPurchase() {
-    if (!selectedProvider || !fullPhone || !selectedProduct) return;
-    purchaseAirtime(selectedProvider, fullPhone, selectedProduct.id);
-    const providerCfg = providerConfig[selectedProvider];
-    toast.success(
-      `${selectedProduct.name} purchased for ${fullPhone} via ${providerCfg.name}!`
-    );
-    setConfirmOpen(false);
-    setSelectedProduct(null);
+    const provider = selectedProvider;
+    const product = selectedProduct;
+    if (!provider || !fullPhone || !product) return;
+    if (insufficientBalance) {
+      toast.error('Insufficient wallet balance for this purchase', {
+        description: `Available: ${formatGHS(mainWallet?.balance ?? 0)}`,
+      });
+      return;
+    }
+    if (isPurchasing) return;
+    setIsPurchasing(true);
+
+    // Brief processing phase, then commit to the store
+    setTimeout(() => {
+      const result = purchaseAirtime(provider, fullPhone, product.id);
+      setIsPurchasing(false);
+
+      if (!result.ok) {
+        toast.error(result.error ?? 'Purchase failed', {
+          description: 'Your wallet balance was not changed.',
+        });
+        return;
+      }
+
+      const providerCfg = providerConfig[provider];
+      toast.success(
+        `${product.name} purchased for ${fullPhone} via ${providerCfg.name}!`
+      );
+      setConfirmOpen(false);
+      setSelectedProduct(null);
+    }, 500);
   }
 
   // ---- Custom airtime amount (not from list) ----
@@ -654,7 +690,7 @@ export function CustomerAirtime() {
                         >
                           <td className="whitespace-nowrap px-5 py-3.5">
                             <Badge
-                              className={`${cfg.bgColor} ${cfg.textColor} hover:${cfg.bgColor} border-0 text-xs font-semibold`}
+                              className={`${cfg.bgColor} ${cfg.textColor} hover:opacity-80 border-0 text-xs font-semibold`}
                             >
                               {cfg.name}
                             </Badge>
@@ -824,6 +860,14 @@ export function CustomerAirtime() {
                   {formatGHS(selectedProduct.price)}
                 </span>
               </div>
+
+              {/* Balance hint */}
+              {insufficientBalance && (
+                <p className="flex items-center gap-1.5 text-xs text-red-600">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  Insufficient wallet balance — available: {formatGHS(mainWallet?.balance ?? 0)}
+                </p>
+              )}
             </div>
           )}
 
@@ -837,10 +881,20 @@ export function CustomerAirtime() {
             </Button>
             <Button
               onClick={handleConfirmPurchase}
+              disabled={isPurchasing || insufficientBalance}
               className="min-h-[44px] bg-emerald-600 text-white hover:bg-emerald-700"
             >
-              <Send className="mr-2 h-4 w-4" />
-              Confirm &amp; Pay {selectedProduct ? formatGHS(selectedProduct.price) : ''}
+              {isPurchasing ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Confirm &amp; Pay {selectedProduct ? formatGHS(selectedProduct.price) : ''}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

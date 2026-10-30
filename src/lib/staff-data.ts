@@ -172,17 +172,39 @@ export const mockSpotChecks: SpotCheck[] = [
 ];
 
 // ================= ACCOUNTANT =================
+// Double-entry seed: each journal = two paired LedgerEntry rows sharing one
+// reference (one debit row, one credit row) so sum(debit) === sum(credit).
 export const mockLedgerEntries: LedgerEntry[] = [
-  { id: 'le-001', date: '2026-10-25', reference: 'JV-1042', accountCode: '1010', accountName: 'Cash on Hand — Teller Chest', debit: 34650, credit: 0, narration: 'Daily susu collections banked to chest', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-002', date: '2026-10-25', reference: 'JV-1042', accountCode: '4010', accountName: 'Susu Collection Income', debit: 0, credit: 1200, narration: 'Commission on daily susu (1% fee)', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-003', date: '2026-10-25', reference: 'JV-1043', accountCode: '1020', accountName: 'MTN MoMo Float', debit: 41280, credit: 0, narration: 'MoMo collections — MTN merchant wallet', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-004', date: '2026-10-24', reference: 'JV-1041', accountCode: '4020', accountName: 'Loan Interest Income', debit: 0, credit: 18450, narration: 'Accrued interest — October cycle', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-005', date: '2026-10-24', reference: 'JV-1040', accountCode: '5010', accountName: 'Agent Commission Expense', debit: 8920, credit: 0, narration: 'Field agent commissions — week 42', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-006', date: '2026-10-23', reference: 'JV-1039', accountCode: '1030', accountName: 'GCB Bank — Operation Account', debit: 45000, credit: 0, narration: 'Cash deposit — daily banking', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-007', date: '2026-10-23', reference: 'JV-1038', accountCode: '5110', accountName: 'Loan Loss Provision', debit: 5400, credit: 0, narration: 'Provision top-up — doubtful & loss classes', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-008', date: '2026-10-22', reference: 'JV-1037', accountCode: '2010', accountName: 'Member Savings Deposits (Susu)', debit: 0, credit: 96500, narration: 'Susu deposits posted to members\' accounts', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-009', date: '2026-10-22', reference: 'JV-1036', accountCode: '5020', accountName: 'Staff Salaries', debit: 38200, credit: 0, narration: 'October payroll net of SSNIT & PAYE', postedBy: 'Esi Nyarko', status: 'posted' },
-  { id: 'le-010', date: '2026-10-21', reference: 'JV-1035', accountCode: '1050', accountName: 'Fixed Assets — Equipment', debit: 0, credit: 2200, narration: 'Depreciation — laptops & fingerprint scanners (monthly)', postedBy: 'Esi Nyarko', status: 'reversed' },
+  // JV-1043 — MoMo collections received into the MTN float
+  { id: 'le-001', date: '2026-10-25', reference: 'JV-1043', accountCode: '1020', accountName: 'MTN MoMo Float', debit: 41280, credit: 0, narration: 'MoMo collections — MTN merchant wallet', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-002', date: '2026-10-25', reference: 'JV-1043', accountCode: '2010', accountName: 'Member Savings Deposits (Susu)', debit: 0, credit: 41280, narration: 'MoMo collections — MTN merchant wallet', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1042 — daily susu cash banked to the teller chest
+  { id: 'le-003', date: '2026-10-25', reference: 'JV-1042', accountCode: '1010', accountName: 'Cash on Hand — Teller Chest', debit: 34650, credit: 0, narration: 'Daily susu collections banked to chest', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-004', date: '2026-10-25', reference: 'JV-1042', accountCode: '2010', accountName: 'Member Savings Deposits (Susu)', debit: 0, credit: 34650, narration: 'Daily susu collections banked to chest', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1041 — susu commission earned
+  { id: 'le-005', date: '2026-10-25', reference: 'JV-1041', accountCode: '1010', accountName: 'Cash on Hand — Teller Chest', debit: 1200, credit: 0, narration: 'Commission on daily susu (1% fee)', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-006', date: '2026-10-25', reference: 'JV-1041', accountCode: '4010', accountName: 'Susu Collection Income', debit: 0, credit: 1200, narration: 'Commission on daily susu (1% fee)', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1040 — October loan interest accrued into the loan book
+  { id: 'le-007', date: '2026-10-24', reference: 'JV-1040', accountCode: '1040', accountName: 'Loan Portfolio (Net)', debit: 18450, credit: 0, narration: 'Accrued interest — October cycle', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-008', date: '2026-10-24', reference: 'JV-1040', accountCode: '4020', accountName: 'Loan Interest Income', debit: 0, credit: 18450, narration: 'Accrued interest — October cycle', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1039 — field agent commissions paid from the chest
+  { id: 'le-009', date: '2026-10-24', reference: 'JV-1039', accountCode: '5010', accountName: 'Agent Commission Expense', debit: 8920, credit: 0, narration: 'Field agent commissions — week 42', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-010', date: '2026-10-24', reference: 'JV-1039', accountCode: '1010', accountName: 'Cash on Hand — Teller Chest', debit: 0, credit: 8920, narration: 'Field agent commissions — week 42', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1038 — daily banking: chest cash deposited at GCB
+  { id: 'le-011', date: '2026-10-23', reference: 'JV-1038', accountCode: '1030', accountName: 'GCB Bank — Operation Account', debit: 45000, credit: 0, narration: 'Cash deposit — daily banking', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-012', date: '2026-10-23', reference: 'JV-1038', accountCode: '1010', accountName: 'Cash on Hand — Teller Chest', debit: 0, credit: 45000, narration: 'Cash deposit — daily banking', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1037 — loan loss provision top-up charged to the portfolio
+  { id: 'le-013', date: '2026-10-23', reference: 'JV-1037', accountCode: '5110', accountName: 'Loan Loss Provision', debit: 5400, credit: 0, narration: 'Provision top-up — doubtful & loss classes', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-014', date: '2026-10-23', reference: 'JV-1037', accountCode: '1040', accountName: 'Loan Portfolio (Net)', debit: 0, credit: 5400, narration: 'Provision top-up — doubtful & loss classes', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1036 — susu deposits received via MoMo
+  { id: 'le-015', date: '2026-10-22', reference: 'JV-1036', accountCode: '1020', accountName: 'MTN MoMo Float', debit: 96500, credit: 0, narration: 'Susu deposits posted to members\' accounts', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-016', date: '2026-10-22', reference: 'JV-1036', accountCode: '2010', accountName: 'Member Savings Deposits (Susu)', debit: 0, credit: 96500, narration: 'Susu deposits posted to members\' accounts', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1035 — October payroll settled from the bank account
+  { id: 'le-017', date: '2026-10-22', reference: 'JV-1035', accountCode: '5020', accountName: 'Staff Salaries', debit: 38200, credit: 0, narration: 'October payroll net of SSNIT & PAYE', postedBy: 'Esi Nyarko', status: 'posted' },
+  { id: 'le-018', date: '2026-10-22', reference: 'JV-1035', accountCode: '1030', accountName: 'GCB Bank — Operation Account', debit: 0, credit: 38200, narration: 'October payroll net of SSNIT & PAYE', postedBy: 'Esi Nyarko', status: 'posted' },
+  // JV-1034 — depreciation posted to the wrong expense line, then reversed
+  { id: 'le-019', date: '2026-10-21', reference: 'JV-1034', accountCode: '5110', accountName: 'Loan Loss Provision', debit: 2200, credit: 0, narration: 'Depreciation — laptops & fingerprint scanners (monthly) — wrong account, reversed', postedBy: 'Esi Nyarko', status: 'reversed' },
+  { id: 'le-020', date: '2026-10-21', reference: 'JV-1034', accountCode: '1050', accountName: 'Fixed Assets — Equipment', debit: 0, credit: 2200, narration: 'Depreciation — laptops & fingerprint scanners (monthly) — wrong account, reversed', postedBy: 'Esi Nyarko', status: 'reversed' },
 ];
 
 export const mockChartOfAccounts: ChartOfAccount[] = [
@@ -193,7 +215,7 @@ export const mockChartOfAccounts: ChartOfAccount[] = [
   { code: '1050', name: 'Fixed Assets — Equipment', type: 'asset', balance: 96500, momChange: -2.2 },
   { code: '2010', name: 'Member Savings Deposits (Susu)', type: 'liability', balance: 1980000, momChange: 7.9 },
   { code: '2020', name: 'Suspected Fraud Hold', type: 'liability', balance: 3500, momChange: 0 },
-  { code: '3010', name: 'Retained Earnings', type: 'equity', balance: 612000, momChange: 9.4 },
+  { code: '3010', name: 'Retained Earnings', type: 'equity', balance: 1461480, momChange: 9.4 },
   { code: '4010', name: 'Susu Collection Income', type: 'income', balance: 148600, momChange: 14.2 },
   { code: '4020', name: 'Loan Interest Income', type: 'income', balance: 322400, momChange: 10.5 },
   { code: '5010', name: 'Agent Commission Expense', type: 'expense', balance: 68400, momChange: 11.8 },

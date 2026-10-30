@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { EmptyState } from '@/components/shared/mobile-components';
 import { FileWarning, Send, Download, Eye, CheckCircle2, Clock } from 'lucide-react';
 import type { STRReport } from '@/lib/types';
 
@@ -70,7 +71,15 @@ export function ComplianceStrReports() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        {filtered.map((s, i) => {
+        {filtered.length === 0 ? (
+          <div className="lg:col-span-2">
+            <EmptyState
+              icon={FileWarning}
+              title="No STR reports found"
+              description="Try adjusting the status filter."
+            />
+          </div>
+        ) : filtered.map((s, i) => {
           const meta = statusMeta[s.status];
           const Icon = meta.icon;
           return (

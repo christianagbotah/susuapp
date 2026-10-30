@@ -14,7 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { UserSearch, MapPin, CalendarDays, Save, Star } from 'lucide-react';
+import { EmptyState } from '@/components/shared/mobile-components';
+import { UserSearch, MapPin, CalendarDays, Save, Star, Sparkles, Loader2, AlertTriangle } from 'lucide-react';
 import type { LoanAppraisal, LoanApplication } from '@/lib/types';
 
 const CRITERIA = [
@@ -27,6 +28,19 @@ const CRITERIA = [
 
 type CriterionKey = typeof CRITERIA[number]['key'];
 
+interface AiSuggestion {
+  scores: Record<CriterionKey, number>;
+  rationale: string;
+  flags: string[];
+}
+
+/** Clamp any AI-returned score into the dialog's 1-5 scale. */
+const clampAiScore = (value: unknown): number => {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 3;
+  return Math.max(1, Math.min(5, Math.round(n)));
+};
+
 export function LoanOfficerAppraisals() {
   const { user, appraisals, applications, saveAppraisal, advanceStage } = useLoanOfficerStore();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -38,6 +52,20 @@ export function LoanOfficerAppraisals() {
   const [recommendation, setRecommendation] = useState<LoanAppraisal['recommendation']>('approve');
   const [amount, setAmount] = useState('');
 
+  // ---- AI 5C assist (/api/ai/appraisal-assist) ----
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<AiSuggestion | null>(null);
+  const [aiForm, setAiForm] = useState({
+    businessType: '',
+    purpose: '',
+    amount: '',
+    tenorMonths: '',
+    existingLoansCount: '',
+    existingOutstanding: '',
+  });
+
   const toAppraise = applications.filter(a => ['field_visit', 'appraisal', 'documents_pending'].includes(a.stage));
 
   const openFor = (app: LoanApplication) => {
@@ -48,7 +76,78 @@ export function LoanOfficerAppraisals() {
     setNotes(existing?.notes ?? '');
     setRecommendation(existing?.recommendation ?? 'approve');
     setAmount(String(existing?.recommendedAmount ?? app.amount));
+    setAiPanelOpen(false);
+    setAiError(null);
+    setAiSuggestion(null);
     setDialogOpen(true);
+  };
+
+  /** Open the small AI context form, pre-filled from the application on file. */
+  const openAiPanel = () => {
+    if (!activeApp) return;
+    setAiForm({
+      businessType: '',
+      purpose: activeApp.purpose,
+      amount: String(activeApp.amount),
+      tenorMonths: String(activeApp.tenorMonths),
+      existingLoansCount: '',
+      existingOutstanding: '',
+    });
+    setAiError(null);
+    setAiPanelOpen(true);
+  };
+
+  const runAiSuggest = async () => {
+    if (!activeApp) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const count = Number(aiForm.existingLoansCount) || 0;
+      const outstanding = Number(aiForm.existingOutstanding) || 0;
+      const res = await fetch('/api/ai/appraisal-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicant: {
+            businessType: aiForm.businessType.trim() || undefined,
+            purpose: aiForm.purpose.trim() || activeApp.purpose,
+            amount: Number(aiForm.amount) || activeApp.amount,
+            tenorMonths: Number(aiForm.tenorMonths) || activeApp.tenorMonths,
+            existingLoans: count > 0 || outstanding > 0 ? [{ count, outstanding }] : undefined,
+            susuHistory: activeApp.dailyRate ? `Susu-linked daily savings of about GHS ${activeApp.dailyRate}` : undefined,
+          },
+          partialScores: {
+            character: scores.character,
+            capacity: scores.capacity,
+            capital: scores.capital,
+            collateral: scores.collateral,
+            condition: scores.conditions,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'AI unavailable');
+      const suggested: Record<CriterionKey, number> = {
+        character: clampAiScore(data?.suggestedScores?.character),
+        capacity: clampAiScore(data?.suggestedScores?.capacity),
+        capital: clampAiScore(data?.suggestedScores?.capital),
+        collateral: clampAiScore(data?.suggestedScores?.collateral),
+        conditions: clampAiScore(data?.suggestedScores?.condition),
+      };
+      setScores(suggested);
+      setAiSuggestion({
+        scores: suggested,
+        rationale: typeof data?.rationale === 'string' ? data.rationale : '',
+        flags: Array.isArray(data?.flags)
+          ? data.flags.filter((f: unknown): f is string => typeof f === 'string').slice(0, 3)
+          : [],
+      });
+    } catch {
+      setAiError('AI unavailable right now — score manually or try again.');
+      toast.error('AI unavailable');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const total = Object.values(scores).reduce((s, v) => s + v, 0);
@@ -88,7 +187,15 @@ export function LoanOfficerAppraisals() {
       {/* Saved appraisals */}
       <h2 className="flex items-center gap-2 text-lg font-semibold"><UserSearch className="h-5 w-5 text-amber-500" /> Completed 5C Appraisals</h2>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {appraisals.map((v, i) => {
+        {appraisals.length === 0 ? (
+          <div className="md:col-span-2">
+            <EmptyState
+              icon={UserSearch}
+              title="No appraisals yet"
+              description="Completed 5C appraisals will appear here."
+            />
+          </div>
+        ) : appraisals.map((v, i) => {
           const score = v.character + v.capacity + v.capital + v.collateral + v.conditions;
           const g = score >= 21 ? 'A' : score >= 17 ? 'B' : score >= 13 ? 'C' : score >= 9 ? 'D' : 'E';
           return (
@@ -132,7 +239,15 @@ export function LoanOfficerAppraisals() {
       {/* Pending appraisals */}
       <h2 className="flex items-center gap-2 text-lg font-semibold"><CalendarDays className="h-5 w-5 text-blue-500" /> Awaiting Appraisal</h2>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {toAppraise.map(a => (
+        {toAppraise.length === 0 ? (
+          <div className="md:col-span-2 xl:col-span-3">
+            <EmptyState
+              icon={CalendarDays}
+              title="Nothing awaiting appraisal"
+              description="Applications in field visit or appraisal stage will appear here."
+            />
+          </div>
+        ) : toAppraise.map(a => (
           <Card key={a.id} className="mobile-card hover:shadow-md transition-shadow">
             <CardContent className="space-y-2.5 p-4">
               <div className="flex items-center justify-between">
@@ -156,6 +271,89 @@ export function LoanOfficerAppraisals() {
             <DialogDescription>Score each criterion 1–5. Ghana susu applicants: weigh susu discipline under Character & Capacity.</DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
+            {/* AI 5C assist */}
+            <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/60 p-3 dark:border-amber-700 dark:bg-amber-900/10">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-sm font-medium"><Sparkles className="h-4 w-4 shrink-0 text-amber-500" /> AI 5C Assist</p>
+                  <p className="text-xs text-muted-foreground">Susu AI proposes the five scores from the applicant's context — you stay in control.</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                  disabled={aiLoading}
+                  onClick={() => (aiPanelOpen ? setAiPanelOpen(false) : openAiPanel())}
+                >
+                  <Sparkles className="mr-1 h-4 w-4" /> Suggest
+                </Button>
+              </div>
+
+              {aiPanelOpen && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mt-3 space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Business type</label>
+                      <Input placeholder="e.g. Market trader" value={aiForm.businessType} onChange={e => setAiForm(f => ({ ...f, businessType: e.target.value }))} className="min-h-[40px]" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Purpose</label>
+                      <Input placeholder="e.g. Restock provisions" value={aiForm.purpose} onChange={e => setAiForm(f => ({ ...f, purpose: e.target.value }))} className="min-h-[40px]" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Amount (₵)</label>
+                      <Input type="number" value={aiForm.amount} onChange={e => setAiForm(f => ({ ...f, amount: e.target.value }))} className="min-h-[40px]" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Tenor (months)</label>
+                      <Input type="number" value={aiForm.tenorMonths} onChange={e => setAiForm(f => ({ ...f, tenorMonths: e.target.value }))} className="min-h-[40px]" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Existing loans (count)</label>
+                      <Input type="number" placeholder="0" value={aiForm.existingLoansCount} onChange={e => setAiForm(f => ({ ...f, existingLoansCount: e.target.value }))} className="min-h-[40px]" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Existing outstanding (₵)</label>
+                      <Input type="number" placeholder="0" value={aiForm.existingOutstanding} onChange={e => setAiForm(f => ({ ...f, existingOutstanding: e.target.value }))} className="min-h-[40px]" />
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full min-h-[40px] bg-amber-600 hover:bg-amber-700 touch-manipulation"
+                    onClick={runAiSuggest}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
+                    {aiLoading ? 'Susu AI is thinking…' : 'Get AI suggestion'}
+                  </Button>
+                </motion.div>
+              )}
+
+              {aiSuggestion && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mt-3 space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/20">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                    <Sparkles className="h-3.5 w-3.5 shrink-0" /> Scores filled from AI suggestion — adjust freely
+                  </p>
+                  {aiSuggestion.rationale && (
+                    <p className="text-sm leading-relaxed text-amber-900 dark:text-amber-100">{aiSuggestion.rationale}</p>
+                  )}
+                  {aiSuggestion.flags.length > 0 && (
+                    <ul className="space-y-1">
+                      {aiSuggestion.flags.map((flag, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-200">
+                          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {flag}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </motion.div>
+              )}
+
+              {aiError && (
+                <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{aiError}</p>
+              )}
+            </div>
+
             {CRITERIA.map(c => (
               <div key={c.key} className="space-y-2">
                 <div className="flex items-center justify-between">

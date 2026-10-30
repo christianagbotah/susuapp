@@ -231,6 +231,10 @@ export function AgentCommissions() {
                             key={commission.id}
                             onClick={() => setDetail(commission)}
                             className="cursor-pointer hover:bg-muted/30 transition-colors"
+                            tabIndex={0}
+                            role="button"
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetail(commission); } }}
+                            aria-label={`Open commission details: ${commission.description}`}
                           >
                             <TableCell className="text-muted-foreground whitespace-nowrap">
                               {formatDate(commission.date)}

@@ -6,14 +6,14 @@ import {
   formatGHS, formatDate, formatDuration, getStatusColor,
   getInitials, formatCompactNumber, formatDateTime,
 } from '@/lib/formatters';
-import { loanPayments } from '@/lib/mock-data';
+import { loanPayments, susuContributions, susuPayouts } from '@/lib/mock-data';
 import { motion } from 'framer-motion';
 import {
-  Landmark, Clock, DollarSign, AlertTriangle, CheckCircle, XCircle,
+  Landmark, Clock, DollarSign, AlertTriangle, Check, CheckCircle, XCircle,
   Eye, Filter, ChevronLeft, ChevronRight, CreditCard, Calendar,
   User, Phone, MapPin, Shield, Search, Download, ArrowRight,
   FileText, TrendingUp, TrendingDown, Send, Banknote, Building2,
-  Wallet, ArrowUpRight, Sparkles, Loader2, ShieldCheck, ShieldAlert, Lightbulb,
+  Wallet, ArrowUpRight, Sparkles, Loader2, Lightbulb,
   RefreshCw, Smartphone,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +33,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import type { Loan, RepaymentScheduleEntry, CreditScoreFactors } from '@/lib/types';
+import type { Loan, RepaymentScheduleEntry, CreditScoreFactors, User as UserRecord } from '@/lib/types';
 import { normalizeGhanaPhone } from '@/lib/payments/types';
 import type { PaymentIntent } from '@/lib/payments/types';
 import { usePaymentsStore } from '@/store/payments-store';
@@ -71,6 +71,131 @@ const typeColors: Record<string, string> = {
   'susu-backed': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
+// ---- AI assessment contract (mirrors /api/ai/loan-assessment) ----
+type AssessmentGrade = 'A' | 'B' | 'C' | 'D' | 'E';
+type AssessmentRecommendation = 'approve' | 'approve_with_conditions' | 'reduce' | 'reject' | 'review';
+
+interface AiAssessment {
+  grade: AssessmentGrade;
+  recommendation: AssessmentRecommendation;
+  confidence: number;
+  summary: string;
+  strengths: string[];
+  risks: string[];
+  conditions: string[];
+  suggestedAmount?: number;
+}
+
+const gradeStyles: Record<AssessmentGrade, string> = {
+  A: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400',
+  B: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400',
+  C: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400',
+  D: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-400',
+  E: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-400',
+};
+
+const recommendationStyles: Record<AssessmentRecommendation, string> = {
+  approve: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  approve_with_conditions: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400',
+  reduce: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  reject: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400',
+  review: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300',
+};
+
+const recommendationLabels: Record<AssessmentRecommendation, string> = {
+  approve: 'Approve',
+  approve_with_conditions: 'Approve with conditions',
+  reduce: 'Reduce amount',
+  reject: 'Reject',
+  review: 'Manual review',
+};
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Build the applicant's susu/credit context from data that actually exists in
+ *  scope (admin store loans/users + the payment, contribution and payout
+ *  records on file). Only observed values are included — anything absent is
+ *  omitted rather than guessed. */
+function buildAssessmentContext(loan: Loan, allLoans: Loan[], allUsers: UserRecord[]): Record<string, unknown> {
+  const otherLoans = allLoans.filter(l => l.applicantId === loan.applicantId && l.id !== loan.id);
+  const activeLoans = otherLoans.filter(l => l.status === 'active');
+  const repaidLoans = otherLoans.filter(l => l.status === 'repaid');
+  const defaultedLoans = otherLoans.filter(l => l.status === 'defaulted');
+  const rejectedLoans = otherLoans.filter(l => l.status === 'rejected');
+  const overdueInstallments = activeLoans.reduce(
+    (sum, l) => sum + (l.repaymentSchedule?.filter(e => e.status === 'overdue').length ?? 0),
+    0,
+  );
+
+  const otherLoanIds = new Set(otherLoans.map(l => l.id));
+  const payments = loanPayments.filter(p => otherLoanIds.has(p.loanId));
+  const completedPayments = payments.filter(p => p.status === 'completed');
+  const failedPayments = payments.filter(p => p.status === 'failed');
+  const paymentDates = payments.map(p => p.date).filter(Boolean).sort();
+  const lastPaymentDate = paymentDates.length > 0 ? paymentDates[paymentDates.length - 1] : undefined;
+
+  const contributions = susuContributions.filter(c => c.memberId === loan.applicantId);
+  const paidContributions = contributions.filter(c => c.status === 'paid');
+  const overdueContributions = contributions.filter(c => c.status === 'overdue');
+  const payouts = susuPayouts.filter(p => p.memberId === loan.applicantId);
+  const groupNames = Array.from(new Set([...contributions, ...payouts].map(x => x.groupName)));
+  const contributionDates = contributions.map(c => c.date).filter(Boolean).sort();
+  const lastContributionDate = contributionDates.length > 0 ? contributionDates[contributionDates.length - 1] : undefined;
+
+  const profile = allUsers.find(u => u.id === loan.applicantId);
+
+  const context: Record<string, unknown> = {};
+
+  if (profile) {
+    context.applicant = {
+      ...(profile.kycLevel ? { kycLevel: profile.kycLevel } : {}),
+      ...(profile.memberSince ? { platformMemberSince: profile.memberSince } : {}),
+      ...(profile.location ? { location: profile.location } : {}),
+    };
+  }
+
+  if (otherLoans.length > 0) {
+    context.loanHistory = {
+      otherLoans: otherLoans.length,
+      activeLoans: activeLoans.length,
+      repaidLoans: repaidLoans.length,
+      ...(defaultedLoans.length > 0 ? { defaultedLoans: defaultedLoans.length } : {}),
+      ...(rejectedLoans.length > 0 ? { rejectedLoans: rejectedLoans.length } : {}),
+      totalOutstanding: round2(activeLoans.reduce((sum, l) => sum + l.remainingBalance, 0)),
+      totalRepaidAllTime: round2(otherLoans.reduce((sum, l) => sum + l.totalPaid, 0)),
+      ...(overdueInstallments > 0 ? { overdueInstallmentsOnActiveLoans: overdueInstallments } : {}),
+    };
+  }
+
+  if (payments.length > 0) {
+    context.paymentHistory = {
+      recordedRepayments: payments.length,
+      completedRepayments: completedPayments.length,
+      ...(failedPayments.length > 0 ? { failedRepayments: failedPayments.length } : {}),
+      totalRecordedRepaid: round2(completedPayments.reduce((sum, p) => sum + p.amount, 0)),
+      ...(lastPaymentDate ? { lastRepaymentDate: lastPaymentDate } : {}),
+    };
+  }
+
+  if (contributions.length > 0 || payouts.length > 0) {
+    context.susuProfile = {
+      ...(groupNames.length > 0 ? { groups: groupNames } : {}),
+      contributionRecords: contributions.length,
+      paidContributions: paidContributions.length,
+      ...(overdueContributions.length > 0 ? { overdueContributions: overdueContributions.length } : {}),
+      totalContributed: round2(paidContributions.reduce((sum, c) => sum + c.amount, 0)),
+      ...(lastContributionDate ? { lastContributionDate } : {}),
+      payoutsReceived: payouts.length,
+      totalPayoutAmount: round2(payouts.reduce((sum, p) => sum + p.amount, 0)),
+    };
+  }
+
+  if (loan.guarantorName) context.guarantor = loan.guarantorName;
+  if (loan.collateral) context.collateral = loan.collateral;
+
+  return context;
+}
+
 const pipelineStages = [
   { key: 'pending', label: 'Applied', color: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-700', dot: 'bg-amber-500', line: 'bg-amber-300' },
   { key: 'under_review', label: 'Under Review', color: 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-700', dot: 'bg-purple-500', line: 'bg-purple-300' },
@@ -92,7 +217,7 @@ function getCreditScoreText(score: number): string {
 }
 
 export function AdminLoans() {
-  const { allLoans, approveLoan, rejectLoan, disburseLoan } = useAdminStore();
+  const { allLoans, allUsers, approveLoan, rejectLoan, disburseLoan } = useAdminStore();
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -112,8 +237,6 @@ export function AdminLoans() {
   const [confirmDialog, askConfirm] = useConfirm();
 
   // ---- AI Risk Assessment ----
-  interface AiFactor { factor: string; impact: 'positive' | 'negative' | 'neutral'; note: string; }
-  interface AiAssessment { riskLevel: 'low' | 'medium' | 'high'; score: number; recommendation: string; factors: AiFactor[]; }
   const [aiLoan, setAiLoan] = useState<Loan | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AiAssessment | null>(null);
@@ -132,26 +255,22 @@ export function AdminLoans() {
           applicantName: loan.applicantName,
           type: loan.type,
           amount: loan.amount,
-          termMonths: loan.term,
+          term: loan.term,
+          termUnit: loan.termUnit,
           purpose: loan.purpose,
           creditScore: loan.creditScore,
           interestRate: loan.interestRate,
+          context: buildAssessmentContext(loan, allLoans, allUsers),
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
-      setAiResult(data);
+      if (!res.ok || !data?.assessment) throw new Error(data?.error || 'Failed');
+      setAiResult(data.assessment);
     } catch {
       setAiError('The AI risk engine is unavailable right now. Please try again shortly.');
     } finally {
       setAiLoading(false);
     }
-  };
-
-  const riskStyles: Record<string, { badge: string; icon: React.ElementType; color: string }> = {
-    low: { badge: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400', icon: ShieldCheck, color: 'text-emerald-600' },
-    medium: { badge: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400', icon: AlertTriangle, color: 'text-amber-600' },
-    high: { badge: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-400', icon: ShieldAlert, color: 'text-rose-600' },
   };
 
   // Computed stats
@@ -537,7 +656,7 @@ export function AdminLoans() {
                           {loan.creditScore}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(loan.startDate)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{loan.startDate ? formatDate(loan.startDate) : '—'}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                           {(loan.status === 'pending' || loan.status === 'under_review') && (
@@ -604,7 +723,7 @@ export function AdminLoans() {
                     <Badge variant="secondary" className={`text-xs font-semibold ${getCreditScoreColor(loan.creditScore)}`}>
                       Score: {loan.creditScore}
                     </Badge>
-                    <span className="text-xs text-muted-foreground ml-auto">{formatDate(loan.startDate)}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">{loan.startDate ? formatDate(loan.startDate) : '—'}</span>
                   </div>
                   {(loan.status === 'active' || loan.status === 'repaid') && (
                     <div className="space-y-1">
@@ -769,9 +888,9 @@ export function AdminLoans() {
                   Dates & Disbursement
                 </h4>
                 <div className="grid gap-2.5 text-sm sm:grid-cols-2">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Applied</span><span>{formatDate(detailLoan.startDate)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">End Date</span><span>{formatDate(detailLoan.endDate)}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Next Payment</span><span>{formatDate(detailLoan.nextPaymentDate)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Applied</span><span>{detailLoan.startDate ? formatDate(detailLoan.startDate) : '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">End Date</span><span>{detailLoan.endDate ? formatDate(detailLoan.endDate) : '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Next Payment</span><span>{detailLoan.nextPaymentDate ? formatDate(detailLoan.nextPaymentDate) : '—'}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Method</span><span className="capitalize">{detailLoan.disbursementMethod === 'momo' ? 'Mobile Money' : 'Bank Transfer'}</span></div>
                   {detailLoan.disbursementNumber && (
                     <div className="flex justify-between sm:col-span-2"><span className="text-muted-foreground">Disbursement Number</span><span>{detailLoan.disbursementNumber}</span></div>
@@ -1134,7 +1253,7 @@ export function AdminLoans() {
 
       {/* AI Risk Assessment Dialog */}
       <Dialog open={!!aiLoan} onOpenChange={(open) => { if (!open) { setAiLoan(null); setAiResult(null); setAiError(null); } }}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white">
@@ -1153,7 +1272,7 @@ export function AdminLoans() {
                 <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
                 <div>
                   <p className="text-sm font-medium">Susu AI is evaluating this application…</p>
-                  <p className="text-xs text-muted-foreground">Reviewing credit profile, amount, purpose and term.</p>
+                  <p className="text-xs text-muted-foreground">Weighing repayment history, susu contributions, exposure and purpose.</p>
                 </div>
               </div>
               {[0, 1, 2].map(i => (
@@ -1175,60 +1294,108 @@ export function AdminLoans() {
           )}
 
           {!aiLoading && aiResult && (
-            <div className="space-y-4">
-              {/* Risk level + score */}
-              <div className="flex items-center justify-between gap-3 rounded-xl border p-4">
-                <div className="flex items-center gap-3">
-                  {(() => {
-                    const style = riskStyles[aiResult.riskLevel] || riskStyles.medium;
-                    const Icon = style.icon;
-                    return (
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-xl border-2 ${style.badge}`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                    );
-                  })()}
-                  <div>
-                    <p className="text-xs text-muted-foreground">Risk Level</p>
-                    <p className="text-lg font-bold capitalize">{aiResult.riskLevel}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">AI Score</p>
-                  <p className="text-2xl font-bold tabular-nums">{aiResult.score}<span className="text-sm text-muted-foreground">/100</span></p>
-                </div>
-              </div>
-
-              {/* Score bar */}
-              <Progress value={aiResult.score} className="h-2" />
-
-              {/* Recommendation */}
-              <div className="rounded-xl border bg-muted/40 p-3">
-                <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><Lightbulb className="h-3.5 w-3.5 text-amber-500" /> Recommendation</p>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{aiResult.recommendation}</p>
-              </div>
-
-              {/* Factors */}
-              <div className="space-y-2">
-                {aiResult.factors.map((f, i) => (
-                  <div key={i} className="flex items-start gap-2.5 rounded-lg border p-2.5">
-                    <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
-                      f.impact === 'positive' ? 'bg-emerald-500' : f.impact === 'negative' ? 'bg-rose-500' : 'bg-slate-400'
-                    }`} />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold">{f.factor}</p>
-                      <p className="text-xs text-muted-foreground">{f.note}</p>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
+              {/* Grade + recommendation + confidence */}
+              <div className="space-y-3 rounded-xl border p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className={`flex h-11 w-11 items-center justify-center rounded-xl border-2 text-xl font-bold ${gradeStyles[aiResult.grade]}`}>
+                      {aiResult.grade}
+                    </span>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Credit Grade</p>
+                      <p className="text-sm font-semibold capitalize">{aiResult.recommendation.replace(/_/g, ' ')}</p>
                     </div>
                   </div>
-                ))}
+                  <Badge className={`shrink-0 ${recommendationStyles[aiResult.recommendation]}`}>
+                    {recommendationLabels[aiResult.recommendation]}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>AI confidence</span>
+                    <span className="font-medium tabular-nums">{aiResult.confidence}%</span>
+                  </div>
+                  <Progress value={aiResult.confidence} className="h-2" />
+                </div>
               </div>
-            </div>
+
+              {/* Summary */}
+              <div className="rounded-xl border bg-muted/40 p-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><Lightbulb className="h-3.5 w-3.5 text-amber-500" /> Summary</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{aiResult.summary}</p>
+              </div>
+
+              {/* Suggested amount (present only when the AI proposes a reduction) */}
+              {typeof aiResult.suggestedAmount === 'number' && (
+                <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 p-3 dark:border-sky-800 dark:bg-sky-950/30">
+                  <p className="flex items-center gap-1.5 text-sm font-medium"><Banknote className="h-4 w-4 text-sky-600 dark:text-sky-400" /> Suggested amount</p>
+                  <p className="text-sm font-bold tabular-nums">{formatGHS(aiResult.suggestedAmount)}</p>
+                </div>
+              )}
+
+              {/* Strengths vs risks */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border p-3">
+                  <p className="mb-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400">Strengths</p>
+                  {aiResult.strengths.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">None identified.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {aiResult.strengths.map((s, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs leading-relaxed">
+                          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-muted-foreground">{s}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="rounded-xl border p-3">
+                  <p className="mb-2 text-xs font-semibold text-amber-700 dark:text-amber-400">Risks</p>
+                  {aiResult.risks.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">None flagged.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {aiResult.risks.map((r, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs leading-relaxed">
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                          <span className="text-muted-foreground">{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              {/* Conditions */}
+              {aiResult.conditions.length > 0 && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">Conditions to apply</p>
+                  <ul className="mt-1.5 space-y-1">
+                    {aiResult.conditions.map((c, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
+                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-center text-[11px] text-muted-foreground">AI-generated guidance — verify before approval.</p>
+            </motion.div>
           )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => { setAiLoan(null); setAiResult(null); setAiError(null); }}>
               Close
             </Button>
+            {!aiLoading && (
+              <Button variant="outline" disabled={!aiLoan} onClick={() => { if (aiLoan) runAiAssessment(aiLoan); }}>
+                <RefreshCw className="mr-1 h-4 w-4" /> Regenerate
+              </Button>
+            )}
             {aiResult && aiLoan && (
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"

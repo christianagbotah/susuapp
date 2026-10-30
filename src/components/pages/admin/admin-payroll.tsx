@@ -461,6 +461,10 @@ export function AdminPayroll() {
                           key={emp.id}
                           className="hover:bg-muted/30 transition-colors cursor-pointer"
                           onClick={() => setDetailEmployee(emp)}
+                          tabIndex={0}
+                          role="button"
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailEmployee(emp); } }}
+                          aria-label={`View employee details for ${emp.name}`}
                         >
                           <TableCell>
                             <div className="flex items-center gap-2">

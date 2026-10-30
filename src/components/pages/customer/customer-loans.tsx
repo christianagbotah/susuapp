@@ -19,8 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Slider } from '@/components/ui/slider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info, CreditCard, ShieldCheck, TrendingDown, Zap, ArrowRight, PiggyBank } from 'lucide-react';
-import { SwipeableRow, FAB } from '@/components/shared/mobile-components';
+import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info, CreditCard, ShieldCheck, TrendingDown, Zap, ArrowRight, PiggyBank, Search } from 'lucide-react';
+import { SwipeableRow, FAB, MobileSearchBar } from '@/components/shared/mobile-components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import type { LoanProduct, RepaymentScheduleEntry } from '@/lib/types';
 import { MomoPaymentDialog } from '@/components/shared/momo-payment-dialog';
@@ -173,6 +173,20 @@ export function CustomerLoans() {
 
   // ---- Tab state (controlled) ----
   const [activeTab, setActiveTab] = useState('my-loans');
+
+  // ---- Loan history search (type / purpose / status) ----
+  const [loanSearch, setLoanSearch] = useState('');
+  const filteredLoans = useMemo(() => {
+    if (!loanSearch) return myLoans;
+    const q = loanSearch.toLowerCase();
+    return myLoans.filter(
+      (l) =>
+        l.type.toLowerCase().includes(q) ||
+        l.purpose.toLowerCase().includes(q) ||
+        l.status.toLowerCase().includes(q) ||
+        l.branch.toLowerCase().includes(q),
+    );
+  }, [myLoans, loanSearch]);
 
   // ---- Derived state ----
   const totalBorrowed = useMemo(() => myLoans.reduce((s, l) => s + l.amount, 0), [myLoans]);
@@ -518,8 +532,26 @@ export function CustomerLoans() {
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-semibold text-slate-900">Loan History</h2>
                 <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                  {myLoans.length} loan{myLoans.length !== 1 ? 's' : ''}
+                  {filteredLoans.length} loan{filteredLoans.length !== 1 ? 's' : ''}
                 </Badge>
+              </div>
+              <div className="mt-3">
+                <div className="hidden sm:block relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    placeholder="Search loans by type, purpose or status..."
+                    value={loanSearch}
+                    onChange={(e) => setLoanSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <MobileSearchBar
+                  value={loanSearch}
+                  onChange={setLoanSearch}
+                  placeholder="Search loans..."
+                  onCancel={() => setLoanSearch('')}
+                  className="sm:hidden"
+                />
               </div>
             </motion.div>
 
@@ -563,7 +595,14 @@ export function CustomerLoans() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {myLoans.map((loan) => {
+                          {filteredLoans.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={8} className="h-24 text-center text-muted-foreground text-sm">
+                                No loans match your search.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredLoans.map((loan) => {
                             const isExpanded = expandedLoanId === loan.id;
                             const progressPercent =
                               loan.amount > 0
@@ -756,7 +795,8 @@ export function CustomerLoans() {
                                 )}
                               </AnimatePresence>
                             );
-                          })}
+                            })
+                          )}
                         </TableBody>
                       </Table>
                     </div>
@@ -767,7 +807,11 @@ export function CustomerLoans() {
 
             {/* Mobile: Swipeable Loan Cards (hidden on desktop) */}
             <div className="space-y-3 lg:hidden">
-              {myLoans.map((loan) => {
+              {filteredLoans.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No loans match your search.
+                </div>
+              ) : filteredLoans.map((loan) => {
                 const progressPercent =
                   loan.amount > 0
                     ? Math.round(((loan.amount - loan.remainingBalance) / loan.amount) * 100)

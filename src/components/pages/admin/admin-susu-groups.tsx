@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAdminStore } from '@/store/app-store';
 import { formatGHS, formatDate, getStatusColor, getInitials, formatCompactNumber, formatPhoneGH } from '@/lib/formatters';
 import { motion } from 'framer-motion';
@@ -74,6 +74,17 @@ export function AdminSusuGroups() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
+  const [groupSearch, setGroupSearch] = useState('');
+
+  const filteredGroups = useMemo(() => {
+    if (!groupSearch) return allSusuGroups;
+    const q = groupSearch.toLowerCase();
+    return allSusuGroups.filter(g =>
+      g.name.toLowerCase().includes(q) ||
+      g.branch.toLowerCase().includes(q) ||
+      g.status.toLowerCase().includes(q)
+    );
+  }, [allSusuGroups, groupSearch]);
 
   const totalGroups = allSusuGroups.length;
   const activeGroups = allSusuGroups.filter(g => g.status === 'active').length;
@@ -143,7 +154,18 @@ export function AdminSusuGroups() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Susu Groups</CardTitle>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-base font-semibold">Susu Groups</CardTitle>
+              <div className="relative sm:w-72">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, branch or status..."
+                  value={groupSearch}
+                  onChange={(e) => setGroupSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {/* Desktop Table */}
@@ -165,7 +187,13 @@ export function AdminSusuGroups() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allSusuGroups.map(group => (
+                  {filteredGroups.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="py-8 text-center text-muted-foreground text-sm">
+                        No susu groups match your search.
+                      </td>
+                    </tr>
+                  ) : filteredGroups.map(group => (
                     <tr key={group.id} className="border-b hover:bg-muted/30 transition-colors">
                       <td className="px-4 py-3 font-medium">{group.name}</td>
                       <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">{group.description}</td>
@@ -210,7 +238,11 @@ export function AdminSusuGroups() {
 
             {/* Mobile / Tablet Cards */}
             <div className="xl:hidden divide-y">
-              {allSusuGroups.map(group => (
+              {filteredGroups.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No susu groups match your search.
+                </div>
+              ) : filteredGroups.map(group => (
                 <div key={group.id} className="mobile-card p-4 space-y-3 touch-manipulation">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">

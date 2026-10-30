@@ -47,6 +47,8 @@ interface BranchManagerState {
   approvals: LoanApprovalRequest[];
   targets: BranchTarget[];
   setActivePage: (page: string) => void;
+  /** Merge the logged-in staff persona into the store user (keeps other fields). */
+  setUser: (patch: Partial<User>) => void;
   decideApproval: (id: string, decision: 'approved' | 'rejected') => void;
   updateStaffStatus: (id: string, status: StaffMember['status']) => void;
   addTarget: (target: Omit<BranchTarget, 'id'>) => void;
@@ -61,6 +63,7 @@ export const useBranchManagerStore = create<BranchManagerState>()(
       approvals: mockLoanApprovals,
       targets: mockBranchTargets,
       setActivePage: (page) => set({ activePage: page }),
+      setUser: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
       decideApproval: (id, decision) => set((s) => ({
         approvals: s.approvals.map((a) => (a.id === id ? { ...a, status: decision } : a)),
       })),
@@ -83,6 +86,8 @@ interface LoanOfficerState {
   appraisals: LoanAppraisal[];
   portfolio: PortfolioLoan[];
   setActivePage: (page: string) => void;
+  /** Merge the logged-in staff persona into the store user (keeps other fields). */
+  setUser: (patch: Partial<User>) => void;
   advanceStage: (id: string, stage: LoanApplication['stage']) => void;
   saveAppraisal: (appraisal: LoanAppraisal) => void;
   recordFollowUp: (id: string, arrearsDays: number) => void;
@@ -97,6 +102,7 @@ export const useLoanOfficerStore = create<LoanOfficerState>()(
       appraisals: mockAppraisals,
       portfolio: mockPortfolio,
       setActivePage: (page) => set({ activePage: page }),
+      setUser: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
       advanceStage: (id, stage) => set((s) => ({
         applications: s.applications.map((a) => (a.id === id ? { ...a, stage } : a)),
       })),
@@ -137,6 +143,8 @@ interface TellerState {
   transfers: VaultTransfer[];
   eodLines: EODReconciliationLine[];
   setActivePage: (page: string) => void;
+  /** Merge the logged-in staff persona into the store user (keeps other fields). */
+  setUser: (patch: Partial<User>) => void;
   processNext: (id: string, status: CounterTransaction['status']) => void;
   serveCustomer: (tx: Omit<CounterTransaction, 'id' | 'queueNo' | 'time' | 'status'>) => void;
   requestTransfer: (tx: Omit<VaultTransfer, 'id' | 'status' | 'date' | 'requestedBy'>) => void;
@@ -155,6 +163,7 @@ export const useTellerStore = create<TellerState>()(
       transfers: mockVaultTransfers,
       eodLines: mockEODLines,
       setActivePage: (page) => set({ activePage: page }),
+      setUser: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
       processNext: (id, status) => set((s) => ({
         queue: s.queue.map((q) => (q.id === id ? { ...q, status } : q)),
       })),
@@ -179,7 +188,17 @@ export const useTellerStore = create<TellerState>()(
         transfers: [{ ...tx, id: `vtx-${Date.now()}`, status: 'requested', date: '2026-10-25', requestedBy: s.user.name }, ...s.transfers],
       })),
       markTransferStatus: (id, status) => set((s) => ({
-        transfers: s.transfers.map((t) => (t.id === id ? { ...t, status } : t)),
+        transfers: s.transfers.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                status,
+                // Dual-control audit trail: record who approved (or advanced)
+                // the movement once it leaves 'requested'.
+                approvedBy: status === 'requested' ? t.approvedBy : (t.approvedBy ?? s.user.name),
+              }
+            : t
+        ),
       })),
       countCash: (notes) => set((s) => {
         const counted = notes.reduce((sum, n) => sum + n.note * n.count, 0);
@@ -210,6 +229,8 @@ interface FieldSupervisorState {
   routes: SupervisorRoute[];
   spotChecks: SpotCheck[];
   setActivePage: (page: string) => void;
+  /** Merge the logged-in staff persona into the store user (keeps other fields). */
+  setUser: (patch: Partial<User>) => void;
   reassignRoute: (routeId: string, agentId: string) => void;
   markStop: (routeId: string, customerName: string, status: 'pending' | 'collected' | 'missed') => void;
   logSpotCheck: (check: Omit<SpotCheck, 'id' | 'verifiedBy' | 'date'>) => void;
@@ -225,6 +246,7 @@ export const useFieldSupervisorStore = create<FieldSupervisorState>()(
       routes: mockRoutes,
       spotChecks: mockSpotChecks,
       setActivePage: (page) => set({ activePage: page }),
+      setUser: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
       reassignRoute: (routeId, agentId) => set((s) => {
         const agent = s.agents.find((a) => a.id === agentId);
         return {
@@ -263,6 +285,26 @@ export const useFieldSupervisorStore = create<FieldSupervisorState>()(
 );
 
 // ---------------- ACCOUNTANT ----------------
+/** One balanced journal: a single amount split across a debit and a credit account. */
+export interface JournalPostInput {
+  reference?: string;
+  narration: string;
+  amount: number;
+  debitAccountCode: string;
+  debitAccountName: string;
+  creditAccountCode: string;
+  creditAccountName: string;
+}
+
+/** Next JV-#### for manual journals: highest seeded/posted journal number + 1. */
+function nextJournalReference(ledger: LedgerEntry[]): string {
+  const nums = ledger
+    .map((l) => /^JV-(\d+)$/.exec(l.reference))
+    .filter((m): m is RegExpExecArray => !!m)
+    .map((m) => Number(m[1]));
+  return `JV-${(nums.length > 0 ? Math.max(...nums) : 1043) + 1}`;
+}
+
 interface AccountantState {
   user: User;
   activePage: string;
@@ -271,7 +313,9 @@ interface AccountantState {
   statements: FinancialStatement[];
   reconciliations: BankReconciliation[];
   setActivePage: (page: string) => void;
-  postEntry: (entry: Omit<LedgerEntry, 'id' | 'postedBy' | 'status' | 'date'>) => void;
+  /** Merge the logged-in staff persona into the store user (keeps other fields). */
+  setUser: (patch: Partial<User>) => void;
+  postEntry: (input: JournalPostInput) => void;
   reverseEntry: (id: string) => void;
   finalizeStatement: (id: string) => void;
   resolveUnmatched: (recId: string, description: string) => void;
@@ -287,21 +331,60 @@ export const useAccountantStore = create<AccountantState>()(
       statements: mockStatements,
       reconciliations: mockReconciliations,
       setActivePage: (page) => set({ activePage: page }),
-      postEntry: (entry) => set((s) => ({
-        ledger: [
-          { ...entry, id: `le-${Date.now()}`, postedBy: s.user.name, status: 'posted', date: '2026-10-25' },
-          ...s.ledger,
-        ],
-        coa: s.coa.map((acc) => {
-          if (acc.code === entry.accountCode) {
-            return { ...acc, balance: acc.balance + entry.debit - entry.credit };
-          }
-          return acc;
-        }),
-      })),
-      reverseEntry: (id) => set((s) => ({
-        ledger: s.ledger.map((l) => (l.id === id ? { ...l, status: 'reversed' } : l)),
-      })),
+      setUser: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
+      // Double-entry post: one journal (shared reference) -> one debit row + one credit row,
+      // plus matching CoA balance deltas so the ledger and CoA stay in step.
+      postEntry: (input) => set((s) => {
+        const reference = input.reference?.trim() || nextJournalReference(s.ledger);
+        const narration = input.narration.trim() || 'Manual journal entry';
+        const stamp = Date.now();
+        const debitRow: LedgerEntry = {
+          id: `le-${stamp}-dr`, date: '2026-10-25', reference,
+          accountCode: input.debitAccountCode, accountName: input.debitAccountName,
+          debit: input.amount, credit: 0,
+          narration, postedBy: s.user.name, status: 'posted',
+        };
+        const creditRow: LedgerEntry = {
+          id: `le-${stamp}-cr`, date: '2026-10-25', reference,
+          accountCode: input.creditAccountCode, accountName: input.creditAccountName,
+          debit: 0, credit: input.amount,
+          narration, postedBy: s.user.name, status: 'posted',
+        };
+        return {
+          ledger: [debitRow, creditRow, ...s.ledger],
+          coa: s.coa.map((acc) => {
+            if (acc.code === input.debitAccountCode) return { ...acc, balance: acc.balance + input.amount };
+            if (acc.code === input.creditAccountCode) return { ...acc, balance: acc.balance - input.amount };
+            return acc;
+          }),
+        };
+      }),
+      // Real reversal: mirror every posted row of the journal (debit↔credit) under a
+      // `<ref>-REV` reference, mark the original rows 'reversed', and undo the CoA deltas.
+      reverseEntry: (id) => set((s) => {
+        const target = s.ledger.find((l) => l.id === id);
+        if (!target || target.status !== 'posted') return {};
+        const journal = s.ledger.filter((l) => l.reference === target.reference && l.status === 'posted');
+        const stamp = Date.now();
+        const revReference = `${target.reference}-REV`;
+        const mirrors: LedgerEntry[] = journal.map((l, i) => ({
+          id: `le-${stamp}-rev${i + 1}`, date: '2026-10-25', reference: revReference,
+          accountCode: l.accountCode, accountName: l.accountName,
+          debit: l.credit, credit: l.debit,
+          narration: `Reversal: ${l.narration}`,
+          postedBy: s.user.name, status: 'posted',
+        }));
+        return {
+          ledger: [
+            ...mirrors,
+            ...s.ledger.map((l) => (l.reference === target.reference ? { ...l, status: 'reversed' as const } : l)),
+          ],
+          coa: s.coa.map((acc) => {
+            const mirror = mirrors.find((m) => m.accountCode === acc.code);
+            return mirror ? { ...acc, balance: acc.balance + mirror.debit - mirror.credit } : acc;
+          }),
+        };
+      }),
       finalizeStatement: (id) => set((s) => ({
         statements: s.statements.map((st) => (st.id === id ? { ...st, status: 'final' } : st)),
       })),
@@ -329,6 +412,8 @@ interface ComplianceState {
   strs: STRReport[];
   bogReturns: BOGReturn[];
   setActivePage: (page: string) => void;
+  /** Merge the logged-in staff persona into the store user (keeps other fields). */
+  setUser: (patch: Partial<User>) => void;
   updateAlertStatus: (id: string, status: AMLAlert['status']) => void;
   fileSTR: (data: { alertId: string; subjectName: string; suspiciousActivity: string; amountInvolved: number; filedWith: STRReport['filedWith'] }) => void;
   updateSTRStatus: (id: string, status: STRReport['status']) => void;
@@ -344,6 +429,7 @@ export const useComplianceStore = create<ComplianceState>()(
       strs: mockSTRs,
       bogReturns: mockBOGReturns,
       setActivePage: (page) => set({ activePage: page }),
+      setUser: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
       updateAlertStatus: (id, status) => set((s) => ({
         alerts: s.alerts.map((a) => (a.id === id ? { ...a, status, assignedTo: s.user.name } : a)),
       })),

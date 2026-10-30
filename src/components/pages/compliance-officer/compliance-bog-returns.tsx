@@ -11,6 +11,7 @@ import { Slider } from '@/components/ui/slider';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { EmptyState } from '@/components/shared/mobile-components';
 import { Landmark, CalendarClock, UploadCloud, FileCheck2, AlertTriangle } from 'lucide-react';
 import type { BOGReturn } from '@/lib/types';
 
@@ -46,7 +47,15 @@ export function ComplianceBogReturns() {
       )}
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {bogReturns.map((r, i) => (
+        {bogReturns.length === 0 ? (
+          <div className="md:col-span-2">
+            <EmptyState
+              icon={Landmark}
+              title="No BoG returns on record"
+              description="Scheduled NBFRI returns will appear here."
+            />
+          </div>
+        ) : bogReturns.map((r, i) => (
           <motion.div key={r.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>
             <Card
               className="mobile-card h-full cursor-pointer hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"

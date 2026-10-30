@@ -49,58 +49,6 @@ const itemVariants = {
   },
 };
 
-// ---- Mock Transfer History ----
-const mockTransfers: Transfer[] = [
-  {
-    id: 'tf-001', senderId: 'usr-001', senderName: 'Ama Mensah',
-    recipientName: 'Efua Darko', recipientPhone: '0501112233',
-    amount: 500, status: 'completed', date: '2026-04-18T14:30:00',
-    reference: 'ISPT-A1B2C3D4', note: 'Market payment for fabrics',
-  },
-  {
-    id: 'tf-002', senderId: 'usr-001', senderName: 'Ama Mensah',
-    recipientName: 'Kwame Asante', recipientPhone: '0209876543',
-    amount: 1200, status: 'completed', date: '2026-04-16T10:15:00',
-    reference: 'ISPT-E5F6G7H8', note: 'Susu group contribution',
-  },
-  {
-    id: 'tf-003', senderId: 'usr-001', senderName: 'Ama Mensah',
-    recipientName: 'Adwoa Poku', recipientPhone: '0237788990',
-    amount: 350, status: 'pending', date: '2026-04-18T16:00:00',
-    reference: 'ISPT-I9J0K1L2', note: 'School fees advance',
-  },
-  {
-    id: 'tf-004', senderId: 'usr-001', senderName: 'Ama Mensah',
-    recipientName: 'Kofi Boateng', recipientPhone: '0274455667',
-    amount: 2500, status: 'failed', date: '2026-04-15T09:45:00',
-    reference: 'ISPT-M3N4O5P6', note: 'Failed due to insufficient balance',
-  },
-  {
-    id: 'tf-005', senderId: 'usr-001', senderName: 'Ama Mensah',
-    recipientName: 'Abena Frimpong', recipientPhone: '0502233445',
-    amount: 800, status: 'completed', date: '2026-04-12T11:20:00',
-    reference: 'ISPT-Q7R8S9T0', note: '',
-  },
-  {
-    id: 'tf-006', senderId: 'usr-001', senderName: 'Ama Mensah',
-    recipientName: 'Grace Owusu', recipientPhone: '0203344556',
-    amount: 1500, status: 'reversed', date: '2026-04-10T08:30:00',
-    reference: 'ISPT-U1V2W3X4', note: 'Reversed - wrong recipient',
-  },
-  {
-    id: 'tf-007', senderId: 'usr-001', senderName: 'Ama Mensah',
-    recipientName: 'Patricia Ampah', recipientPhone: '0246677889',
-    amount: 600, status: 'completed', date: '2026-04-08T15:10:00',
-    reference: 'ISPT-Y5Z6A7B8', note: 'Monthly susu payout share',
-  },
-  {
-    id: 'tf-008', senderId: 'usr-001', senderName: 'Ama Mensah',
-    recipientName: 'Emmanuel Osei', recipientPhone: '0265566778',
-    amount: 2000, status: 'completed', date: '2026-04-05T13:45:00',
-    reference: 'ISPT-C9D0E1F2', note: 'Agent collection payment',
-  },
-];
-
 // ---- Helper: Status badge config ----
 function getStatusText(status: string): string {
   switch (status) {
@@ -110,6 +58,12 @@ function getStatusText(status: string): string {
     case 'reversed': return 'Reversed';
     default: return status;
   }
+}
+
+// ---- Helper: true when the stored recipientName is actually a bare phone number
+// (the store records recipientName = recipientPhone when no name was captured) ----
+function isPhoneOnlyName(name: string): boolean {
+  return /^0\d{9}$/.test(name.trim());
 }
 
 // ---- Known recipients lookup ----
@@ -128,7 +82,7 @@ const knownRecipients: Record<string, string> = {
 // Main Component
 // ============================================================
 export function CustomerTransfers() {
-  const { user, wallets, transactions } = useCustomerStore();
+  const { user, wallets, transactions, transfers, recordTransfer } = useCustomerStore();
   const mainWallet = wallets.find((w) => w.type === 'main');
 
   // ---- Summary stats ----
@@ -136,7 +90,7 @@ export function CustomerTransfers() {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const transfersThisMonth = mockTransfers.filter((t) => {
+  const transfersThisMonth = transfers.filter((t) => {
     const d = new Date(t.date);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
@@ -145,7 +99,7 @@ export function CustomerTransfers() {
     .filter((t) => t.status === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const recentCount = mockTransfers.filter((t) => {
+  const recentCount = transfers.filter((t) => {
     const d = new Date(t.date);
     const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
     return diffDays <= 7 && t.status === 'completed';
@@ -178,6 +132,7 @@ export function CustomerTransfers() {
 
   // ---- Confirmation dialog ----
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   // ---- Detail dialog state (card → detail linkage) ----
   const [detailTransfer, setDetailTransfer] = useState<Transfer | null>(null);
@@ -209,17 +164,37 @@ export function CustomerTransfers() {
 
   // ---- Confirm transfer ----
   function handleConfirmTransfer() {
-    toast.success('Transfer initiated successfully!', {
-      description: `${formatGHS(amountNum)} to ${recipientName} (${recipientPhone}). Reference: ISPT${Date.now().toString(36).toUpperCase()}`,
-    });
-    // Reset form
-    setRecipientPhone('');
-    setRecipientName('');
-    setSendAmount('');
-    setSendProviderId('');
-    setSendMethod('momo');
-    setSendNote('');
-    setConfirmOpen(false);
+    if (isSending) return;
+    setIsSending(true);
+    // Simulated MoMo/bank processing phase before committing to the store
+    setTimeout(() => {
+      const result = recordTransfer({
+        recipientName,
+        recipientPhone,
+        amount: amountNum,
+        fee: transferFee,
+        note: sendNote.trim() || undefined,
+        walletId: mainWallet?.id,
+      });
+      setIsSending(false);
+      if (!result.ok) {
+        toast.error(result.error ?? 'Transfer failed', {
+          description: 'Your wallet balance was not changed.',
+        });
+        return;
+      }
+      toast.success('Transfer sent successfully!', {
+        description: `${formatGHS(amountNum)} to ${recipientName} (${recipientPhone}). Reference: ${result.reference}`,
+      });
+      // Reset form
+      setRecipientPhone('');
+      setRecipientName('');
+      setSendAmount('');
+      setSendProviderId('');
+      setSendMethod('momo');
+      setSendNote('');
+      setConfirmOpen(false);
+    }, 500);
   }
 
   // ---- Clipboard helper (transfer receipt dialog) ----
@@ -239,7 +214,7 @@ export function CustomerTransfers() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredTransfers = useMemo(() => {
-    return mockTransfers.filter((t) => {
+    return transfers.filter((t) => {
       if (statusFilter !== 'all' && t.status !== statusFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -251,7 +226,7 @@ export function CustomerTransfers() {
       }
       return true;
     });
-  }, [statusFilter, searchQuery]);
+  }, [transfers, statusFilter, searchQuery]);
 
   const resetHistoryFilters = () => {
     setStatusFilter('all');
@@ -281,7 +256,7 @@ export function CustomerTransfers() {
           </p>
         </div>
         <Badge className="mt-2 w-fit bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 sm:mt-0">
-          {mockTransfers.filter((t) => t.status === 'completed').length} Successful Transfers
+          {transfers.filter((t) => t.status === 'completed').length} Successful Transfers
         </Badge>
       </motion.div>
 
@@ -754,7 +729,7 @@ export function CustomerTransfers() {
             </span>
             {hasActiveFilters && (
               <span className="hidden sm:inline">
-                (filtered from {mockTransfers.length} total)
+                (filtered from {transfers.length} total)
               </span>
             )}
           </div>
@@ -1021,10 +996,20 @@ export function CustomerTransfers() {
             </Button>
             <Button
               onClick={handleConfirmTransfer}
+              disabled={isSending}
               className="w-full sm:w-auto bg-emerald-600 text-white hover:bg-emerald-700 min-h-[44px] lg:min-h-0"
             >
-              <Send className="mr-2 h-4 w-4" />
-              Confirm Transfer
+              {isSending ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Confirm Transfer
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1043,13 +1028,26 @@ export function CustomerTransfers() {
             <div className="space-y-4">
               {/* Identity header */}
               <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="text-sm font-semibold bg-emerald-100 text-emerald-700">
-                    {getInitials(detailTransfer.recipientName)}
-                  </AvatarFallback>
-                </Avatar>
+                {isPhoneOnlyName(detailTransfer.recipientName) ? (
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                    <Smartphone className="h-5 w-5" />
+                  </span>
+                ) : (
+                  <Avatar className="h-12 w-12">
+                    <AvatarFallback className="text-sm font-semibold bg-emerald-100 text-emerald-700">
+                      {getInitials(detailTransfer.recipientName)}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-semibold">{detailTransfer.recipientName}</p>
+                  <p className="truncate text-base font-semibold">
+                    {isPhoneOnlyName(detailTransfer.recipientName)
+                      ? formatPhoneGH(detailTransfer.recipientName)
+                      : detailTransfer.recipientName}
+                  </p>
+                  {isPhoneOnlyName(detailTransfer.recipientName) && (
+                    <p className="text-xs text-muted-foreground">Recipient number</p>
+                  )}
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <Badge
                       variant="secondary"

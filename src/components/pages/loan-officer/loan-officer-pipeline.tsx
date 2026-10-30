@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { EmptyState } from '@/components/shared/mobile-components';
 import { ClipboardList, Phone, ArrowRight, CheckCircle2, Search, PiggyBank } from 'lucide-react';
 import type { LoanApplication, LoanOfficerPageId } from '@/lib/types';
 
@@ -85,7 +86,15 @@ export function LoanOfficerPipeline() {
 
       {/* Cards */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((a, i) => {
+        {filtered.length === 0 ? (
+          <div className="md:col-span-2 xl:col-span-3">
+            <EmptyState
+              icon={ClipboardList}
+              title="No applications found"
+              description="Try adjusting your search or filters."
+            />
+          </div>
+        ) : filtered.map((a, i) => {
           const stageIdx = STAGE_FLOW.indexOf(a.stage);
           return (
             <motion.div key={a.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>

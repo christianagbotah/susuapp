@@ -23,6 +23,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/shared/confirm-dialog';
+import { EmptyState } from '@/components/shared/mobile-components';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
 } from 'recharts';
@@ -220,7 +221,17 @@ export function AdminUsers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedUsers.map(user => {
+                  {paginatedUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={8}>
+                        <EmptyState
+                          icon={Users}
+                          title="No users found"
+                          description="Try adjusting your search or filters."
+                        />
+                      </td>
+                    </tr>
+                  ) : paginatedUsers.map(user => {
                     const suspended = suspendedUsers.has(user.id);
                     return (
                       <tr key={user.id} className="border-b hover:bg-muted/30 transition-colors">
@@ -273,7 +284,13 @@ export function AdminUsers() {
 
             {/* Mobile Cards */}
             <div className="md:hidden divide-y">
-              {paginatedUsers.map(user => {
+              {paginatedUsers.length === 0 ? (
+                <EmptyState
+                  icon={Users}
+                  title="No users found"
+                  description="Try adjusting your search or filters."
+                />
+              ) : paginatedUsers.map(user => {
                 const suspended = suspendedUsers.has(user.id);
                 return (
                   <div key={user.id} className="mobile-list-item p-4 space-y-3">

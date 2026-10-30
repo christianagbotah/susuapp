@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { EmptyState } from '@/components/shared/mobile-components';
 import { Search, MapPin, Wallet, Users, Bell, ClipboardCheck, Radio } from 'lucide-react';
 import type { SupervisedAgent } from '@/lib/types';
 
@@ -52,7 +53,15 @@ export function FieldSupervisorAgents() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((a, i) => {
+        {filtered.length === 0 ? (
+          <div className="md:col-span-2 xl:col-span-3">
+            <EmptyState
+              icon={Users}
+              title="No agents found"
+              description="Try adjusting your search."
+            />
+          </div>
+        ) : filtered.map((a, i) => {
           const meta = statusMeta[a.status];
           return (
             <motion.div key={a.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>

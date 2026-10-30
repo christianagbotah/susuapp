@@ -81,7 +81,7 @@ export function CustomerSusu() {
   const nextPayout = susuPayouts.find((p) => p.status === 'pending');
   const totalSaved = savingsGoals.reduce((s, g) => s + g.currentAmount, 0);
   const onTrackGoals = savingsGoals.filter(
-    (g) => (g.currentAmount / g.targetAmount) * 100 >= 50,
+    (g) => g.targetAmount > 0 && (g.currentAmount / g.targetAmount) * 100 >= 50,
   );
 
   // ---- Dialog state ----
@@ -192,6 +192,10 @@ export function CustomerSusu() {
     const { name, description, targetAmount, deadline, contributionAmount, contributionFrequency, icon } = newGoal;
     if (!name || !targetAmount || !deadline || !contributionAmount) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+    if (!(parseFloat(targetAmount) > 0)) {
+      toast.error('Target amount must be greater than 0');
       return;
     }
     createSavingsGoal({
@@ -912,7 +916,7 @@ export function CustomerSusu() {
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {savingsGoals.map((goal) => {
-                  const percent = Math.round((goal.currentAmount / goal.targetAmount) * 100);
+                  const percent = goal.targetAmount > 0 ? Math.round((goal.currentAmount / goal.targetAmount) * 100) : 0;
                   const isOnTrack = percent >= 50;
                   return (
                     <motion.div
@@ -1220,11 +1224,11 @@ export function CustomerSusu() {
                     {formatGHS(goalDetail.currentAmount)} of {formatGHS(goalDetail.targetAmount)}
                   </span>
                   <span className="font-bold text-emerald-600">
-                    {Math.round((goalDetail.currentAmount / goalDetail.targetAmount) * 100)}%
+                    {goalDetail.targetAmount > 0 ? Math.round((goalDetail.currentAmount / goalDetail.targetAmount) * 100) : 0}%
                   </span>
                 </div>
                 <Progress
-                  value={Math.round((goalDetail.currentAmount / goalDetail.targetAmount) * 100)}
+                  value={goalDetail.targetAmount > 0 ? Math.round((goalDetail.currentAmount / goalDetail.targetAmount) * 100) : 0}
                   className="h-2.5"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground">

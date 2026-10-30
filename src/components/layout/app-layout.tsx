@@ -615,6 +615,33 @@ export function AppLayout() {
     return () => window.removeEventListener('keydown', onKey);
   }, [toggleSidebarCollapse]);
 
+  // Per-page document title (one effect; resolves the active page label from nav configs)
+  const portalActivePages: Record<string, string> = {
+    customer: customerStore.activePage,
+    agent: agentStore.activePage,
+    admin: adminStore.activePage,
+    treasurer: treasurerStore.activePage,
+    'branch-manager': branchManagerStore.activePage,
+    'loan-officer': loanOfficerStore.activePage,
+    teller: tellerStore.activePage,
+    'field-supervisor': fieldSupervisorStore.activePage,
+    accountant: accountantStore.activePage,
+    'compliance-officer': complianceStore.activePage,
+  };
+  const activePageKey = currentPortal ? `${currentPortal}:${portalActivePages[currentPortal] ?? ''}` : '';
+  React.useEffect(() => {
+    const sep = activePageKey.indexOf(':');
+    const portal = sep > 0 ? activePageKey.slice(0, sep) : '';
+    const page = sep > 0 ? activePageKey.slice(sep + 1) : '';
+    const label = portal && page
+      ? (getNavItems(portal).find(n => n.id === page)?.label
+        ?? page.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+      : '';
+    document.title = label
+      ? `${label} · iSusuPro Ghana`
+      : 'iSusuPro Ghana — Micro Finance & Susu Platform';
+  }, [activePageKey]);
+
   // Login state
   if (!currentPortal) {
     return <LoginPage />;
@@ -888,7 +915,11 @@ export function AppLayout() {
             {/* Right actions */}
             <div className="flex items-center gap-0.5 shrink-0">
               {/* Notifications */}
-              <button className="touch-target relative flex items-center justify-center h-10 w-10 rounded-full hover:bg-muted transition-colors" onClick={() => setNotificationOpen(true)}>
+              <button
+                aria-label="Notifications"
+                className="touch-target relative flex items-center justify-center h-10 w-10 rounded-full hover:bg-muted transition-colors"
+                onClick={() => setNotificationOpen(true)}
+              >
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
                   <span className="absolute top-1 right-1 h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
@@ -900,6 +931,7 @@ export function AppLayout() {
               {/* Dark mode toggle */}
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                aria-label="Toggle theme"
                 className="touch-target flex items-center justify-center h-10 w-10 rounded-full hover:bg-muted transition-colors"
               >
                 <Sun className="h-[18px] w-[18px] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -909,6 +941,7 @@ export function AppLayout() {
               {/* User avatar */}
               <button
                 onClick={toggleSidebar}
+                aria-label="Account menu"
                 className="touch-target flex items-center justify-center -mr-1"
               >
                 <Avatar className="h-8 w-8 border-2 border-primary/20">
@@ -971,6 +1004,7 @@ export function AppLayout() {
       <MobileDrawer
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        title="Navigation menu"
       >
         {/* Swipe-back gesture hint */}
         <div className="drawer-edge-indicator" />

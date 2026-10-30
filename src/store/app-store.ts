@@ -31,6 +31,15 @@ import {
   loanProducts,
 } from '@/lib/mock-data';
 import { generateReference, calculateCreditScoreFromProfile } from '@/lib/formatters';
+import {
+  useBranchManagerStore,
+  useLoanOfficerStore,
+  useTellerStore,
+  useFieldSupervisorStore,
+  useAccountantStore,
+  useComplianceStore,
+} from '@/store/staff-stores';
+import { usePaymentsStore } from '@/store/payments-store';
 
 // ---- Navigation Store ----
 interface NavigationState {
@@ -48,10 +57,96 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   setPortal: (portal) => set({ currentPortal: portal, sidebarOpen: false }),
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  logout: () => set({ currentPortal: null }),
+  logout: () => {
+    // 1) Reset volatile per-portal session state in memory (seeded demo
+    //    entities are intentionally kept so demo data survives re-login).
+    useCustomerStore.setState({ activePage: 'dashboard' });
+    useAgentStore.setState({ activePage: 'dashboard' });
+    useAdminStore.setState({ activePage: 'dashboard' });
+    useTreasurerStore.setState({ activePage: 'dashboard' });
+
+    if (typeof window !== 'undefined') {
+      // 2) Clear persisted staff/payment sessions so the next login starts
+      //    from the seeded data instead of the previous persona's state.
+      const staffPersistKeys = [
+        'isusupro-bm', 'isusupro-lo', 'isusupro-teller', 'isusupro-fs',
+        'isusupro-acc', 'isusupro-comp', 'isusupro-payments',
+      ];
+      staffPersistKeys.forEach((key) => window.localStorage.removeItem(key));
+
+      // 3) Rehydrate from the (now empty) storage; safe no-op when a store
+      //    has no persisted snapshot. Memory keeps seeded entities.
+      try {
+        useBranchManagerStore.persist.rehydrate();
+        useLoanOfficerStore.persist.rehydrate();
+        useTellerStore.persist.rehydrate();
+        useFieldSupervisorStore.persist.rehydrate();
+        useAccountantStore.persist.rehydrate();
+        useComplianceStore.persist.rehydrate();
+        usePaymentsStore.persist.rehydrate();
+      } catch {
+        // Persist API unavailable — nothing else to do.
+      }
+    }
+
+    set({ currentPortal: null, sidebarOpen: false });
+  },
 }));
 
 // ---- Customer Store ----
+// Seed for the customer transfer history (shared by History tab + new
+// recordTransfer action, so stored transfers appear alongside the seed).
+const customerTransferSeed: Transfer[] = [
+  {
+    id: 'tf-001', senderId: 'usr-001', senderName: 'Ama Mensah',
+    recipientName: 'Efua Darko', recipientPhone: '0501112233',
+    amount: 500, status: 'completed', date: '2026-04-18T14:30:00',
+    reference: 'ISPT-A1B2C3D4', note: 'Market payment for fabrics',
+  },
+  {
+    id: 'tf-002', senderId: 'usr-001', senderName: 'Ama Mensah',
+    recipientName: 'Kwame Asante', recipientPhone: '0209876543',
+    amount: 1200, status: 'completed', date: '2026-04-16T10:15:00',
+    reference: 'ISPT-E5F6G7H8', note: 'Susu group contribution',
+  },
+  {
+    id: 'tf-003', senderId: 'usr-001', senderName: 'Ama Mensah',
+    recipientName: 'Adwoa Poku', recipientPhone: '0237788990',
+    amount: 350, status: 'pending', date: '2026-04-18T16:00:00',
+    reference: 'ISPT-I9J0K1L2', note: 'School fees advance',
+  },
+  {
+    id: 'tf-004', senderId: 'usr-001', senderName: 'Ama Mensah',
+    recipientName: 'Kofi Boateng', recipientPhone: '0274455667',
+    amount: 2500, status: 'failed', date: '2026-04-15T09:45:00',
+    reference: 'ISPT-M3N4O5P6', note: 'Failed due to insufficient balance',
+  },
+  {
+    id: 'tf-005', senderId: 'usr-001', senderName: 'Ama Mensah',
+    recipientName: 'Abena Frimpong', recipientPhone: '0502233445',
+    amount: 800, status: 'completed', date: '2026-04-12T11:20:00',
+    reference: 'ISPT-Q7R8S9T0', note: '',
+  },
+  {
+    id: 'tf-006', senderId: 'usr-001', senderName: 'Ama Mensah',
+    recipientName: 'Grace Owusu', recipientPhone: '0203344556',
+    amount: 1500, status: 'reversed', date: '2026-04-10T08:30:00',
+    reference: 'ISPT-U1V2W3X4', note: 'Reversed - wrong recipient',
+  },
+  {
+    id: 'tf-007', senderId: 'usr-001', senderName: 'Ama Mensah',
+    recipientName: 'Patricia Ampah', recipientPhone: '0246677889',
+    amount: 600, status: 'completed', date: '2026-04-08T15:10:00',
+    reference: 'ISPT-Y5Z6A7B8', note: 'Monthly susu payout share',
+  },
+  {
+    id: 'tf-008', senderId: 'usr-001', senderName: 'Ama Mensah',
+    recipientName: 'Emmanuel Osei', recipientPhone: '0265566778',
+    amount: 2000, status: 'completed', date: '2026-04-05T13:45:00',
+    reference: 'ISPT-C9D0E1F2', note: 'Agent collection payment',
+  },
+];
+
 interface CustomerState {
   user: User;
   wallets: Wallet[];
@@ -65,6 +160,7 @@ interface CustomerState {
   notifications: Notification[];
   referrals: Referral[];
   recentTransfers: Transfer[];
+  transfers: Transfer[];
   disputes: Dispute[];
   activePage: string;
 
@@ -76,6 +172,16 @@ interface CustomerState {
   createSavingsGoal: (goal: Omit<SavingsGoal, 'id'>) => void;
   contributeToGoal: (goalId: string, amount: number) => void;
   initiateTransfer: (recipientPhone: string, amount: number, note?: string) => void;
+  recordTransfer: (input: {
+    recipientName: string;
+    recipientPhone: string;
+    amount: number;
+    /** Optional channel fee debited on top of the amount (MoMo 1% / bank 2%). */
+    fee?: number;
+    note?: string;
+    /** Wallet to debit; defaults to the main wallet. */
+    walletId?: string;
+  }) => { ok: boolean; reference?: string; error?: string };
   fileDispute: (transactionId: string, type: string, description: string) => void;
   markDisputeResolved: (disputeId: string, resolution: string) => void;
   completeKYC: (kycLevel: 'basic' | 'full') => void;
@@ -101,6 +207,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   notifications: notifications,
   referrals: referrals.filter(r => r.referrerId === 'usr-001'),
   recentTransfers: recentTransfers.filter(t => t.senderId === 'usr-001'),
+  transfers: customerTransferSeed,
   disputes: disputes.filter(d => d.userId === 'usr-001'),
   activePage: 'dashboard',
 
@@ -246,6 +353,54 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
         wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: newBalance } : w),
       };
     });
+  },
+
+  recordTransfer: ({ recipientName, recipientPhone, amount, fee = 0, note, walletId }) => {
+    const s = get();
+    const wallet =
+      (walletId ? s.wallets.find(w => w.id === walletId) : undefined) ||
+      s.wallets.find(w => w.type === 'main');
+    if (!wallet) return { ok: false, error: 'Wallet not found' };
+
+    const totalDebit = amount + fee;
+    if (totalDebit > wallet.balance) {
+      return { ok: false, error: 'Insufficient balance' };
+    }
+
+    const reference = `TRF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const newTransfer: Transfer = {
+      id: `trf-${Date.now()}`,
+      senderId: s.user.id,
+      senderName: s.user.name,
+      recipientName,
+      recipientPhone,
+      amount,
+      status: 'completed',
+      date: new Date().toISOString(),
+      reference,
+      note: note || undefined,
+    };
+    const newBalance = wallet.balance - totalDebit;
+    const newTxn: Transaction = {
+      id: `txn-${Date.now()}`,
+      userId: s.user.id,
+      type: 'transfer',
+      amount,
+      currency: 'GHS',
+      status: 'completed',
+      date: new Date().toISOString(),
+      description: `Transfer to ${recipientName}${note ? ` - ${note}` : ''}`,
+      reference,
+      category: 'Transfer',
+      balanceAfter: newBalance,
+      counterpartName: recipientPhone,
+    };
+    set((st) => ({
+      transfers: [newTransfer, ...st.transfers],
+      transactions: [newTxn, ...st.transactions],
+      wallets: st.wallets.map(w => w.id === wallet.id ? { ...w, balance: newBalance } : w),
+    }));
+    return { ok: true, reference };
   },
 
   fileDispute: (transactionId, type, description) => {
@@ -1277,8 +1432,8 @@ interface CustomerExtendedState {
   budgets: Budget[];
   expenses: Expense[];
 
-  purchaseAirtime: (provider: TelcoProvider, phone: string, productId: string) => void;
-  payBill: (billerId: string, accountNumber: string, customerName: string, amount: number) => void;
+  purchaseAirtime: (provider: TelcoProvider, phone: string, productId: string) => { ok: boolean; error?: string };
+  payBill: (billerId: string, accountNumber: string, customerName: string, amount: number) => { ok: boolean; error?: string };
   addBudget: (budget: Omit<Budget, 'id' | 'userId' | 'remainingAmount'>) => void;
   addExpense: (expense: Omit<Expense, 'id' | 'userId' | 'reference'>) => void;
 }
@@ -1293,10 +1448,14 @@ export const useCustomerExtendedStore = create<CustomerExtendedState>((set) => (
 
   purchaseAirtime: (provider, phone, productId) => {
     const product = mockAirtimeProducts.find(p => p.id === productId);
-    if (!product) return;
+    if (!product) return { ok: false, error: 'Product not found' };
     const customerState = useCustomerStore.getState();
     const mainWallet = customerState.wallets.find(w => w.type === 'main');
-    const newBalance = (mainWallet?.balance || 0) - product.price;
+    const balance = mainWallet?.balance || 0;
+    if (product.price > balance) {
+      return { ok: false, error: 'Insufficient balance' };
+    }
+    const newBalance = balance - product.price;
     const newTxn: AirtimeTransaction = {
       id: `att-${Date.now()}`,
       userId: 'usr-001',
@@ -1312,16 +1471,21 @@ export const useCustomerExtendedStore = create<CustomerExtendedState>((set) => (
     };
     useCustomerStore.setState({ wallets: customerState.wallets.map(w => w.type === 'main' ? { ...w, balance: newBalance } : w) });
     set((s) => ({ airtimeTransactions: [newTxn, ...s.airtimeTransactions] }));
+    return { ok: true };
   },
 
   payBill: (billerId, accountNumber, customerName, amount) => {
     const biller = mockBillers.find(b => b.id === billerId);
-    if (!biller) return;
+    if (!biller) return { ok: false, error: 'Biller not found' };
     const fee = amount * 0.015;
     const totalAmount = amount + fee;
     const customerState = useCustomerStore.getState();
     const mainWallet = customerState.wallets.find(w => w.type === 'main');
-    const newBalance = (mainWallet?.balance || 0) - totalAmount;
+    const balance = mainWallet?.balance || 0;
+    if (totalAmount > balance) {
+      return { ok: false, error: 'Insufficient balance' };
+    }
+    const newBalance = balance - totalAmount;
     const newPayment: BillPayment = {
       id: `bp-${Date.now()}`,
       userId: 'usr-001',
@@ -1341,6 +1505,7 @@ export const useCustomerExtendedStore = create<CustomerExtendedState>((set) => (
     };
     useCustomerStore.setState({ wallets: customerState.wallets.map(w => w.type === 'main' ? { ...w, balance: newBalance } : w) });
     set((s) => ({ billPayments: [newPayment, ...s.billPayments] }));
+    return { ok: true };
   },
 
   addBudget: (budget) => {

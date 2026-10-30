@@ -18,6 +18,14 @@ import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useNavigationStore } from '@/store/app-store';
+import {
+  useBranchManagerStore,
+  useLoanOfficerStore,
+  useTellerStore,
+  useFieldSupervisorStore,
+  useAccountantStore,
+  useComplianceStore,
+} from '@/store/staff-stores';
 import { apiFetch, ensureBackendStarted } from '@/lib/api-client';
 import { toast } from 'sonner';
 import type { PortalId } from '@/lib/types';
@@ -57,6 +65,37 @@ const demoAccounts: DemoAccount[] = [
 
 const communityAccounts = demoAccounts.filter((a) => ['ama', 'kwame', 'patricia', 'emmanuel'].includes(a.id));
 const staffAccounts = demoAccounts.filter((a) => !['ama', 'kwame', 'patricia', 'emmanuel'].includes(a.id));
+
+// Sync the selected demo persona into the matching staff portal store so the
+// portal header and user-dependent actions show the logged-in staff member
+// (not the hardcoded seed user). Admin user comes from the API and is left
+// untouched; community portals use the app-store seeds.
+function syncStaffUser(account: DemoAccount) {
+  const patch = { name: account.name, role: account.portal, phone: account.phone };
+  switch (account.portal) {
+    case 'branch-manager':
+      useBranchManagerStore.getState().setUser(patch);
+      break;
+    case 'loan-officer':
+      useLoanOfficerStore.getState().setUser(patch);
+      break;
+    case 'teller':
+      useTellerStore.getState().setUser(patch);
+      break;
+    case 'field-supervisor':
+      useFieldSupervisorStore.getState().setUser(patch);
+      break;
+    case 'accountant':
+      useAccountantStore.getState().setUser(patch);
+      break;
+    case 'compliance-officer':
+      useComplianceStore.getState().setUser(patch);
+      break;
+    default:
+      // customer / agent / treasurer / admin — no staff store to sync
+      break;
+  }
+}
 
 // ---- Animation variants (consistent app-wide: opacity + small offset, easeOut) ----
 const containerVariants = {
@@ -117,8 +156,13 @@ export function LoginPage() {
     const digits = phone.replace(/\D/g, '');
     const normalizedPhone = digits.length === 9 && !digits.startsWith('0') ? `0${digits}` : digits;
 
-    const demoLogin = async (offline: boolean, portal: PortalId = targetPortal) => {
+    const demoLogin = async (offline: boolean, portal: PortalId = targetPortal, account: DemoAccount | null = null) => {
       await new Promise((r) => setTimeout(r, 600));
+      // Resolve which demo persona is signing in so staff stores can adopt it.
+      const staffAccount = account
+        ?? demoAccounts.find((a) => a.portal === portal && a.phone === normalizedPhone)
+        ?? (selectedAccount?.portal === portal ? selectedAccount : null);
+      if (staffAccount) syncStaffUser(staffAccount);
       setPortal(portal);
       setIsLoading(false);
       if (offline) toast.info('Signed in to demo mode — NestJS API not reachable in this session.');
@@ -151,7 +195,7 @@ export function LoginPage() {
         );
         if (matchedDemo && pin === DEMO_PIN) {
           setSelectedId(matchedDemo.id);
-          await demoLogin(true, matchedDemo.portal);
+          await demoLogin(true, matchedDemo.portal, matchedDemo);
           return;
         }
         toast.error('Invalid phone number or PIN. Demo PIN: 123456');

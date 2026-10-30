@@ -273,10 +273,23 @@ interface MobileDrawerProps {
   side?: 'left' | 'right';
   /** Extra classes merged into the panel (e.g. width overrides via tailwind-merge). */
   className?: string;
+  /** Accessible name for the dialog (used as aria-label). Defaults to 'Menu'. */
+  title?: string;
 }
 
-export function MobileDrawer({ open, onClose, children, side = 'left', className }: MobileDrawerProps) {
+export function MobileDrawer({ open, onClose, children, side = 'left', className, title }: MobileDrawerProps) {
   const isRight = side === 'right';
+
+  // Close on Escape while open
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -296,6 +309,9 @@ export function MobileDrawer({ open, onClose, children, side = 'left', className
             animate={{ x: 0 }}
             exit={{ x: isRight ? '100%' : '-100%' }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title ?? 'Menu'}
             className={cn(
               'fixed top-0 bottom-0 z-[60] w-[85%] max-w-[320px] bg-background shadow-2xl',
               isRight ? 'right-0 safe-area-right' : 'left-0 safe-area-left',

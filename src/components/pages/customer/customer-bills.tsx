@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Zap, Droplets, Tv, Wifi, Building, Shield, Receipt,
-  Copy, CheckCircle2, X, CircleDollarSign, Clock, ArrowRight,
+  Copy, CheckCircle2, X, CircleDollarSign, Clock, ArrowRight, AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,10 @@ import { Separator } from '@/components/ui/separator';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { useCustomerExtendedStore } from '@/store/app-store';
+import { useCustomerExtendedStore, useCustomerStore } from '@/store/app-store';
 import { formatGHS, formatDate, getStatusColor } from '@/lib/formatters';
 import type { Biller, BillerCategory, BillPayment } from '@/lib/types';
+import { toast } from 'sonner';
 
 // ============================================
 // Category Configuration
@@ -81,11 +82,14 @@ function getPaymentStatusVariant(status: BillPayment['status']): string {
 // ============================================
 export function CustomerBills() {
   const { billers, billPayments, payBill } = useCustomerExtendedStore();
+  const { wallets } = useCustomerStore();
+  const mainWallet = wallets.find((w) => w.type === 'main');
 
   const [activeTab, setActiveTab] = useState<string>('all');
   const [selectedBiller, setSelectedBiller] = useState<Biller | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [lastPayment, setLastPayment] = useState<BillPayment | null>(null);
   const [receiptPayment, setReceiptPayment] = useState<BillPayment | null>(null);
   const [copiedToken, setCopiedToken] = useState(false);
@@ -105,6 +109,7 @@ export function CustomerBills() {
   const numericAmount = parseFloat(amount) || 0;
   const fee = numericAmount > 0 ? numericAmount * FEE_RATE : 0;
   const totalAmount = numericAmount + fee;
+  const insufficientBalance = !!mainWallet && totalAmount > mainWallet.balance;
 
   // ---- Open payment dialog ----
   const handlePayNow = (biller: Biller) => {
@@ -118,16 +123,35 @@ export function CustomerBills() {
   // ---- Submit payment ----
   const handleSubmitPayment = () => {
     if (!selectedBiller || !accountNumber || !customerName || numericAmount <= 0) return;
+    if (insufficientBalance) {
+      toast.error('Insufficient wallet balance for this payment', {
+        description: `Available: ${formatCurrency(mainWallet?.balance ?? 0)} — needed: ${formatCurrency(totalAmount)}`,
+      });
+      return;
+    }
+    if (isProcessingPayment) return;
+    setIsProcessingPayment(true);
 
-    payBill(selectedBiller.id, accountNumber, customerName, numericAmount);
+    // Brief processing phase, then commit to the store
+    setTimeout(() => {
+      const result = payBill(selectedBiller.id, accountNumber, customerName, numericAmount);
+      setIsProcessingPayment(false);
 
-    // Find the newly added payment (it will be at index 0 after payBill)
-    const newPayments = useCustomerExtendedStore.getState().billPayments;
-    const newPayment = newPayments[0];
+      if (!result.ok) {
+        toast.error(result.error ?? 'Payment failed', {
+          description: 'Your wallet balance was not changed.',
+        });
+        return;
+      }
 
-    setLastPayment(newPayment);
-    setPaymentDialogOpen(false);
-    setSuccessDialogOpen(true);
+      // Find the newly added payment (it will be at index 0 after payBill)
+      const newPayments = useCustomerExtendedStore.getState().billPayments;
+      const newPayment = newPayments[0];
+
+      setLastPayment(newPayment);
+      setPaymentDialogOpen(false);
+      setSuccessDialogOpen(true);
+    }, 500);
   };
 
   // ---- Copy token to clipboard ----
@@ -594,14 +618,31 @@ export function CustomerBills() {
               </motion.div>
             )}
 
+            {/* Balance hint */}
+            {numericAmount > 0 && insufficientBalance && (
+              <p className="flex items-center gap-1.5 text-xs text-red-600">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                Insufficient wallet balance — available: {formatCurrency(mainWallet?.balance ?? 0)}
+              </p>
+            )}
+
             {/* Submit Button */}
             <Button
               onClick={handleSubmitPayment}
-              disabled={!accountNumber || !customerName || numericAmount <= 0}
+              disabled={!accountNumber || !customerName || numericAmount <= 0 || insufficientBalance || isProcessingPayment}
               className="w-full h-11 gap-2 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
             >
-              Pay {formatCurrency(totalAmount)}
-              <ArrowRight className="h-4 w-4" />
+              {isProcessingPayment ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  Pay {formatCurrency(totalAmount)}
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

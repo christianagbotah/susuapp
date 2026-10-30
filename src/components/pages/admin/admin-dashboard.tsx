@@ -34,6 +34,7 @@ export function AdminDashboard() {
   const [detailAgent, setDetailAgent] = useState<Agent | null>(null);
 
   const pendingLoans = allLoans.filter(l => l.status === 'pending' || l.status === 'under_review');
+  const activeLoanCount = allLoans.filter(l => l.status === 'active').length;
   const topAgents = [...allAgents].sort((a, b) => b.totalCollections - a.totalCollections).slice(0, 5);
   const topBranches = [...allBranches].sort((a, b) => b.totalCustomers - a.totalCustomers).slice(0, 5);
 
@@ -81,7 +82,7 @@ export function AdminDashboard() {
 
   const statCards = [
     { label: 'Total Users', value: formatCompactNumber(stats.totalUsers), change: '+12.5%', icon: Users, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900/30', page: 'users' as const },
-    { label: 'Active Loans', value: `${stats.pendingLoans} pending`, change: '34 pending', icon: Landmark, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', page: 'loans' as const },
+    { label: 'Active Loans', value: `${activeLoanCount}`, change: `${pendingLoans.length} pending review`, icon: Landmark, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', page: 'loans' as const },
     { label: 'Total Deposits', value: formatGHS(stats.totalDeposits), change: '+8.2%', icon: Wallet, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', page: 'analytics' as const },
     { label: 'Total Susu Pool', value: formatGHS(stats.totalSusuPool), change: '+15.3%', icon: PiggyBank, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-100 dark:bg-purple-900/30', page: 'susu-groups' as const },
     { label: 'Active Agents', value: `${stats.activeAgents} of ${stats.totalAgents}`, change: '83% active', icon: UserCheck, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-100 dark:bg-teal-900/30', page: 'agents' as const },

@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useConfirm } from '@/components/shared/confirm-dialog';
+import { EmptyState } from '@/components/shared/mobile-components';
 import { ShieldAlert, Search, FileWarning, Send, CheckCircle2, Eye, XCircle } from 'lucide-react';
 import type { AMLAlert } from '@/lib/types';
 
@@ -87,7 +88,13 @@ export function ComplianceAmlAlerts() {
 
       {/* Alerts */}
       <div className="space-y-3">
-        {filtered.map((a, i) => (
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={ShieldAlert}
+            title="No alerts found"
+            description="Try adjusting the status filter."
+          />
+        ) : filtered.map((a, i) => (
           <motion.div key={a.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>
             <Card className={`mobile-card ${a.severity === 'critical' && !a.status.startsWith('closed') ? 'border-l-4 border-red-500' : ''}`}>
               <CardContent className="p-4">

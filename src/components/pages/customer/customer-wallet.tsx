@@ -1033,15 +1033,19 @@ export function CustomerWallet() {
       </Tabs>
 
       {/* Mobile FAB - Quick Deposit */}
-      <MobileFabWithLabel
-        icon={ArrowDownLeft}
-        label="Quick Deposit"
-        onClick={() => {
-          // Switch to deposit tab by clicking the trigger
-          const depositTrigger = document.querySelector('[value="deposit"]') as HTMLElement;
-          depositTrigger?.click();
-        }}
-      />
+      {/* Wrapper lifts the FAB to bottom-36 so it clears the Susu AI FAB
+          (fixed at bottom-20 right-4 z-[70]) on mobile. */}
+      <div className="[&>button]:bottom-36!">
+        <MobileFabWithLabel
+          icon={ArrowDownLeft}
+          label="Quick Deposit"
+          onClick={() => {
+            // Switch to deposit tab by clicking the trigger
+            const depositTrigger = document.querySelector('[value="deposit"]') as HTMLElement;
+            depositTrigger?.click();
+          }}
+        />
+      </div>
 
       {/* ==============================
           MoMo Gateway Payment (live Hubtel/Paystack rails)

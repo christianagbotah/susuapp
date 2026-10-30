@@ -2,8 +2,174 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Bot, User } from 'lucide-react';
-import { useNavigationStore } from '@/store/app-store';
+import { Sparkles, X, Send, Bot, User, Languages } from 'lucide-react';
+import {
+  useNavigationStore,
+  useCustomerStore,
+  useAgentStore,
+  useAdminStore,
+  useTreasurerStore,
+} from '@/store/app-store';
+import {
+  useBranchManagerStore,
+  useLoanOfficerStore,
+  useTellerStore,
+  useFieldSupervisorStore,
+  useAccountantStore,
+  useComplianceStore,
+} from '@/store/staff-stores';
+
+// ---- Reply languages for Ghana ----
+const LANGUAGES: { id: string; label: string }[] = [
+  { id: 'en', label: 'English' },
+  { id: 'twi', label: 'Twi' },
+  { id: 'ga', label: 'Ga' },
+  { id: 'ewe', label: 'Ewe' },
+  { id: 'hausa', label: 'Hausa' },
+  { id: 'pidgin', label: 'Pidgin' },
+];
+const LANGUAGE_STORAGE_KEY = 'isusupro-ai-lang';
+
+const cedi = (n: number) => `₵${Number(n).toLocaleString()}`;
+
+/**
+ * Collect a small, live data snapshot for the signed-in portal so the AI can
+ * ground its answers in the user's real figures. Uses Zustand `getState()`
+ * (no subscriptions) so building it has zero render cost.
+ */
+function buildLiveSnapshot(portal: string): Record<string, string> {
+  const snap: Record<string, string> = {};
+  try {
+    if (portal === 'customer') {
+      const s = useCustomerStore.getState();
+      snap['User name'] = s.user?.name ?? '';
+      const main = s.wallets?.find((w) => w.type === 'main') ?? s.wallets?.[0];
+      if (main) snap['Main wallet balance'] = cedi(main.balance);
+      const activeLoans = s.myLoans?.filter((l) => l.status === 'active') ?? [];
+      if (activeLoans.length > 0) {
+        snap['Active loans'] = `${activeLoans.length} (total remaining ${cedi(activeLoans.reduce((a, l) => a + (l.remainingBalance || 0), 0))})`;
+      } else snap['Active loans'] = 'none';
+      const goals = s.savingsGoals ?? [];
+      if (goals.length > 0) {
+        snap['Savings goals'] = goals
+          .slice(0, 4)
+          .map((g) => `${g.name}: ${cedi(g.currentAmount)} of ${cedi(g.targetAmount)}`)
+          .join('; ');
+      }
+      if (s.susuGroups?.length) {
+        snap['My susu groups'] = s.susuGroups.map((g) => g.name).slice(0, 4).join(', ');
+        const nextPayout = s.susuPayouts?.find((p) => p.status === 'pending');
+        if (nextPayout) {
+          snap['Next susu payout'] = `${cedi(nextPayout.amount)} from ${nextPayout.groupName} on ${nextPayout.payoutDate}`;
+        }
+      }
+      snap['Transactions recorded'] = String(s.transactions?.length ?? 0);
+    } else if (portal === 'agent') {
+      const s = useAgentStore.getState();
+      snap['Agent name'] = s.user?.name ?? '';
+      if (s.agent) {
+        snap['Territory'] = s.agent.territory ?? '';
+        snap['Rating'] = `${s.agent.rating}/5`;
+        snap['Total customers'] = String(s.agent.totalCustomers ?? s.allCustomers?.length ?? 0);
+      }
+      const openRoutes = s.collectionRoutes?.filter((r) => r.status === 'in_progress' || r.status === 'partial') ?? [];
+      if (openRoutes.length > 0) {
+        const expected = openRoutes.reduce((a, r) => a + (r.totalExpected || 0), 0);
+        const collected = openRoutes.reduce((a, r) => a + (r.totalCollected || 0), 0);
+        snap['Today routes'] = `${openRoutes.length} open · collected ${cedi(collected)} of ${cedi(expected)} expected`;
+      }
+      const pending = s.commissions?.filter((c) => c.status === 'pending') ?? [];
+      snap['Commissions'] = `pending ${cedi(pending.reduce((a, c) => a + (c.amount || 0), 0))}`;
+    } else if (portal === 'treasurer') {
+      const s = useTreasurerStore.getState();
+      snap['Treasurer name'] = s.user?.name ?? '';
+      snap['Groups managed'] = String(s.managedGroups?.length ?? 0);
+      if (s.managedGroups?.length) {
+        snap['Group names'] = s.managedGroups.map((g) => g.name).slice(0, 4).join(', ');
+        snap['Combined pool'] = cedi(s.managedGroups.reduce((a, g) => a + (g.totalPool || 0), 0));
+        const g0 = s.managedGroups[0];
+        if (g0) snap['Leading group round'] = `${g0.name}: round ${g0.currentRound} of ${g0.totalRounds}`;
+      }
+      const pendingPayouts = s.payouts?.filter((p) => p.status === 'pending') ?? [];
+      snap['Pending payouts'] = `${pendingPayouts.length} totalling ${cedi(pendingPayouts.reduce((a, p) => a + (p.amount || 0), 0))}`;
+      const overdue = s.allContributions?.filter((c) => c.status === 'overdue') ?? [];
+      snap['Overdue contributions'] = String(overdue.length);
+      snap['Members'] = String(s.allMembers?.length ?? 0);
+    } else if (portal === 'admin') {
+      const s = useAdminStore.getState();
+      if (s.stats) {
+        snap['Total users'] = String(s.stats.totalUsers ?? '');
+        snap['Total deposits'] = cedi(s.stats.totalDeposits ?? 0);
+        snap['Total susu pool'] = cedi(s.stats.totalSusuPool ?? 0);
+        snap['Agents'] = `${s.stats.activeAgents ?? 0} active of ${s.stats.totalAgents ?? 0}`;
+        snap['Susu groups'] = String(s.stats.totalSusuGroups ?? '');
+      }
+      const pending = s.allLoans?.filter((l) => l.status === 'pending') ?? [];
+      snap['Pending loan approvals'] = `${pending.length} worth ${cedi(pending.reduce((a, l) => a + (l.amount || 0), 0))}`;
+    } else if (portal === 'branch-manager') {
+      const s = useBranchManagerStore.getState();
+      snap['Branch manager'] = s.user?.name ?? '';
+      snap['Staff'] = String(s.staff?.length ?? 0);
+      const pending = s.approvals?.filter((a) => a.status === 'pending_bm') ?? [];
+      snap['Approvals awaiting me'] = `${pending.length} worth ${cedi(pending.reduce((a, x) => a + (x.amount || 0), 0))}`;
+      if (s.targets?.length) {
+        snap['Branch targets'] = s.targets
+          .slice(0, 3)
+          .map((t) => `${t.metric}: ${t.achieved} of ${t.target} (${t.period})`)
+          .join('; ');
+      }
+    } else if (portal === 'loan-officer') {
+      const s = useLoanOfficerStore.getState();
+      snap['Loan officer'] = s.user?.name ?? '';
+      const stages = s.applications ?? [];
+      snap['Pipeline'] = `${stages.length} applications (${stages.filter((a) => a.stage === 'appraisal').length} in appraisal, ${stages.filter((a) => a.stage === 'new').length} new)`;
+      const portfolio = s.portfolio ?? [];
+      snap['Portfolio outstanding'] = cedi(portfolio.reduce((a, p) => a + (p.outstanding || 0), 0));
+      const arrears = portfolio.filter((p) => p.arrearsDays > 0);
+      snap['Loans in arrears'] = `${arrears.length}${arrears.length > 0 ? ` (worst ${Math.max(...arrears.map((p) => p.arrearsDays))} days)` : ''}`;
+      snap['Appraisals completed'] = String(s.appraisals?.length ?? 0);
+    } else if (portal === 'teller') {
+      const s = useTellerStore.getState();
+      snap['Teller'] = s.user?.name ?? '';
+      if (s.drawer) {
+        snap['Drawer expected balance'] = cedi(s.drawer.expectedBalance ?? 0);
+        snap['Drawer variance'] = cedi(s.drawer.variance ?? 0);
+      }
+      snap['Queue'] = `${(s.queue ?? []).filter((q) => q.status === 'waiting').length} waiting · ${(s.queue ?? []).filter((q) => q.status === 'completed').length} completed today`;
+      snap['Pending vault transfers'] = String((s.transfers ?? []).filter((t) => t.status !== 'completed').length);
+    } else if (portal === 'field-supervisor') {
+      const s = useFieldSupervisorStore.getState();
+      snap['Field supervisor'] = s.user?.name ?? '';
+      const agents = s.agents ?? [];
+      snap['Agents supervised'] = String(agents.length);
+      if (agents.length > 0) {
+        snap['Average collection rate'] = `${Math.round(agents.reduce((a, x) => a + (x.collectionRate || 0), 0) / agents.length)}%`;
+        snap['Offline agents right now'] = String(agents.filter((a) => a.status === 'offline').length);
+        snap['KYC verifications pending'] = String(agents.reduce((a, x) => a + (x.pendingVerify || 0), 0));
+      }
+      snap['Spot checks done'] = String(s.spotChecks?.length ?? 0);
+    } else if (portal === 'accountant') {
+      const s = useAccountantStore.getState();
+      snap['Accountant'] = s.user?.name ?? '';
+      const dr = (s.ledger ?? []).reduce((a, l) => a + (l.debit || 0), 0);
+      const cr = (s.ledger ?? []).reduce((a, l) => a + (l.credit || 0), 0);
+      snap['Ledger'] = `debits ${cedi(dr)} vs credits ${cedi(cr)} (${dr === cr ? 'balanced' : `difference ${cedi(Math.abs(dr - cr))}`})`;
+      snap['Accounts in CoA'] = String(s.coa?.length ?? 0);
+      snap['Reconciliations needing work'] = String((s.reconciliations ?? []).filter((r) => r.status !== 'reconciled').length);
+      snap['Draft statements'] = String((s.statements ?? []).filter((st) => st.status === 'draft').length);
+    } else if (portal === 'compliance-officer') {
+      const s = useComplianceStore.getState();
+      snap['Compliance officer'] = s.user?.name ?? '';
+      const alerts = s.alerts ?? [];
+      snap['AML alerts'] = `${alerts.filter((a) => a.status === 'open' || a.status === 'escalated').length} open · ${alerts.filter((a) => a.severity === 'critical').length} critical`;
+      snap['STRs in progress'] = String((s.strs ?? []).filter((r) => r.status === 'under_review' || r.status === 'draft').length);
+      snap['BoG returns'] = String(s.bogReturns?.length ?? 0);
+    }
+  } catch {
+    // Snapshot is best-effort — never break the chat over missing data.
+  }
+  return snap;
+}
 
 // ---- Portal-aware configuration ----
 const PORTAL_CONFIG: Record<string, { greeting: string; suggestions: string[] }> = {
@@ -75,9 +241,23 @@ export function SusuAiChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState('en');
   const scrollRef = useRef<HTMLDivElement>(null);
   const portal = useNavigationStore((s) => s.currentPortal) || 'customer';
   const config = PORTAL_CONFIG[portal] || PORTAL_CONFIG.customer;
+  const activeLanguage = LANGUAGES.find((l) => l.id === language) ?? LANGUAGES[0];
+
+  // Restore the chosen reply language across sessions
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (saved && LANGUAGES.some((l) => l.id === saved)) setLanguage(saved);
+  }, []);
+
+  const chooseLanguage = (id: string) => {
+    setLanguage(id);
+    if (typeof window !== 'undefined') window.localStorage.setItem(LANGUAGE_STORAGE_KEY, id);
+  };
 
   // Seed greeting whenever the widget opens (or portal changes while open)
   useEffect(() => {
@@ -102,7 +282,12 @@ export function SusuAiChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // drop the seeded greeting (always index 0) from the AI context
-        body: JSON.stringify({ portal, messages: next.slice(1).map(({ role, content }) => ({ role, content })) }),
+        body: JSON.stringify({
+          portal,
+          language,
+          context: buildLiveSnapshot(portal),
+          messages: next.slice(1).map(({ role, content }) => ({ role, content })),
+        }),
       });
       const data = await res.json();
       setMessages((m) => [...m, { role: 'assistant', content: data.reply || data.error || 'Sorry, please try again.' }]);
@@ -168,8 +353,8 @@ export function SusuAiChat() {
                   <span className="rounded-full bg-amber-400/90 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-emerald-950">Beta</span>
                 </p>
                 <p className="flex items-center gap-1 text-xs text-emerald-100">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-                  Online · {portal.charAt(0).toUpperCase() + portal.slice(1)} assistant
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                  Online · Live data · {activeLanguage.label}
                 </p>
               </div>
               <button onClick={() => setOpen(false)} aria-label="Close chat" className="rounded-full p-1.5 transition hover:bg-white/10">
@@ -236,6 +421,27 @@ export function SusuAiChat() {
               </div>
             )}
 
+            {/* Reply language — Ghana languages for financial inclusion */}
+            <div className="flex items-center gap-1.5 border-t bg-background px-3 py-1.5" role="group" aria-label="Reply language">
+              <Languages className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {LANGUAGES.map((l) => (
+                  <button
+                    key={l.id}
+                    onClick={() => chooseLanguage(l.id)}
+                    aria-pressed={language === l.id}
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                      language === l.id
+                        ? 'bg-emerald-600 text-white'
+                        : 'border bg-card text-muted-foreground hover:border-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400'
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Input */}
             <form
               onSubmit={(e) => {
@@ -247,7 +453,7 @@ export function SusuAiChat() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask Susu AI anything…"
+                placeholder={language === 'en' ? 'Ask Susu AI anything…' : `Ask Susu AI (${activeLanguage.label} or English)…`}
                 className="h-10 flex-1 rounded-xl border bg-muted/50 px-3.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 disabled={loading}
               />

@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { EmptyState } from '@/components/shared/mobile-components';
 import { Briefcase, Phone, ShieldAlert, TrendingDown, PieChart, CalendarCheck } from 'lucide-react';
 import type { PortfolioLoan } from '@/lib/types';
 
@@ -134,7 +135,13 @@ export function LoanOfficerPortfolio() {
 
       {/* Loan list */}
       <div className="space-y-2">
-        {filtered.map((p, i) => (
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={Briefcase}
+            title="No portfolio loans found"
+            description="Try adjusting the classification filter."
+          />
+        ) : filtered.map((p, i) => (
           <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.03 }}>
             <Card
               onClick={() => setDetail(p)}
