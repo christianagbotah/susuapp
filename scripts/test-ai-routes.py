@@ -250,4 +250,61 @@ status, data = post('/api/ai/branch-brief', {})
 ok11b = status == 400
 print('11b BRANCH-BRIEF(empty):', status, data, 'OK' if ok11b else 'CHECK')
 
-print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b]) else 'SOME CHECKS FAILED')
+# 12) Admin network pulse: KPIs + approvals + agents + branches + compliance + disputes + KYC
+status, data = post('/api/ai/admin-pulse', {
+    'adminName': 'Daniel Tetteh',
+    'network': {
+        'totalUsers': 2847, 'activeUsers': 2156, 'monthlyGrowth': 12.5,
+        'totalDeposits': 4250000, 'totalSusuPool': 3200000,
+        'totalLoansDisbursed': 1850000, 'monthlyRevenue': 385000,
+        'defaultRate': 2.3, 'totalAgents': 24, 'activeAgents': 20, 'totalSusuGroups': 89,
+    },
+    'approvals': [
+        {'applicantName': 'Hawa Abdulai', 'type': 'business', 'amount': 25000, 'tenor': '12 months', 'creditScore': 480, 'purpose': 'Cold store expansion'},
+        {'applicantName': 'Grace Tetteh', 'type': 'business', 'amount': 15000, 'tenor': '6 months', 'creditScore': 780, 'purpose': 'Christmas clothing stock'},
+        {'applicantName': 'Ibrahim Musah', 'type': 'susu-backed', 'amount': 8000, 'tenor': '4 months', 'creditScore': 700},
+    ],
+    'agents': [
+        {'name': 'Yaw Owusu', 'branch': 'Makola', 'status': 'suspended', 'totalCollections': 12000, 'totalCustomers': 40, 'rating': 2.8},
+        {'name': 'Ama Serwaa', 'branch': 'Kaneshie', 'status': 'active', 'totalCollections': 84000, 'totalCustomers': 95, 'rating': 4.9},
+        {'name': 'Kofi Boateng', 'branch': 'Kumasi', 'status': 'active', 'totalCollections': 61000, 'totalCustomers': 72, 'rating': 4.3},
+    ],
+    'branches': [
+        {'name': 'Makola Branch', 'region': 'Greater Accra', 'manager': 'Nana Ampofo', 'totalCustomers': 820, 'totalAgents': 9, 'totalSusuGroups': 31, 'status': 'active'},
+        {'name': 'Kumasi Branch', 'region': 'Ashanti', 'manager': 'Abena Owusu', 'totalCustomers': 640, 'totalAgents': 7, 'totalSusuGroups': 24, 'status': 'active'},
+        {'name': 'Tamale Branch', 'region': 'Northern', 'manager': 'Unassigned', 'totalCustomers': 180, 'totalAgents': 2, 'totalSusuGroups': 6, 'status': 'inactive'},
+    ],
+    'compliance': [
+        {'type': 'suspicious_activity', 'title': 'Rapid Successive Transfers', 'severity': 'critical', 'status': 'escalated'},
+        {'type': 'aml', 'title': 'Large Cash Deposit Alert', 'severity': 'high', 'status': 'investigating'},
+        {'type': 'kyc', 'title': 'Incomplete KYC - Batch 47', 'severity': 'high', 'status': 'open'},
+        {'type': 'transaction_limit', 'title': 'Daily Limit Exceeded', 'severity': 'medium', 'status': 'open'},
+    ],
+    'disputes': [
+        {'type': 'not_received', 'amount': 1000, 'status': 'open'},
+        {'type': 'duplicate', 'amount': 500, 'status': 'investigating'},
+    ],
+    'kyc': {'pending': 1, 'inReview': 0, 'rejected': 1, 'expired': 0},
+})
+brief = data.get('brief') or ''
+items = data.get('items', [])
+PAGES_12 = ('loans', 'agents', 'compliance', 'kyc-verification', 'susu-groups', 'analytics', 'none')
+ok12 = (
+    status == 200
+    and 3 <= len(items) <= 5
+    and len(brief) > 0
+    and all(i.get('tone') in ('positive', 'warning', 'risk', 'tip') for i in items)
+    and all(i.get('page') in PAGES_12 for i in items)
+    and all(i.get('title') and i.get('detail') for i in items)
+)
+print('12 ADMIN-PULSE:', status, 'brief =', brief[:110])
+for i in items:
+    print('   ', i.get('tone'), '|', i.get('page'), '|', (i.get('title') or '')[:44], '|', (i.get('detail') or '')[:90])
+print('    ', 'OK' if ok12 else 'CHECK')
+
+# 12b) Error path: no data -> 400
+status, data = post('/api/ai/admin-pulse', {'adminName': 'Daniel Tetteh', 'network': {'totalUsers': 2847}})
+ok12b = status == 400
+print('12b ADMIN-PULSE(empty):', status, data, 'OK' if ok12b else 'CHECK')
+
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b]) else 'SOME CHECKS FAILED')

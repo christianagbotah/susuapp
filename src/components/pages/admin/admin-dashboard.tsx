@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCard } from '@/components/shared/kpi-card';
+import { AdminNetworkPulse } from '@/components/pages/admin/admin-network-pulse';
 import { useConfirm } from '@/components/shared/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +28,7 @@ import {
 } from 'recharts';
 
 export function AdminDashboard() {
-  const { stats, allLoans, allAgents, allBranches, approveLoan, rejectLoan, setActivePage } = useAdminStore();
+  const { user, stats, allLoans, allAgents, allBranches, complianceReports, allDisputes, kycRecords, approveLoan, rejectLoan, setActivePage } = useAdminStore();
   const [confirmDialog, askConfirm] = useConfirm();
   const [detailLoan, setDetailLoan] = useState<Loan | null>(null);
   const [detailBranch, setDetailBranch] = useState<Branch | null>(null);
@@ -113,6 +114,19 @@ export function AdminDashboard() {
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
         <div className="absolute -bottom-6 right-20 h-24 w-24 rounded-full bg-white/10" />
       </motion.div>
+
+      {/* Susu AI · Network pulse — whole-operation brief with deep links */}
+      <AdminNetworkPulse
+        adminName={user.name}
+        stats={stats}
+        approvals={pendingLoans}
+        agents={allAgents}
+        branches={allBranches}
+        compliance={complianceReports}
+        disputes={allDisputes}
+        kycRecords={kycRecords}
+        onNavigate={setActivePage}
+      />
 
       {/* Stats Row — every KPI opens its details page */}
       <div className="grid grid-cols-2 gap-3 lg:gap-4 sm:grid-cols-3 lg:grid-cols-6">
