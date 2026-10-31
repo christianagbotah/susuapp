@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
+import { BranchManagerAiBrief } from '@/components/pages/branch-manager/branch-manager-ai-brief';
 import {
   LayoutDashboard, Users, Landmark, Target, TrendingUp, TrendingDown,
   Building2, ArrowRight, ClipboardCheck, AlertTriangle, CircleDollarSign,
@@ -45,7 +46,7 @@ const staffStatusMeta: Record<StaffMember['status'], { label: string; className:
 };
 
 export function BranchManagerDashboard() {
-  const { user, staff, approvals, setActivePage } = useBranchManagerStore();
+  const { user, staff, approvals, targets, setActivePage } = useBranchManagerStore();
   const [approvalDetail, setApprovalDetail] = useState<LoanApprovalRequest | null>(null);
   const [staffDetail, setStaffDetail] = useState<StaffMember | null>(null);
 
@@ -89,7 +90,7 @@ export function BranchManagerDashboard() {
               </div>
               <div className="text-right">
                 <p className="text-xs text-violet-200">Today</p>
-                <p className="text-sm font-medium">{formatDate('2026-10-25')}</p>
+                <p className="text-sm font-medium">{formatDate(new Date().toISOString().slice(0, 10))}</p>
               </div>
             </div>
           </CardContent>
@@ -148,6 +149,16 @@ export function BranchManagerDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Susu AI morning brief */}
+      <BranchManagerAiBrief
+        managerName={user.name}
+        branch={user.branch}
+        approvals={approvals}
+        staff={staff}
+        targets={targets}
+        onNavigate={setActivePage}
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Approval queue preview */}

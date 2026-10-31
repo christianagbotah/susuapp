@@ -205,4 +205,49 @@ status, data = post('/api/ai/collections-prioritize', {
 ok10b = status == 400
 print('10b SMART-ROUTE(all collected):', status, data, 'OK' if ok10b else 'CHECK')
 
-print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b]) else 'SOME CHECKS FAILED')
+# 11) Branch manager morning brief: approvals + staff + targets
+status, data = post('/api/ai/branch-brief', {
+    'managerName': 'Nana Ampofo',
+    'branch': 'Makola Branch, Accra',
+    'approvals': [
+        {'applicantName': 'Grace Tetteh', 'productName': 'Market Trader Loan', 'amount': 15000, 'tenorMonths': 6, 'appraisalScore': 86, 'creditGrade': 'A', 'officerRecommendation': 'approve', 'officerName': 'Kwabena Mensah', 'requestDate': '2026-10-24', 'purpose': 'Christmas clothing stock'},
+        {'applicantName': 'Ibrahim Musah', 'productName': 'Susu-Linked Loan', 'amount': 8000, 'tenorMonths': 4, 'appraisalScore': 78, 'creditGrade': 'B', 'officerRecommendation': 'approve', 'officerName': 'Abena Owusu', 'requestDate': '2026-10-24'},
+        {'applicantName': 'Comfort Aidoo', 'productName': 'School Fees Loan', 'amount': 4500, 'tenorMonths': 10, 'appraisalScore': 64, 'creditGrade': 'C', 'officerRecommendation': 'review', 'officerName': 'Kwabena Mensah', 'requestDate': '2026-10-23'},
+        {'applicantName': 'Hawa Abdulai', 'productName': 'Market Trader Loan', 'amount': 25000, 'tenorMonths': 12, 'appraisalScore': 42, 'creditGrade': 'E', 'officerRecommendation': 'reject', 'officerName': 'Kwabena Mensah', 'requestDate': '2026-10-22', 'purpose': 'Cold store expansion'},
+    ],
+    'staff': [
+        {'name': 'Kwabena Mensah', 'role': 'Loan Officer', 'status': 'active', 'performance': 92},
+        {'name': 'Akua Sarpong', 'role': 'Teller', 'status': 'active', 'performance': 88},
+        {'name': 'Abena Owusu', 'role': 'Loan Officer', 'status': 'on_leave', 'performance': 79},
+        {'name': 'Adjoa Mensimah', 'role': 'Teller', 'status': 'suspended', 'performance': 61},
+        {'name': 'Esi Nyarko', 'role': 'Accountant', 'status': 'active', 'performance': 97},
+    ],
+    'targets': [
+        {'metric': 'New Susu Accounts Opened', 'period': 'October 2026', 'target': 150, 'achieved': 118, 'unit': 'count', 'owner': 'All Officers'},
+        {'metric': 'Daily Collections (MoMo + Cash)', 'period': 'October 2026', 'target': 320000, 'achieved': 286400, 'unit': 'currency', 'owner': 'Field Supervisor'},
+        {'metric': 'Loan Disbursement', 'period': 'October 2026', 'target': 450000, 'achieved': 341000, 'unit': 'currency', 'owner': 'Loan Officers'},
+        {'metric': 'Portfolio At Risk (PAR 30)', 'period': 'October 2026', 'target': 5, 'achieved': 3.8, 'unit': 'percent', 'owner': 'Branch Manager'},
+        {'metric': 'KYC Full Completion Rate', 'period': 'October 2026', 'target': 85, 'achieved': 72, 'unit': 'percent', 'owner': 'Agents'},
+    ],
+})
+brief = data.get('brief') or ''
+items = data.get('items', [])
+ok11 = (
+    status == 200
+    and 3 <= len(items) <= 5
+    and len(brief) > 0
+    and all(i.get('tone') in ('positive', 'warning', 'risk', 'tip') for i in items)
+    and all(i.get('page') in ('loan-approvals', 'staff', 'targets', 'none') for i in items)
+    and all(i.get('title') and i.get('detail') for i in items)
+)
+print('11 BRANCH-BRIEF:', status, 'brief =', brief[:110])
+for i in items:
+    print('   ', i.get('tone'), '|', i.get('page'), '|', (i.get('title') or '')[:44], '|', (i.get('detail') or '')[:90])
+print('    ', 'OK' if ok11 else 'CHECK')
+
+# 11b) Error path: no data -> 400
+status, data = post('/api/ai/branch-brief', {})
+ok11b = status == 400
+print('11b BRANCH-BRIEF(empty):', status, data, 'OK' if ok11b else 'CHECK')
+
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b]) else 'SOME CHECKS FAILED')
