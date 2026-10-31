@@ -203,7 +203,7 @@ export function LoanOfficerAppraisals() {
       applicantName: activeApp.applicantName,
       officerName: user.name,
       ...scores,
-      fieldVisitDate: '2026-10-25',
+      fieldVisitDate: new Date().toISOString().slice(0, 10),
       businessLocation: location.trim(),
       notes: notes.trim(),
       recommendation,

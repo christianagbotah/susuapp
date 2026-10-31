@@ -165,4 +165,44 @@ ok6 = status == 200 and 'suggestedScores' in data and len(note) > 200
 print('6 APPRAISAL+NOTE:', status, 'scores=', 'suggestedScores' in data, 'note chars =', len(note), 'OK' if ok6 else 'CHECK')
 print('  note preview:', note[:180].replace('\n', ' '))
 
-print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9]) else 'SOME CHECKS FAILED')
+# 10) Agent smart visit order: rank pending/absent customers (never collected)
+status, data = post('/api/ai/collections-prioritize', {
+    'agentName': 'Kofi Boateng',
+    'routes': [{
+        'name': 'Makola Morning Route',
+        'area': 'Makola Market, Accra',
+        'customers': [
+            {'customerId': 'cus-001', 'customerName': 'Akosua Mensah', 'susuGroupName': 'Makola Traders Circle', 'expectedAmount': 120, 'collectedAmount': 0, 'status': 'pending'},
+            {'customerId': 'cus-002', 'customerName': 'Yaw Owusu', 'susuGroupName': 'Makola Traders Circle', 'expectedAmount': 80, 'collectedAmount': 0, 'status': 'absent', 'notes': 'Stall closed, neighbour says he travelled to Kumasi'},
+            {'customerId': 'cus-003', 'customerName': 'Efua Darko', 'susuGroupName': 'Makola Traders Circle', 'expectedAmount': 50, 'collectedAmount': 20, 'status': 'pending', 'notes': 'Paid part, promises rest by afternoon'},
+            {'customerId': 'cus-004', 'customerName': 'Ama Asantewaa', 'susuGroupName': 'Makola Traders Circle', 'expectedAmount': 200, 'collectedAmount': 0, 'status': 'pending'},
+            {'customerId': 'cus-005', 'customerName': 'Kwabena Osei', 'susuGroupName': 'Makola Traders Circle', 'expectedAmount': 60, 'collectedAmount': 60, 'status': 'collected'},
+        ],
+    }],
+})
+visits = data.get('visits', [])
+ids = {v.get('customerId') for v in visits}
+ok10 = (
+    status == 200
+    and 3 <= len(visits) <= 12
+    and all(v.get('urgency') in ('high', 'medium', 'low') for v in visits)
+    and all(v.get('suggestion') in ('collect', 'revisit', 'call') for v in visits)
+    and ids <= {'cus-001', 'cus-002', 'cus-003', 'cus-004'}
+    and 'cus-005' not in ids
+    and len(ids) == len(visits)
+)
+print('10 SMART-ROUTE:', status, 'brief =', (data.get('brief') or '')[:110])
+for v in visits:
+    print('   ', v.get('customerId'), '|', v.get('urgency'), '|', v.get('suggestion'), '|', (v.get('reason') or '')[:80])
+print('    ', 'OK' if ok10 else 'CHECK')
+
+# 10b) Error path: nothing actionable (all collected) -> 400
+status, data = post('/api/ai/collections-prioritize', {
+    'routes': [{'name': 'Done route', 'customers': [
+        {'customerId': 'cus-009', 'customerName': 'X', 'expectedAmount': 10, 'collectedAmount': 10, 'status': 'collected'},
+    ]}],
+})
+ok10b = status == 400
+print('10b SMART-ROUTE(all collected):', status, data, 'OK' if ok10b else 'CHECK')
+
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b]) else 'SOME CHECKS FAILED')

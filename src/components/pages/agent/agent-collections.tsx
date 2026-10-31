@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { CollectionCustomer, CollectionRoute } from '@/lib/types';
+import { AgentSmartRouteCard } from '@/components/pages/agent/agent-smart-route-card';
 
 interface CollectDialogState {
   open: boolean;
@@ -53,7 +54,7 @@ const fadeIn = {
 };
 
 export function AgentCollections() {
-  const { collectionRoutes, collectFromCustomer, markCustomerAbsent } = useAgentStore();
+  const { user, collectionRoutes, collectFromCustomer, markCustomerAbsent } = useAgentStore();
 
   const activeRoutes = collectionRoutes.filter(
     (r) => r.status === 'in_progress' || r.status === 'partial'
@@ -175,7 +176,9 @@ export function AgentCollections() {
               </CardContent>
             </Card>
           ) : (
-            activeRoutes.map((route, index) => {
+            <>
+            <AgentSmartRouteCard routes={activeRoutes} agentName={user.name} />
+            {activeRoutes.map((route, index) => {
               const isExpanded = expandedRoute === route.id;
               const progress =
                 route.totalExpected > 0
@@ -436,7 +439,8 @@ export function AgentCollections() {
                   </Card>
                 </motion.div>
               );
-            })
+            })}
+            </>
           )}
         </TabsContent>
 

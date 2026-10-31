@@ -1027,3 +1027,20 @@ Stage Summary:
 - Route tests now 10 checks ALL OK incl. `4b FIN-HEALTH(twi)`: 200, score 75/Good, 5 distinct Twi labels, Twi summary stating "ɔha mu nkyem aduonum num (75)", tips in Twi, grade English; repeated runs give distinct labels (guard confirmed after one early degenerate sample)
 - Browser (390px, Ama, lang=twi): card generates fully in Twi (5 Twi factor labels, ɛ/ɔ chars, Good badge), Read aloud → `POST /api/ai/speak 200` → playing → stop; cache key `isusupro-fin-health-v1-twi`; chat re-opens in Twi (shared preference); no page errors
 - `npx tsc --noEmit` 0 errors, `npx eslint` clean on both changed files
+
+## Task ID: 2026-10-31-agent-smart-route
+**Commit:** (this commit) — feat(ai): smart collections route prioritizer for field agents
+
+**Scope:** User: "go on. have you built the other platforms already like the mobile apps and desktop software?" Confirmed the native shells (Capacitor 8 Android/iOS + Tauri 2 desktop, per NATIVE_BUILDS.md) and continued the AI track with the field agent — the last core role without a dedicated AI feature.
+
+**New feature — Susu AI · Smart visit order (agent Collections page):**
+1. `POST /api/ai/collections-prioritize` (NEW): ranks today's pending/absent customers into a visit order. Prompt encodes Ghana field realities — market traders leave stalls by mid-afternoon, absentees need a prompt revisit or a polite call, MoMo is the fallback for late/far stops, large amounts carry collection risk. Strict-JSON contract `{ brief, visits[{customerId, urgency high|medium|low, reason ≤20 words, suggestion collect|revisit|call}] }`; defensive parse (fence-strip, brace-slice, enum whitelists with medium/collect defaults, reason capped 140, brief capped 220, ≤12 visits); visits resolved against the customer IDs actually sent (unmatched/duplicates dropped) so the UI never keys on hallucinated IDs; zero actionable customers → 400; routes capped 5, customers capped 15/route & 40 total; snapshot also computes todayStillToCollect server-side.
+2. `AgentSmartRouteCard` (NEW `src/components/pages/agent/agent-smart-route-card.tsx`): emerald/teal gradient card at the top of the agent's Active Routes tab. "Prioritize my day" (compact "Plan"/"Again" on mobile) → skeleton loaders → brief line + ranked stop rows (numbered chip, urgency badge Visit first/Today/Later, suggestion chip Collect/Revisit/Call-MoMo with icon, reason quoting real figures, route name); header shows live "N customers pending · ₵X still to collect"; honest-client fallback reason when the model returns none; error box + retry; disclaimer "AI guidance from today's live collections — you know your customers best."; renders nothing when nothing is actionable; opacity/translateY motion only.
+3. Wired into `agent-collections.tsx` (fragment above the route list, only when active routes exist; agent name from the agent store user).
+4. Fix: `loan-officer-appraisals.tsx` had a hardcoded `fieldVisitDate: '2026-10-25'` — new appraisals now stamp the actual save date (`new Date().toISOString().slice(0,10)`).
+
+**Verification:**
+- `scripts/test-ai-routes.py` → 12 checks ALL OK incl. new `10 SMART-ROUTE` (200; ranked Ama ₵200 high/collect first, Yaw absent high/call with Kumasi-travel reason, partial-payer low; collected customer cus-005 excluded; all IDs known & unique) and `10b` all-collected → 400
+- Browser (390px & 1280px, logged in as Emmanuel Osei/Susu Agent): card renders on the Active Routes tab ("2 customers pending · ₵1,000.00 still to collect today"), Plan → skeleton → 2 ranked stops from LIVE route data (Kwame Asante absent → "Visit first/Revisit · Customer not at stall, GHS 500 pending"; Kofi Boateng → "Visit first/Collect · Large amount GHS 500, no collection yet") + brief; zero overflow at both widths; no console/page errors
+- Loan officer (Efua Sarpong): re-saved the Yaw Antwi 5C appraisal → card now stamps **31 Oct 2026** (today) instead of the hardcoded 25 Oct 2026
+- `npx tsc --noEmit` 0 errors (excl. skills/), `npx eslint` on all 4 changed files clean
