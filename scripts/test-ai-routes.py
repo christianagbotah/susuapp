@@ -386,4 +386,131 @@ status, data = post('/api/ai/supervisor-focus', {'supervisorName': 'Abena Frimpo
 ok14b = status == 400
 print('14b SUPERVISOR-FOCUS(empty):', status, data, 'OK' if ok14b else 'CHECK')
 
-print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b, ok13, ok13b, ok14, ok14b]) else 'SOME CHECKS FAILED')
+# 15) Accountant books check: ledger + CoA + statements + reconciliations
+status, data = post('/api/ai/accountant-brief', {
+    'accountantName': 'Esi Nyarko',
+    'ledger': [
+        {'date': '2026-10-31', 'reference': 'JV-2026-041', 'accountName': 'MTN MoMo Settlement Account', 'debit': 12500, 'credit': 0, 'narration': 'Daily MoMo sweep to bank', 'status': 'posted'},
+        {'date': '2026-10-31', 'reference': 'JV-2026-041', 'accountName': 'GCB Bank Operating Account', 'debit': 0, 'credit': 12500, 'narration': 'Daily MoMo sweep to bank', 'status': 'posted'},
+        {'date': '2026-10-30', 'reference': 'JV-2026-039', 'accountName': 'Susu Payable — Members', 'debit': 0, 'credit': 8400, 'narration': 'October susu contributions', 'status': 'posted'},
+        {'date': '2026-10-30', 'reference': 'JV-2026-038', 'accountName': 'Interest Income', 'debit': 0, 'credit': 3150, 'narration': 'Loan interest accrued', 'status': 'posted'},
+        {'date': '2026-10-29', 'reference': 'JV-2026-036', 'accountName': 'Office Expenses', 'debit': 950, 'credit': 0, 'narration': 'Generator diesel', 'status': 'reversed'},
+        {'date': '2026-10-29', 'reference': 'JV-2026-037', 'accountName': 'Office Expenses', 'debit': 950, 'credit': 0, 'narration': 'Generator diesel (re-posted)', 'status': 'posted'},
+    ],
+    'coa': [
+        {'code': '1010', 'name': 'GCB Bank Operating Account', 'type': 'asset', 'balance': 486200, 'momoChange': 4.2},
+        {'code': '1020', 'name': 'MTN MoMo Settlement Account', 'type': 'asset', 'balance': 62400, 'momoChange': -2.8},
+        {'code': '2010', 'name': 'Susu Payable — Members', 'type': 'liability', 'balance': 1240800, 'momoChange': 6.1},
+        {'code': '4010', 'name': 'Interest Income', 'type': 'income', 'balance': 286400},
+        {'code': '5010', 'name': 'Office Expenses', 'type': 'expense', 'balance': 48300},
+    ],
+    'statements': [
+        {'name': 'Statement of Financial Position', 'period': 'September 2026', 'status': 'final'},
+        {'name': 'Income Statement', 'period': 'Jan–Sep 2026', 'status': 'final'},
+        {'name': 'Trial Balance', 'period': 'October 2026 mid-month', 'status': 'draft'},
+    ],
+    'reconciliations': [
+        {'source': 'GCB Bank — Operating', 'period': 'October 2026', 'status': 'in_progress', 'bookBalance': 486200, 'statementBalance': 485400, 'unmatched': [{'description': 'Bank charges not posted', 'amount': 180, 'type': 'debit'}, {'description': 'Unpresented cheque — Adjoa Prints', 'amount': 620, 'type': 'credit'}]},
+        {'source': 'MTN MoMo Settlement', 'period': 'October 2026', 'status': 'variance', 'bookBalance': 62400, 'statementBalance': 62220, 'unmatched': [{'description': 'Settlement fee drift — 31 Oct batch', 'amount': 180, 'type': 'debit'}]},
+        {'source': 'Fidelity Bank — Savings', 'period': 'September 2026', 'status': 'reconciled', 'bookBalance': 210000, 'statementBalance': 210000, 'unmatched': []},
+    ],
+})
+brief = data.get('brief') or ''
+items = data.get('items', [])
+PAGES_15 = ('ledger', 'statements', 'reconciliation', 'none')
+ok15 = (
+    status == 200
+    and 3 <= len(items) <= 5
+    and len(brief) > 0
+    and all(i.get('tone') in ('positive', 'warning', 'risk', 'tip') for i in items)
+    and all(i.get('page') in PAGES_15 for i in items)
+    and all(i.get('title') and i.get('detail') for i in items)
+)
+print('15 ACCOUNTANT-BRIEF:', status, 'brief =', brief[:110])
+for i in items:
+    print('   ', i.get('tone'), '|', i.get('page'), '|', (i.get('title') or '')[:44], '|', (i.get('detail') or '')[:90])
+print('    ', 'OK' if ok15 else 'CHECK')
+
+# 15b) Error path: no data -> 400
+status, data = post('/api/ai/accountant-brief', {'accountantName': 'Esi Nyarko'})
+ok15b = status == 400
+print('15b ACCOUNTANT-BRIEF(empty):', status, data, 'OK' if ok15b else 'CHECK')
+
+# 16) Teller drawer check: drawer + queue + transfers + EOD lines
+status, data = post('/api/ai/teller-brief', {
+    'tellerName': 'Akua Sarpong',
+    'drawer': {'openingFloat': 5000, 'cashIn': 18420, 'cashOut': 3410, 'expectedBalance': 20010, 'countedBalance': 19960, 'variance': -50, 'status': 'variance_pending'},
+    'queue': [
+        {'queueNo': 14, 'type': 'withdrawal', 'amount': 1200, 'channel': 'cash', 'status': 'waiting'},
+        {'queueNo': 15, 'type': 'susu_collection', 'amount': 450, 'channel': 'momo_mtn', 'status': 'waiting'},
+        {'queueNo': 16, 'type': 'deposit', 'amount': 2600, 'channel': 'cash', 'status': 'processing'},
+        {'queueNo': 13, 'type': 'loan_repayment', 'amount': 800, 'channel': 'cash', 'status': 'completed'},
+    ],
+    'transfers': [
+        {'direction': 'to_bank', 'amount': 15000, 'status': 'requested', 'requestedBy': 'Akua Sarpong'},
+        {'direction': 'from_vault', 'amount': 2000, 'status': 'in_transit', 'requestedBy': 'Nana Ampofo'},
+    ],
+    'eodLines': [
+        {'category': 'momo_mtn', 'systemTotal': 41280, 'countedTotal': 41100, 'variance': -180, 'txCount': 156},
+        {'category': 'cash', 'systemTotal': 18420, 'countedTotal': 18370, 'variance': -50, 'txCount': 84},
+        {'category': 'momo_telecel', 'systemTotal': 8940, 'countedTotal': 8940, 'variance': 0, 'txCount': 38},
+        {'category': 'cheque', 'systemTotal': 6200, 'countedTotal': 6200, 'variance': 0, 'txCount': 5},
+    ],
+})
+brief = data.get('brief') or ''
+items = data.get('items', [])
+PAGES_16 = ('counter', 'reconciliation', 'vault', 'none')
+ok16 = (
+    status == 200
+    and 3 <= len(items) <= 5
+    and len(brief) > 0
+    and all(i.get('tone') in ('positive', 'warning', 'risk', 'tip') for i in items)
+    and all(i.get('page') in PAGES_16 for i in items)
+    and all(i.get('title') and i.get('detail') for i in items)
+)
+print('16 TELLER-BRIEF:', status, 'brief =', brief[:110])
+for i in items:
+    print('   ', i.get('tone'), '|', i.get('page'), '|', (i.get('title') or '')[:44], '|', (i.get('detail') or '')[:90])
+print('    ', 'OK' if ok16 else 'CHECK')
+
+# 16b) Error path: no data -> 400
+status, data = post('/api/ai/teller-brief', {'tellerName': 'Akua Sarpong'})
+ok16b = status == 400
+print('16b TELLER-BRIEF(empty):', status, data, 'OK' if ok16b else 'CHECK')
+
+# 17) Treasurer payout readiness: groups + payout queue
+status, data = post('/api/ai/treasurer-brief', {
+    'treasurerName': 'Yaw Darko',
+    'groups': [
+        {'name': 'Makola Market Women', 'members': 12, 'currentRound': 3, 'totalRounds': 12, 'totalPool': 14400, 'contributionAmount': 100, 'frequency': 'daily', 'nextPayout': '2026-11-05', 'nextPayoutMember': 'Akosua Brewoo', 'status': 'active', 'overdue': 3, 'pending': 5},
+        {'name': 'Kaneshie Traders Circle', 'members': 15, 'currentRound': 12, 'totalRounds': 12, 'totalPool': 22500, 'contributionAmount': 125, 'frequency': 'weekly', 'nextPayout': '2026-11-08', 'nextPayoutMember': 'Grace Tetteh', 'status': 'active', 'overdue': 0, 'pending': 2},
+        {'name': 'Nima Foodstuffs Group', 'members': 10, 'currentRound': 7, 'totalRounds': 10, 'totalPool': 9800, 'contributionAmount': 100, 'frequency': 'daily', 'nextPayout': '2026-11-03', 'nextPayoutMember': 'Adiza Fuseini', 'status': 'active', 'overdue': 1, 'pending': 4},
+    ],
+    'payouts': [
+        {'groupName': 'Nima Foodstuffs Group', 'memberName': 'Adiza Fuseini', 'amount': 9800, 'payoutDate': '2026-11-03', 'status': 'pending', 'disbursementMethod': 'momo'},
+        {'groupName': 'Makola Market Women', 'memberName': 'Akosua Brewoo', 'amount': 14400, 'payoutDate': '2026-11-05', 'status': 'pending', 'disbursementMethod': 'momo'},
+        {'groupName': 'Kaneshie Traders Circle', 'memberName': 'Grace Tetteh', 'amount': 22000, 'payoutDate': '2026-10-28', 'status': 'completed', 'disbursementMethod': 'bank'},
+    ],
+})
+brief = data.get('brief') or ''
+items = data.get('items', [])
+PAGES_17 = ('groups', 'payouts', 'members', 'reports', 'none')
+ok17 = (
+    status == 200
+    and 3 <= len(items) <= 5
+    and len(brief) > 0
+    and all(i.get('tone') in ('positive', 'warning', 'risk', 'tip') for i in items)
+    and all(i.get('page') in PAGES_17 for i in items)
+    and all(i.get('title') and i.get('detail') for i in items)
+)
+print('17 TREASURER-BRIEF:', status, 'brief =', brief[:110])
+for i in items:
+    print('   ', i.get('tone'), '|', i.get('page'), '|', (i.get('title') or '')[:44], '|', (i.get('detail') or '')[:90])
+print('    ', 'OK' if ok17 else 'CHECK')
+
+# 17b) Error path: no data -> 400
+status, data = post('/api/ai/treasurer-brief', {'treasurerName': 'Yaw Darko'})
+ok17b = status == 400
+print('17b TREASURER-BRIEF(empty):', status, data, 'OK' if ok17b else 'CHECK')
+
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b, ok13, ok13b, ok14, ok14b, ok15, ok15b, ok16, ok16b, ok17, ok17b]) else 'SOME CHECKS FAILED')

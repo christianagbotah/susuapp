@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTellerStore } from '@/store/staff-stores';
+import { TellerBriefCard } from '@/components/pages/teller/teller-brief-card';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCard } from '@/components/shared/kpi-card';
@@ -42,7 +43,7 @@ function DetailField({ label, value, wide = false }: { label: string; value: Rea
 }
 
 export function TellerDashboard() {
-  const { user, drawer, queue, transfers, setActivePage } = useTellerStore();
+  const { user, drawer, queue, transfers, eodLines, setActivePage } = useTellerStore();
   const [detailTransfer, setDetailTransfer] = useState<VaultTransfer | null>(null);
 
   const waiting = queue.filter(q => q.status === 'waiting').length;
@@ -73,13 +74,23 @@ export function TellerDashboard() {
                 <p className="text-sm text-cyan-100">{user.branch} · Drawer: TL-02 · Float {formatGHS(drawer.openingFloat)}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-cyan-200">{formatDate('2026-10-25')}</p>
+                <p className="text-xs text-cyan-200">{formatDate(new Date().toISOString().slice(0, 10))}</p>
                 <p className="text-sm font-medium">Business day open</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Susu AI · Drawer check — close-of-day priorities with deep links */}
+      <TellerBriefCard
+        tellerName={user.name}
+        drawer={drawer}
+        queue={queue}
+        transfers={transfers}
+        eodLines={eodLines}
+        onNavigate={setActivePage}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">

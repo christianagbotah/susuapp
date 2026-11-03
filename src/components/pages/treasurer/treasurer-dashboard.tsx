@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTreasurerStore } from '@/store/app-store';
+import { TreasurerBriefCard } from '@/components/pages/treasurer/treasurer-brief-card';
 import { formatGHS, formatDate, getStatusColor, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCard } from '@/components/shared/kpi-card';
@@ -127,6 +128,15 @@ export function TreasurerDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Susu AI · Payout readiness — group priorities with deep links */}
+      <TreasurerBriefCard
+        treasurerName={user.name}
+        groups={managedGroups}
+        payouts={payouts}
+        contributions={allContributions}
+        onNavigate={setActivePage}
+      />
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 gap-3 lg:gap-4 sm:grid-cols-2 lg:grid-cols-4">

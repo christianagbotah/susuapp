@@ -80,7 +80,7 @@ export function AccountantBriefCard({
             name: c.name,
             type: c.type,
             balance: c.balance,
-            momoChange: c.momoChange,
+            momoChange: c.momChange,
           })),
           statements: statementsSorted.map((s) => ({
             name: s.name,

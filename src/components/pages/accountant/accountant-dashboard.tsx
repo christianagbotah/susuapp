@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAccountantStore } from '@/store/staff-stores';
+import { AccountantBriefCard } from '@/components/pages/accountant/accountant-brief-card';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCard } from '@/components/shared/kpi-card';
@@ -18,7 +19,7 @@ import type { ChartOfAccount, BankReconciliation } from '@/lib/types';
 const fadeUp = { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.4 } };
 
 export function AccountantDashboard() {
-  const { user, ledger, coa, reconciliations, setActivePage } = useAccountantStore();
+  const { user, ledger, coa, statements, reconciliations, setActivePage } = useAccountantStore();
   const [accountDetail, setAccountDetail] = useState<ChartOfAccount | null>(null);
   const [recDetail, setRecDetail] = useState<BankReconciliation | null>(null);
 
@@ -60,6 +61,16 @@ export function AccountantDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Susu AI · Books check — accounting priorities with deep links */}
+      <AccountantBriefCard
+        accountantName={user.name}
+        ledger={ledger}
+        coa={coa}
+        statements={statements}
+        reconciliations={reconciliations}
+        onNavigate={setActivePage}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
