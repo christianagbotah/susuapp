@@ -5,6 +5,7 @@ import { useComplianceStore } from '@/store/staff-stores';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCard } from '@/components/shared/kpi-card';
+import { ComplianceTriageCard } from '@/components/pages/compliance-officer/compliance-triage-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -65,6 +66,15 @@ export function ComplianceDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Susu AI · Compliance triage — regulatory priorities with deep links */}
+      <ComplianceTriageCard
+        officerName={user.name}
+        alerts={alerts}
+        strs={strs}
+        bogReturns={bogReturns}
+        onNavigate={setActivePage}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">

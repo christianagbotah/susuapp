@@ -307,4 +307,83 @@ status, data = post('/api/ai/admin-pulse', {'adminName': 'Daniel Tetteh', 'netwo
 ok12b = status == 400
 print('12b ADMIN-PULSE(empty):', status, data, 'OK' if ok12b else 'CHECK')
 
-print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b]) else 'SOME CHECKS FAILED')
+# 13) Compliance officer triage: AML alerts + STR pipeline + BoG returns
+status, data = post('/api/ai/compliance-triage', {
+    'officerName': 'Gifty Owusu',
+    'alerts': [
+        {'rule': 'Structuring — multiple deposits below ₵5,000 threshold', 'severity': 'critical', 'customerName': 'Hawa Abdulai', 'amount': 44000, 'status': 'escalated', 'triggeredDate': '2026-10-25', 'assignedTo': 'Gifty Owusu'},
+        {'rule': 'Sanctions name screening partial match', 'severity': 'critical', 'customerName': 'Yaw Owusu Ansah', 'amount': 0, 'status': 'investigating', 'triggeredDate': '2026-10-20'},
+        {'rule': 'Rapid movement — deposit & immediate withdrawal', 'severity': 'high', 'customerName': 'John Nyeko', 'amount': 18000, 'status': 'investigating', 'triggeredDate': '2026-10-24'},
+        {'rule': 'Geographic — collections from high-risk border zone', 'severity': 'medium', 'customerName': 'Adiza Fuseini', 'amount': 12400, 'status': 'open', 'triggeredDate': '2026-10-15'},
+    ],
+    'strs': [
+        {'subjectName': 'Hawa Abdulai', 'status': 'filed', 'filedWith': 'Financial Intelligence Centre (FIC)', 'filedDate': '2026-10-25', 'reference': 'FIC/STR/2026/0912', 'amountInvolved': 44000},
+    ],
+    'returns': [
+        {'returnName': 'AML/CFT Return', 'period': 'Q3 2026', 'dueDate': '2026-10-20', 'status': 'late', 'completion': 100},
+        {'returnName': 'NBFRI 8 (Liquid Assets)', 'period': 'October 2026', 'dueDate': '2026-11-10', 'status': 'not_started', 'completion': 0},
+        {'returnName': 'NBFRI 3 (Capital Adequacy)', 'period': 'October 2026', 'dueDate': '2026-11-10', 'status': 'in_progress', 'completion': 65},
+    ],
+})
+brief = data.get('brief') or ''
+items = data.get('items', [])
+PAGES_13 = ('aml-alerts', 'str-reports', 'bog-returns', 'none')
+ok13 = (
+    status == 200
+    and 3 <= len(items) <= 5
+    and len(brief) > 0
+    and all(i.get('tone') in ('positive', 'warning', 'risk', 'tip') for i in items)
+    and all(i.get('page') in PAGES_13 for i in items)
+    and all(i.get('title') and i.get('detail') for i in items)
+)
+print('13 COMPLIANCE-TRIAGE:', status, 'brief =', brief[:110])
+for i in items:
+    print('   ', i.get('tone'), '|', i.get('page'), '|', (i.get('title') or '')[:44], '|', (i.get('detail') or '')[:90])
+print('    ', 'OK' if ok13 else 'CHECK')
+
+# 13b) Error path: no data -> 400
+status, data = post('/api/ai/compliance-triage', {'officerName': 'Gifty Owusu'})
+ok13b = status == 400
+print('13b COMPLIANCE-TRIAGE(empty):', status, data, 'OK' if ok13b else 'CHECK')
+
+# 14) Field supervisor focus: agents + routes + spot checks
+status, data = post('/api/ai/supervisor-focus', {
+    'supervisorName': 'Abena Frimpong',
+    'branch': 'Makola Branch, Accra',
+    'agents': [
+        {'name': 'Adiza Mohammed', 'area': 'Nima', 'status': 'offline', 'todayCollections': 3890, 'expectedToday': 4500, 'collectionRate': 86, 'floatBalance': 240, 'pendingVerify': 8, 'lastSync': '17:48 yesterday'},
+        {'name': 'Esi Blankson', 'area': 'Madina Market', 'status': 'at_office', 'todayCollections': 4210, 'expectedToday': 6900, 'collectionRate': 61, 'floatBalance': 920, 'pendingVerify': 11, 'lastSync': '08:55'},
+        {'name': 'Ama Serwaa', 'area': 'Tema Station', 'status': 'in_field', 'todayCollections': 7480, 'expectedToday': 8200, 'collectionRate': 91, 'floatBalance': 1850, 'pendingVerify': 2, 'lastSync': '09:44'},
+        {'name': 'Kofi Adjei', 'area': 'Makola Market', 'status': 'in_field', 'todayCollections': 9820, 'expectedToday': 11400, 'collectionRate': 86, 'floatBalance': 3240, 'pendingVerify': 6, 'lastSync': '09:41'},
+    ],
+    'routes': [
+        {'name': 'Madina Line 1', 'area': 'Madina Market — foodstuffs', 'agentName': 'Esi Blankson', 'dailyTarget': 5200, 'collectedToday': 4210, 'status': 'in_progress', 'stopsPending': 3, 'stopsMissed': 1},
+        {'name': 'Makola Line A', 'area': 'Makola Market — fabrics', 'agentName': 'Kofi Adjei', 'dailyTarget': 4800, 'collectedToday': 4120, 'status': 'in_progress', 'stopsPending': 2, 'stopsMissed': 0},
+        {'name': 'Tema Station Line 2', 'area': 'Tema Station — spare parts', 'agentName': 'Ama Serwaa', 'dailyTarget': 4200, 'collectedToday': 4200, 'status': 'completed', 'stopsPending': 0, 'stopsMissed': 0},
+    ],
+    'spotChecks': [
+        {'agentName': 'Esi Blankson', 'rating': 'needs_improvement', 'cashMatched': False, 'issuesFound': ['2 receipts not issued', 'float declaration missing']},
+    ],
+})
+brief = data.get('brief') or ''
+items = data.get('items', [])
+PAGES_14 = ('agents', 'routes', 'spot-checks', 'none')
+ok14 = (
+    status == 200
+    and 3 <= len(items) <= 5
+    and len(brief) > 0
+    and all(i.get('tone') in ('positive', 'warning', 'risk', 'tip') for i in items)
+    and all(i.get('page') in PAGES_14 for i in items)
+    and all(i.get('title') and i.get('detail') for i in items)
+)
+print('14 SUPERVISOR-FOCUS:', status, 'brief =', brief[:110])
+for i in items:
+    print('   ', i.get('tone'), '|', i.get('page'), '|', (i.get('title') or '')[:44], '|', (i.get('detail') or '')[:90])
+print('    ', 'OK' if ok14 else 'CHECK')
+
+# 14b) Error path: no data -> 400
+status, data = post('/api/ai/supervisor-focus', {'supervisorName': 'Abena Frimpong'})
+ok14b = status == 400
+print('14b SUPERVISOR-FOCUS(empty):', status, data, 'OK' if ok14b else 'CHECK')
+
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b, ok13, ok13b, ok14, ok14b]) else 'SOME CHECKS FAILED')

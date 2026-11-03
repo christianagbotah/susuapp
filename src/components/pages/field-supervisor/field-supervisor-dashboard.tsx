@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { formatGHS, formatDate, getInitials } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCard } from '@/components/shared/kpi-card';
+import { SupervisorFocusCard } from '@/components/pages/field-supervisor/supervisor-focus-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -74,13 +75,23 @@ export function FieldSupervisorDashboard() {
                 <p className="text-sm text-lime-100">{user.branch} · {agents.length} agents across Greater Accra markets</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-lime-200">{formatDate('2026-10-25')}</p>
+                <p className="text-xs text-lime-200">{formatDate(new Date().toISOString().slice(0, 10))}</p>
                 <p className="text-sm font-medium">Market day — peak collections</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Susu AI · Field focus — who to reach and which routes to close, with deep links */}
+      <SupervisorFocusCard
+        supervisorName={user.name}
+        branch={user.branch}
+        agents={agents}
+        routes={routes}
+        spotChecks={spotChecks}
+        onNavigate={setActivePage}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
