@@ -79,7 +79,10 @@ export function LoanOfficerAppraisals() {
     setAmount(String(existing?.recommendedAmount ?? app.amount));
     setAiPanelOpen(false);
     setAiError(null);
-    setAiSuggestion(null);
+    // Restore the AI provenance saved in the credit file so re-editing shows why the scores were suggested.
+    setAiSuggestion(existing?.aiRationale
+      ? { scores: { character: existing.character, capacity: existing.capacity, capital: existing.capital, collateral: existing.collateral, conditions: existing.conditions }, rationale: existing.aiRationale, flags: existing.aiFlags ?? [] }
+      : null);
     setDialogOpen(true);
   };
 
@@ -208,12 +211,20 @@ export function LoanOfficerAppraisals() {
       notes: notes.trim(),
       recommendation,
       recommendedAmount: recAmount,
+      // Persist the AI provenance into the credit file when an AI suggestion informed this appraisal.
+      ...(aiSuggestion?.rationale
+        ? {
+            aiRationale: aiSuggestion.rationale,
+            ...(aiSuggestion.flags.length ? { aiFlags: aiSuggestion.flags } : {}),
+            aiAssistedAt: new Date().toISOString().slice(0, 10),
+          }
+        : {}),
     });
     if (recommendation !== 'reject') {
       advanceStage(activeApp.id, 'recommended');
     }
     toast.success(`5C appraisal saved — ${activeApp.applicantName}`, {
-      description: `Score ${total}/${maxTotal} (Grade ${grade}) · ${recommendation === 'approve' ? 'Recommended to Branch Manager' : recommendation === 'reduce_amount' ? 'Reduced amount proposed' : 'Marked for rejection'}`,
+      description: `Score ${total}/${maxTotal} (Grade ${grade}) · ${recommendation === 'approve' ? 'Recommended to Branch Manager' : recommendation === 'reduce_amount' ? 'Reduced amount proposed' : 'Marked for rejection'}${aiSuggestion?.rationale ? ' · AI rationale saved to credit file' : ''}`,
     });
     setDialogOpen(false);
   };
@@ -250,7 +261,14 @@ export function LoanOfficerAppraisals() {
                       <p className="truncate font-semibold">{v.applicantName}</p>
                       <p className="flex items-center gap-1 truncate text-xs text-muted-foreground"><MapPin className="h-3 w-3" /> {v.businessLocation}</p>
                     </div>
-                    <Badge className="shrink-0 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Grade {g}</Badge>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {v.aiRationale && (
+                        <Badge className="gap-1 border-amber-300 bg-amber-50 text-[10px] text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300" aria-label="AI-assisted appraisal">
+                          <Sparkles className="h-3 w-3" /> AI
+                        </Badge>
+                      )}
+                      <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Grade {g}</Badge>
+                    </div>
                   </div>
                   <div className="grid grid-cols-5 gap-1.5">
                     {CRITERIA.map(c => (
@@ -525,6 +543,29 @@ export function LoanOfficerAppraisals() {
                   <p className="font-semibold">{recLabel}</p>
                   <p className="mt-1 text-xs text-muted-foreground">Recommended amount: {formatGHS(detail.recommendedAmount)}</p>
                 </div>
+
+                {/* AI rationale — provenance saved into the credit file */}
+                {detail.aiRationale && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-800 dark:bg-amber-900/15">
+                    <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                      AI rationale{detail.aiAssistedAt ? ` · ${formatDate(detail.aiAssistedAt)}` : ''}
+                    </p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-amber-900 dark:text-amber-100">{detail.aiRationale}</p>
+                    {(detail.aiFlags?.length ?? 0) > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {detail.aiFlags?.map((flag, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-200">
+                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {flag}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-2 text-[11px] text-amber-700/80 dark:text-amber-300/80">
+                      Saved from the Susu AI 5C assist — the officer's scores and recommendation govern this file.
+                    </p>
+                  </div>
+                )}
 
                 {/* Field visit */}
                 <div className="grid grid-cols-2 gap-3 text-sm">

@@ -992,6 +992,10 @@ export interface LoanAppraisal {
   recommendation: 'approve' | 'reject' | 'reduce_amount';
   recommendedAmount: number;
   officerName: string;
+  /** Susu AI 5C assist provenance — persisted into the credit file when the officer used an AI suggestion. */
+  aiRationale?: string;
+  aiFlags?: string[];
+  aiAssistedAt?: string;
 }
 
 export interface PortfolioLoan {

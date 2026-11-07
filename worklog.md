@@ -1109,3 +1109,18 @@ Stage Summary:
 - `scripts/test-ai-routes.py` → **22/22 ALL OK** (test WAV regenerated via the app's own TTS surface)
 - Browser, 390px & 1280px, all three portals: accountant (Kwesi Nyarko) card shows live recon figures (Telecel −₵60, AT −₵50, GCB ₵3,600) + 4 items, deep link → Statements title confirmed; teller (Yaw Antwi) card "4 at the counter · drawer balanced", items quote ₵20,760 counted / ₵15,000 transfer by Akua Sarpong / MoMo AT ₵50 short, deep link → Vault title confirmed, banner shows 03 Nov 2026; treasurer (Patricia Ampah) card quotes ₵10,000 to Ama Mensah via MoMo + real group names (Makola Market Women, Kaneshie Traders Union, Tema Port Workers), deep link → Payouts title confirmed; zero horizontal overflow at both widths everywhere; no console/page errors
 - With this commit every one of the 10 portals has its own dedicated, data-grounded AI feature
+
+## Task ID: 2026-11-07-ai-rationale-credit-file
+**Commit:** (this commit) — feat(credit-file): persist AI 5C rationale into the appraisal record
+
+**Scope:** User: "go on". Closed the long-proposed item: the loan officer's AI 5C assist filled scores and drafted notes in the dialog, but the "why" evaporated on save — nothing in the credit file recorded that (and how) AI informed the appraisal.
+
+**Changes:**
+1. `LoanAppraisal` type += optional provenance fields `aiRationale?: string`, `aiFlags?: string[]`, `aiAssistedAt?: string`.
+2. Officer dialog: `handleSave` now embeds the AI rationale/flags/date whenever an AI suggestion informed the session (spread into `saveAppraisal`, which upserts wholesale); `openFor` RESTORES the saved suggestion from the credit file so re-editing shows the original rationale; save toast appends "· AI rationale saved to credit file".
+3. Visibility: saved-appraisal cards show an amber Sparkles "AI" chip next to the grade; the detail dialog gained an "AI rationale · <date>" block quoting the rationale, any flags (AlertTriangle list) and the governance line "the officer's scores and recommendation govern this file".
+4. Seed: Grace Tetteh + Yaw Antwi mock appraisals carry realistic provenance (susu-savings anchor / thin-collateral cap + reverify flag) so the feature is visible without running AI.
+
+**Verification:**
+- `npx tsc --noEmit` 0 errors; `npx eslint` clean on the 3 changed files; secrets scan clean; modes 644
+- Browser end-to-end (390px & 1280px, loan officer): Grace card shows AI chip; detail dialog shows "AI rationale · 23 Oct 2026" + flag + governance line; LIVE flow on Yaw Antwi — Get AI suggestion → rationale generated ("Character is strong with consistent susu savings of GHS 50 daily…") → Save → toast "AI rationale saved to credit file" → card keeps AI chip → reopened detail shows "AI rationale · 07 Nov 2026" with the fresh text; zero overflow both widths; no console/page errors
