@@ -10,6 +10,7 @@ GHANA MICROFINANCE CONTEXT:
 - Portfolio quality (PAR) and KYC completion are supervisory concerns for Bank of Ghana — targets behind on those deserve early warning.
 - Daily susu collections (MoMo + cash) drive branch liquidity; a collections shortfall is urgent.
 - Approval queue: large amounts, weak credit grades or a loan officer's "reject" recommendation need the manager's eyes first; Christmas-season trading stock is normal and healthy demand in October.
+- An approval may list "aiFlags": conditions the credit-file AI 5C assist flagged during appraisal (e.g. "stock valuation self-reported — reverify"). An approve-recommended loan with aiFlags can still be approved — surface the flags as things to verify before disbursement. When an approval carries aiFlags, make sure it gets a mention (its own item, or folded into another approval item or the brief) so the manager verifies before releasing funds.
 - Staff: suspended or low-performing staff affect both risk and morale; acknowledge solid performers too.
 - Most managers skim fast: lead with what needs a decision TODAY.
 
@@ -55,6 +56,8 @@ interface ApprovalIn {
   officerName?: string;
   requestDate?: string;
   purpose?: string;
+  /** Conditions the credit-file AI 5C assist flagged during appraisal (provenance from the loan officer's credit file). */
+  aiFlags?: string[];
 }
 
 interface StaffIn {
@@ -123,6 +126,12 @@ export async function POST(request: Request) {
         officerName: a.officerName,
         requestDate: a.requestDate,
         purpose: typeof a.purpose === 'string' ? a.purpose.slice(0, 80) : undefined,
+        aiFlags: Array.isArray(a.aiFlags)
+          ? a.aiFlags
+              .filter((f: unknown) => typeof f === 'string' && f.trim())
+              .slice(0, 4)
+              .map((f: string) => f.slice(0, 90))
+          : undefined,
       })),
       staffRoster: staff.map((s) => ({
         name: s.name,

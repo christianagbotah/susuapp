@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useLoanOfficerStore } from '@/store/staff-stores';
 import type { LoanApprovalRequest, StaffMember, BranchTarget } from '@/lib/types';
 
 interface BriefItem {
@@ -40,6 +41,8 @@ export function BranchManagerAiBrief({
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Credit files live in the loan-officer store — read live so flagged conditions reach the brief.
+  const appraisals = useLoanOfficerStore((s) => s.appraisals);
   const [brief, setBrief] = useState<string | null>(null);
   const [items, setItems] = useState<BriefItem[]>([]);
 
@@ -55,18 +58,26 @@ export function BranchManagerAiBrief({
         body: JSON.stringify({
           managerName,
           branch,
-          approvals: pending.map((a) => ({
-            applicantName: a.applicantName,
-            productName: a.productName,
-            amount: a.amount,
-            tenorMonths: a.tenorMonths,
-            appraisalScore: a.appraisalScore,
-            creditGrade: a.creditGrade,
-            officerRecommendation: a.officerRecommendation,
-            officerName: a.officerName,
-            requestDate: a.requestDate,
-            purpose: a.purpose,
-          })),
+          approvals: pending.map((a) => {
+            // Carry the credit file's AI flags into the brief so flagged conditions surface at the desk.
+            const creditFile = appraisals.find(
+              (v) => v.applicantName.trim().toLowerCase() === a.applicantName.trim().toLowerCase(),
+            );
+            const aiFlags = (creditFile?.aiFlags ?? []).filter((f): f is string => typeof f === 'string');
+            return {
+              applicantName: a.applicantName,
+              productName: a.productName,
+              amount: a.amount,
+              tenorMonths: a.tenorMonths,
+              appraisalScore: a.appraisalScore,
+              creditGrade: a.creditGrade,
+              officerRecommendation: a.officerRecommendation,
+              officerName: a.officerName,
+              requestDate: a.requestDate,
+              purpose: a.purpose,
+              ...(aiFlags.length ? { aiFlags } : {}),
+            };
+          }),
           staff: staff.map((s) => ({
             name: s.name,
             role: s.role,

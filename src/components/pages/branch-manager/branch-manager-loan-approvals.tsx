@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useBranchManagerStore } from '@/store/staff-stores';
+import { useBranchManagerStore, useLoanOfficerStore } from '@/store/staff-stores';
 import { formatGHS, formatDate } from '@/lib/formatters';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,11 +11,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useConfirm } from '@/components/shared/confirm-dialog';
-import { ClipboardCheck, CircleDollarSign, CheckCircle2, XCircle, Eye, CalendarDays, UserCheck } from 'lucide-react';
-import type { LoanApprovalRequest } from '@/lib/types';
+import { ClipboardCheck, CircleDollarSign, CheckCircle2, XCircle, Eye, CalendarDays, UserCheck, Sparkles, AlertTriangle } from 'lucide-react';
+import type { LoanApprovalRequest, LoanAppraisal } from '@/lib/types';
+
+/** Compact 5C view of the credit file — same labels the loan officer's appraisal grid uses. */
+const CRITERIA = [
+  { key: 'character', label: 'Cha' },
+  { key: 'capacity', label: 'Cap' },
+  { key: 'capital', label: 'Cap' },
+  { key: 'collateral', label: 'Col' },
+  { key: 'conditions', label: 'Con' },
+] as const;
+
+/** Joins an approval to the credit file by applicant name (the store's shared key). */
+const linkCreditFile = (appraisals: LoanAppraisal[], applicantName: string): LoanAppraisal | undefined =>
+  appraisals.find((v) => v.applicantName.trim().toLowerCase() === applicantName.trim().toLowerCase());
 
 export function BranchManagerLoanApprovals() {
   const { approvals, decideApproval } = useBranchManagerStore();
+  // Credit files live in the loan-officer store — read live so a re-appraisal is visible here immediately.
+  const appraisals = useLoanOfficerStore((s) => s.appraisals);
   const [filter, setFilter] = useState<'all' | 'pending_bm' | 'approved' | 'rejected'>('pending_bm');
   const [detail, setDetail] = useState<LoanApprovalRequest | null>(null);
   const [rejectOpen, setRejectOpen] = useState<LoanApprovalRequest | null>(null);
@@ -110,7 +125,9 @@ export function BranchManagerLoanApprovals() {
 
       {/* Approval cards */}
       <div className="space-y-3">
-        {filtered.map((a, i) => (
+        {filtered.map((a, i) => {
+          const creditFile = linkCreditFile(appraisals, a.applicantName);
+          return (
           <motion.div key={a.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>
             <Card className="mobile-card hover:shadow-md transition-shadow">
               <CardContent className="p-4">
@@ -118,6 +135,11 @@ export function BranchManagerLoanApprovals() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-semibold">{a.applicantName}</p>
+                      {creditFile?.aiRationale && (
+                        <Badge className="gap-1 border-amber-300 bg-amber-50 text-[10px] text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300" aria-label="AI-assisted appraisal on file">
+                          <Sparkles className="h-3 w-3" /> AI
+                        </Badge>
+                      )}
                       <Badge className={`text-[10px] ${gradeColor(a.creditGrade)}`}>Grade {a.creditGrade}</Badge>
                       <Badge variant="outline" className="text-[10px] capitalize">{a.status.replace('_', ' ')}</Badge>
                     </div>
@@ -137,7 +159,8 @@ export function BranchManagerLoanApprovals() {
               </CardContent>
             </Card>
           </motion.div>
-        ))}
+          );
+        })}
         {filtered.length === 0 && (
           <Card><CardContent className="flex items-center justify-center gap-2 p-10 text-sm text-muted-foreground">
             <CheckCircle2 className="h-5 w-5 text-emerald-500" /> Nothing here right now.
@@ -148,8 +171,10 @@ export function BranchManagerLoanApprovals() {
       {/* Detail dialog */}
       <Dialog open={!!detail} onOpenChange={(open) => !open && setDetail(null)}>
         <DialogContent className="max-w-lg">
-          {detail && (
-            <>
+          {detail && (() => {
+            const creditFile = linkCreditFile(appraisals, detail.applicantName);
+            return (
+              <>
               <DialogHeader>
                 <DialogTitle>Loan Approval Review</DialogTitle>
                 <DialogDescription>{detail.applicantName} · {detail.productName} · Applied {formatDate(detail.requestDate)}</DialogDescription>
@@ -174,6 +199,23 @@ export function BranchManagerLoanApprovals() {
                   <p className="text-xs font-medium text-muted-foreground">Purpose</p>
                   <p className="text-sm">{detail.purpose}</p>
                 </div>
+                {/* Credit file 5C scores — pulled live from the loan officer's appraisal */}
+                {creditFile && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs font-medium text-muted-foreground">Credit file · 5C scores (loan officer appraisal)</p>
+                    <div className="mt-2 grid grid-cols-5 gap-1.5">
+                      {CRITERIA.map((c) => (
+                        <div key={c.key} className="rounded bg-muted/60 p-1.5 text-center">
+                          <p className="text-[9px] font-medium text-muted-foreground">{c.label}</p>
+                          <p className="text-sm font-bold">{creditFile[c.key]}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Field visit {formatDate(creditFile.fieldVisitDate)} · {creditFile.recommendation === 'approve' ? `officer approved ${formatGHS(creditFile.recommendedAmount)}` : creditFile.recommendation === 'reduce_amount' ? `officer reduced to ${formatGHS(creditFile.recommendedAmount)}` : 'officer recommended reject'}
+                    </p>
+                  </div>
+                )}
                 <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
                   <div>
                     <p className="text-xs text-muted-foreground">Loan Officer recommendation</p>
@@ -183,6 +225,28 @@ export function BranchManagerLoanApprovals() {
                     {detail.officerRecommendation}
                   </Badge>
                 </div>
+                {/* AI rationale — provenance persisted in the credit file by the Susu AI 5C assist */}
+                {creditFile?.aiRationale && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-800 dark:bg-amber-900/15">
+                    <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                      Credit file · AI rationale{creditFile.aiAssistedAt ? ` · ${formatDate(creditFile.aiAssistedAt)}` : ''}
+                    </p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-amber-900 dark:text-amber-100">{creditFile.aiRationale}</p>
+                    {(creditFile.aiFlags?.length ?? 0) > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {creditFile.aiFlags?.map((flag, i) => (
+                          <li key={i} className="flex items-start gap-1.5 text-xs text-amber-800 dark:text-amber-200">
+                            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" /> {flag}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-2 text-[11px] text-amber-700/80 dark:text-amber-300/80">
+                      Saved from the Susu AI 5C assist during appraisal — the officer's scores and recommendation govern the file; your decision governs the loan.
+                    </p>
+                  </div>
+                )}
                 {detail.status === 'pending_bm' && (
                   <div className="grid grid-cols-2 gap-2">
                     <Button className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700 touch-manipulation" onClick={() => approve(detail)}>
@@ -194,8 +258,9 @@ export function BranchManagerLoanApprovals() {
                   </div>
                 )}
               </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

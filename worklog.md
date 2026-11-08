@@ -1124,3 +1124,23 @@ Stage Summary:
 **Verification:**
 - `npx tsc --noEmit` 0 errors; `npx eslint` clean on the 3 changed files; secrets scan clean; modes 644
 - Browser end-to-end (390px & 1280px, loan officer): Grace card shows AI chip; detail dialog shows "AI rationale · 23 Oct 2026" + flag + governance line; LIVE flow on Yaw Antwi — Get AI suggestion → rationale generated ("Character is strong with consistent susu savings of GHS 50 daily…") → Save → toast "AI rationale saved to credit file" → card keeps AI chip → reopened detail shows "AI rationale · 07 Nov 2026" with the fresh text; zero overflow both widths; no console/page errors
+
+## Task ID: 2026-11-08-bm-approval-provenance
+**Commit:** (this commit) — feat(credit-file): AI appraisal provenance surfaces at the branch manager's approval desk
+
+**Scope:** User: "go on". Completed the provenance chain proposed with the credit-file batch: the officer's AI rationale was persisted but invisible to the next review layer — the branch manager approved loans without seeing that (or how) AI informed the appraisal, and the morning brief didn't know about flagged conditions.
+
+**Changes:**
+1. `branch-manager-loan-approvals.tsx`: the page now reads the loan-officer store's credit files live (name-based join, case/trim-insensitive) — no data duplication, a re-appraisal is visible immediately. Approval cards show the amber Sparkles "AI" chip next to the grade when the linked credit file carries provenance; the Review dialog gained a compact "Credit file · 5C scores" strip (same Cha/Cap/Col/Con cells as the officer's grid + field-visit date and officer's recommended amount) and an amber "Credit file · AI rationale · <date>" block with the rationale, flags (AlertTriangle list) and the governance line "the officer's scores and recommendation govern the file; your decision governs the loan".
+2. `branch-manager-ai-brief.tsx`: the morning-brief payload now carries the linked credit file's `aiFlags` per pending approval.
+3. `/api/ai/branch-brief`: accepts optional per-approval `aiFlags` (strings only, ≤4 × ≤90 chars, sanitized into the snapshot); prompt guidance — aiFlags are appraisal-time conditions to verify before disbursement, an approve-recommended loan can still be approved, and a flagged approval should get a mention (item, folded into another approval item, or the brief).
+4. `scripts/test-ai-routes.py` test 11: Grace's payload entry carries the stock-reverify aiFlag; new informational line reports whether the flag surfaced in the brief text (dialog rendering guarantees it regardless; observed True in most runs — the brief has a 3-5 item budget and the model may fold it into the brief sentence).
+
+**Verification:**
+- `npx tsc --noEmit` 0 errors (excl. skills/); `npx eslint` clean on all 3 changed files; secrets scan clean
+- `scripts/test-ai-routes.py` → **22/22 ALL OK** on the final code (flag surfaced: True; upstream 429s observed mid-session were retried after cooldown — routes degrade to the standard 500 with a generic message)
+- Browser (390px & 1280px, BM Nana Ampofo): Grace's card shows the AI chip and her Review dialog renders the 5C strip (5/4/4/4/4), the seeded rationale, the stock-reverify flag and the governance line; Comfort (credit file without provenance) shows the 5C strip but NO amber block (negative case); zero horizontal overflow both widths; no console/page errors
+- LIVE cross-portal read: as officer (Efua Sarpong) bumped Comfort's Capacity 3→4 and saved → back as BM, Comfort's Review dialog showed 3/4/2/1/3 with field visit 08 Nov 2026 — the desk reads the officer's credit file live (Comfort's stage was reverted to documents_pending after that test since the save had advanced it, so the AI flow could also run)
+- LIVE provenance flip: as officer ran Get AI suggestion on Comfort (live `POST /api/ai/appraisal-assist 200`) → Save → credit file persisted `aiAssistedAt 2026-11-08` with flags ("Verify the GHS 40 daily susu income amount", "Confirm the amount of the term 2 fees") → as BM, Comfort's dialog now shows the amber "Credit file · AI rationale · 08 Nov 2026" block with those flags; her card gained the AI chip (chips 1 → 2)
+- LIVE brief with flags: BM dashboard "Brief me" → 200 → first item quotes "Grace Tetteh's GHS 15K loan (A-grade) needs approval; officer recommends approve but AI flags stock valuation for re-verification before disbursement"; zero overflow; no console errors
+

@@ -210,7 +210,7 @@ status, data = post('/api/ai/branch-brief', {
     'managerName': 'Nana Ampofo',
     'branch': 'Makola Branch, Accra',
     'approvals': [
-        {'applicantName': 'Grace Tetteh', 'productName': 'Market Trader Loan', 'amount': 15000, 'tenorMonths': 6, 'appraisalScore': 86, 'creditGrade': 'A', 'officerRecommendation': 'approve', 'officerName': 'Kwabena Mensah', 'requestDate': '2026-10-24', 'purpose': 'Christmas clothing stock'},
+        {'applicantName': 'Grace Tetteh', 'productName': 'Market Trader Loan', 'amount': 15000, 'tenorMonths': 6, 'appraisalScore': 86, 'creditGrade': 'A', 'officerRecommendation': 'approve', 'officerName': 'Kwabena Mensah', 'requestDate': '2026-10-24', 'purpose': 'Christmas clothing stock', 'aiFlags': ['Stock valuation self-reported — reverify before disbursement']},
         {'applicantName': 'Ibrahim Musah', 'productName': 'Susu-Linked Loan', 'amount': 8000, 'tenorMonths': 4, 'appraisalScore': 78, 'creditGrade': 'B', 'officerRecommendation': 'approve', 'officerName': 'Abena Owusu', 'requestDate': '2026-10-24'},
         {'applicantName': 'Comfort Aidoo', 'productName': 'School Fees Loan', 'amount': 4500, 'tenorMonths': 10, 'appraisalScore': 64, 'creditGrade': 'C', 'officerRecommendation': 'review', 'officerName': 'Kwabena Mensah', 'requestDate': '2026-10-23'},
         {'applicantName': 'Hawa Abdulai', 'productName': 'Market Trader Loan', 'amount': 25000, 'tenorMonths': 12, 'appraisalScore': 42, 'creditGrade': 'E', 'officerRecommendation': 'reject', 'officerName': 'Kwabena Mensah', 'requestDate': '2026-10-22', 'purpose': 'Cold store expansion'},
@@ -243,6 +243,9 @@ ok11 = (
 print('11 BRANCH-BRIEF:', status, 'brief =', brief[:110])
 for i in items:
     print('   ', i.get('tone'), '|', i.get('page'), '|', (i.get('title') or '')[:44], '|', (i.get('detail') or '')[:90])
+all_text = (brief + ' ' + ' '.join((i.get('title') or '') + ' ' + (i.get('detail') or '') for i in items)).lower()
+flag_seen = 'stock' in all_text or 'reverify' in all_text or 'verif' in all_text
+print('     ai-flag surfaced in brief (informational — review dialog guarantees it):', flag_seen)
 print('    ', 'OK' if ok11 else 'CHECK')
 
 # 11b) Error path: no data -> 400
