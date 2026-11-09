@@ -1163,3 +1163,19 @@ Stage Summary:
 - Browser (390px, Ama/customer): chat panel shows the "Talk hands-free" banner; entering voice mode renders the full-screen overlay (97% dark frame, orb + equalizer + transcript greeting); headless mic denial handled gracefully → "Microphone unavailable — tap the orb to try again." + orb "Tap to speak"; mute toggle flips label/aria-pressed ("Spoken replies muted"); orb tap retries the mic; Esc AND the End button both return to the chat panel with state intact; header-button entry + End-button exit verified too; zero horizontal overflow (390 vs 390); no page errors
 - Browser (1280px, Efua/loan-officer — voice mode across portals): same overlay flow ("replying in English" sub-line, mic-failure notice); E2E chat round-trip on the refactored send path — suggestion click → 1 → 3 messages with a live AI reply; zero horizontal overflow (1280 vs 1280); no page errors; only Fast Refresh dev noise in console
 - Note: the full positive loop (real mic → ASR → reply → TTS) cannot run in the headless browser (no audio device); each hop is covered by route tests 1/5/18 and the loop logic by the state machine above
+
+## Task ID: 2026-11-09-final-hardening
+**Commit:** (this commit) — test(ai): chained VOICE-LOOP proof + close the last flagged follow-ups
+
+**Scope:** User: "go on till you are done". Final hardening pass over the voice-mode batch: the one documented verification gap (headless browser has no mic, so the positive loop was only covered hop-by-hop) plus the last two loose ends flagged in older worklog entries — leaving zero open follow-ups in the log.
+
+**Changes:**
+1. `scripts/test-ai-routes.py` → 25 checks. New `19 VOICE-LOOP`: chains the exact sequence the Voice Mode overlay performs, server-side — the test WAV → `/api/ai/transcribe` → transcript fed as the user message to `/api/ai/chat` with `voice: true` (grounded in the ₵1,240.50 snapshot) → reply fed to `/api/ai/speak` → spoken WAV back. The chat hop retries once (4s backoff) because it follows test 18's call closely and upstream 429s were observed mid-session. ASR even renders the phonetic "susu" as "Sue's" — and the voice reply still answers it correctly, which is the robustness the loop needs.
+2. `notification-panel.tsx`: MobileDrawer now passes `title="Notifications"` — the drawer's `role="dialog"` was labeled "Menu" for screen readers on every portal.
+3. `customer-airtime.tsx`: local EmptyState sub-component (~20 lines, Card-styled duplicate) deleted; both empty states (data/bundle tabs with no plans for the selected provider) now use the shared `EmptyState` from mobile-components (`icon={Wifi}` / `icon={Package}`) — the app-wide pattern, one less divergence.
+
+**Verification:**
+- `npx tsc --noEmit` 0 errors (excl. skills/); `npx eslint` clean on both changed components; secrets scan clean; modes 644
+- `scripts/test-ai-routes.py` → **25/25 ALL OK** — 19 VOICE-LOOP: asr True → chat True → tts True, spoken reply "Your wallet balance is ₵1,240.50. To grow your savings, consider joining more susu groups…" with ~580KB of returned WAV audio
+- **Production build**: `npm run build` ✓ compiled in 19.8s, 24 static pages, all 14 `/api/ai/*` + KYC + payments routes emitted, zero warnings (dev server restarted afterwards — the build clobbered `.next`)
+- Browser (390px & 1280px, Ama/customer): AT provider + Bundles tab renders the migrated shared EmptyState ("No bundles available — No bundle plans found for AT. Check back later.") at BOTH widths; notifications drawer opens with `aria-label="Notifications"` (was "Menu") at both widths; Susu AI chat shows all three voice entry points and the Voice Mode overlay still renders (orb "Tap to speak", mute toggle, End buttons — mic unavailable in headless, degrades as designed); zero horizontal overflow (390 vs 390, 1280 vs 1280); no page errors; console only Fast Refresh dev noise; six verification screenshots in download/

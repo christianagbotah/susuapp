@@ -397,7 +397,7 @@ export function NotificationPanel({ open, onClose, portal }: NotificationPanelPr
   }, [portal]);
 
   return (
-    <MobileDrawer open={open} onClose={onClose} side="right" className="max-w-[480px]">
+    <MobileDrawer open={open} onClose={onClose} side="right" title="Notifications" className="max-w-[480px]">
       <div className="flex h-full flex-col overflow-hidden">
         {/* ---- Header ---- */}
         <div className="flex items-center justify-between border-b px-4 py-3 shrink-0">

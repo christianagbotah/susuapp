@@ -2,6 +2,7 @@
 """Smoke-test the AI routes: transcribe, localize, financial-health, speak, chat (voice mode), appraisal-assist(draftNote)."""
 import base64
 import json
+import time
 import urllib.request
 
 BASE = 'http://localhost:3000'
@@ -544,4 +545,36 @@ status, data = post('/api/ai/chat', {'portal': 'customer', 'voice': True, 'messa
 ok18b = status == 400
 print('18b CHAT-VOICE(empty):', status, data, 'OK' if ok18b else 'CHECK')
 
-print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b, ok13, ok13b, ok14, ok14b, ok15, ok15b, ok16, ok16b, ok17, ok17b, ok18, ok18b]) else 'SOME CHECKS FAILED')
+# 19) VOICE-LOOP: the exact sequence the Voice Mode overlay performs, chained
+#     server-side — mic WAV -> ASR transcript -> voice-styled chat reply ->
+#     spoken audio. Closes the gap left by the headless browser (no mic): each
+#     hop was covered by tests 1/18/5, this proves they compose into the loop.
+status, data = post('/api/ai/transcribe', {'audioBase64': audio_b64})
+text19 = (data.get('text') or '').strip()
+ok19a = status == 200 and 0 < len(text19) < 400
+# The chat hop follows test 18's call closely; retry once on transient upstream errors
+reply19 = ''
+status = 0
+for attempt in range(2):
+    status, data = post('/api/ai/chat', {
+        'portal': 'customer',
+        'language': 'en',
+        'voice': True,
+        'context': {'Main wallet balance': '₵1,240.50'},
+        'messages': [{'role': 'user', 'content': text19 or 'What is my wallet balance?'}],
+    }, timeout=180)
+    reply19 = data.get('reply') or ''
+    if status == 200 and reply19:
+        break
+    if attempt == 0:
+        time.sleep(4)
+ok19b = status == 200 and 0 < len(reply19) <= 700 and '**' not in reply19 and '•' not in reply19
+status, data = post('/api/ai/speak', {'text': reply19[:500]})
+audio19 = data.get('audioBase64') or ''
+ok19c = status == 200 and len(audio19) > 1000
+ok19 = ok19a and ok19b and ok19c
+print('19 VOICE-LOOP: asr', ok19a, '-> chat', ok19b, '-> tts', ok19c, 'OK' if ok19 else 'CHECK')
+print('    transcript:', text19[:90])
+print('    spoken reply:', reply19[:90], '... [tts', len(audio19), 'b64 chars]')
+
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b, ok13, ok13b, ok14, ok14b, ok15, ok15b, ok16, ok16b, ok17, ok17b, ok18, ok18b, ok19]) else 'SOME CHECKS FAILED')

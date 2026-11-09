@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/shared/mobile-components';
 import {
   Smartphone,
   Zap,
@@ -493,7 +494,7 @@ export function CustomerAirtime() {
                   </div>
                 ) : (
                   <EmptyState
-                    icon={<Wifi className="h-10 w-10 text-slate-300" />}
+                    icon={Wifi}
                     title="No data plans available"
                     description={`No data plans found for ${providerConfig[selectedProvider].name}. Check back later.`}
                   />
@@ -518,7 +519,7 @@ export function CustomerAirtime() {
                   </div>
                 ) : (
                   <EmptyState
-                    icon={<Package className="h-10 w-10 text-slate-300" />}
+                    icon={Package}
                     title="No bundles available"
                     description={`No bundle plans found for ${providerConfig[selectedProvider].name}. Check back later.`}
                   />
@@ -1055,28 +1056,5 @@ function ProductCard({
         </motion.div>
       )}
     </motion.div>
-  );
-}
-
-// ============================================
-// Empty State Sub-component
-// ============================================
-function EmptyState({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Card className="border-slate-200/80 bg-white shadow-sm">
-      <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-        {icon}
-        <p className="mt-3 text-sm font-semibold text-slate-600">{title}</p>
-        <p className="mt-1 max-w-sm text-xs text-slate-400">{description}</p>
-      </CardContent>
-    </Card>
   );
 }
