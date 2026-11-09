@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke-test the AI routes: transcribe, localize, financial-health, speak, appraisal-assist(draftNote)."""
+"""Smoke-test the AI routes: transcribe, localize, financial-health, speak, chat (voice mode), appraisal-assist(draftNote)."""
 import base64
 import json
 import urllib.request
@@ -516,4 +516,32 @@ status, data = post('/api/ai/treasurer-brief', {'treasurerName': 'Yaw Darko'})
 ok17b = status == 400
 print('17b TREASURER-BRIEF(empty):', status, data, 'OK' if ok17b else 'CHECK')
 
-print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b, ok13, ok13b, ok14, ok14b, ok15, ok15b, ok16, ok16b, ok17, ok17b]) else 'SOME CHECKS FAILED')
+# 18) Voice-mode chat: reply is spoken aloud, so it must be short and plain
+#     (no markdown/bullets) and cite the live snapshot figure
+status, data = post('/api/ai/chat', {
+    'portal': 'customer',
+    'language': 'en',
+    'voice': True,
+    'context': {'Main wallet balance': '₵1,240.50'},
+    'messages': [{'role': 'user', 'content': 'What is my wallet balance?'}],
+}, timeout=180)
+reply18 = data.get('reply') or ''
+words18 = len(reply18.split())
+ok18 = (
+    status == 200
+    and 0 < len(reply18) <= 700
+    and '**' not in reply18
+    and '•' not in reply18
+    and not reply18.lstrip().startswith('-')
+)
+cites18 = '1,240' in reply18 or '1240' in reply18
+print('18 CHAT-VOICE:', status, 'words =', words18, 'chars =', len(reply18), 'markdown-free =', ok18, 'OK' if ok18 else 'CHECK')
+print('   cites snapshot figure:', cites18)
+print('   reply:', reply18[:170])
+
+# 18b) Voice chat with no messages -> 400 (guard unchanged by the voice flag)
+status, data = post('/api/ai/chat', {'portal': 'customer', 'voice': True, 'messages': []})
+ok18b = status == 400
+print('18b CHAT-VOICE(empty):', status, data, 'OK' if ok18b else 'CHECK')
+
+print('\nSUMMARY:', 'ALL OK' if all([ok4, ok4b, ok5, ok7, ok8, ok9, ok10, ok10b, ok11, ok11b, ok12, ok12b, ok13, ok13b, ok14, ok14b, ok15, ok15b, ok16, ok16b, ok17, ok17b, ok18, ok18b]) else 'SOME CHECKS FAILED')

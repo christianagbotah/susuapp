@@ -27,6 +27,17 @@ const LANGUAGE_DIRECTIVES: Record<string, string> = {
   pidgin: 'LANGUAGE: Reply in Ghanaian Pidgin English — warm street-level register ("dey", "wey", "ein", "make", "you fit", "small small"). Keep it respectful and clear; financial figures and product names stay standard English.',
 };
 
+// ---- Voice mode: the reply is spoken aloud by TTS and answered by voice ----
+const VOICE_MODE_RULES = `
+
+VOICE MODE: Your reply is about to be SPOKEN ALOUD by text-to-speech, and the
+user will answer by voice again — like a phone conversation.
+- Keep it SHORT: one to three spoken sentences, at most 60 words.
+- Plain flowing speech only — NO markdown, no bold, no bullet lists, no emoji.
+- Lead with the answer or the key figure, then at most one short reason.
+- If a longer explanation is genuinely needed, give the headline answer by
+  voice and offer to expand in the chat if they type.`;
+
 const BASE_RULES = `You are Susu AI — the intelligent financial assistant inside iSusuPro, a microfinance & susu savings platform for Ghana.
 
 ABOUT THE PLATFORM:
@@ -47,7 +58,7 @@ HOW TO USE THE LIVE DATA SNAPSHOT:
 - When present, treat it as authoritative: cite exact figures from it (balances, pending counts, rates) instead of speaking generally.
 - If a figure is NOT in the snapshot, never invent it — advise where to check in the app.`;
 
-function buildSystemPrompt(portal: string, language: string, context: Record<string, unknown>): string {
+function buildSystemPrompt(portal: string, language: string, context: Record<string, unknown>, voice: boolean): string {
   const persona = PORTAL_CONTEXT[portal] || PORTAL_CONTEXT.customer;
   const languageDirective = LANGUAGE_DIRECTIVES[language] || '';
 
@@ -58,7 +69,7 @@ function buildSystemPrompt(portal: string, language: string, context: Record<str
     snapshot = `\n\nLIVE DATA SNAPSHOT (real data for THIS user right now):\n${lines.join('\n')}`;
   }
 
-  return [BASE_RULES, `USER ROLE: ${persona}`, languageDirective, snapshot]
+  return [BASE_RULES, `USER ROLE: ${persona}`, languageDirective, snapshot, voice ? VOICE_MODE_RULES : '']
     .filter((part) => part.length > 0)
     .join('\n\n');
 }
@@ -71,6 +82,7 @@ export async function POST(request: Request) {
       : [];
     const portal: string = typeof body?.portal === 'string' ? body.portal : 'customer';
     const language: string = typeof body?.language === 'string' ? body.language : 'en';
+    const voice: boolean = body?.voice === true;
     const context: Record<string, unknown> =
       body?.context && typeof body.context === 'object' && !Array.isArray(body.context)
         ? (body.context as Record<string, unknown>)
@@ -83,7 +95,7 @@ export async function POST(request: Request) {
     const zai = await ZAI.create();
     const completion = await zai.chat.completions.create({
       messages: [
-        { role: 'assistant', content: buildSystemPrompt(portal, language, context) },
+        { role: 'assistant', content: buildSystemPrompt(portal, language, context, voice) },
         ...messages,
       ],
       thinking: { type: 'disabled' },

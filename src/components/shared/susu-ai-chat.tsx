@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Bot, User, Languages, Mic, Square, Loader2, AlertCircle, Volume2 } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User, Languages, Mic, Square, Loader2, AlertCircle, Volume2, AudioLines, VolumeX, PhoneOff } from 'lucide-react';
 import {
   useNavigationStore,
   useCustomerStore,
@@ -18,6 +18,7 @@ import {
   useAccountantStore,
   useComplianceStore,
 } from '@/store/staff-stores';
+import { useVoiceRecorder } from '@/hooks/use-voice-recorder';
 
 // ---- Reply languages for Ghana ----
 const LANGUAGES: { id: string; label: string }[] = [
@@ -55,32 +56,6 @@ function ttsCacheSet(key: string, value: string) {
 
 const cedi = (n: number) => `₵${Number(n).toLocaleString()}`;
 
-// ---- Voice input helpers: capture PCM via Web Audio API → 16-bit mono WAV.
-// WAV is universally accepted by the ASR service, unlike MediaRecorder's
-// browser-specific container formats (webm/mp4/ogg).
-function encodeWav(samples: Int16Array, sampleRate: number): ArrayBuffer {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
-  const view = new DataView(buffer);
-  const writeStr = (offset: number, s: string) => {
-    for (let i = 0; i < s.length; i++) view.setUint8(offset + i, s.charCodeAt(i));
-  };
-  writeStr(0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * 2, true);
-  writeStr(8, 'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16, true); // chunk size
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // mono
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true); // byte rate
-  view.setUint16(32, 2, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
-  writeStr(36, 'data');
-  view.setUint32(40, samples.length * 2, true);
-  let offset = 44;
-  for (let i = 0; i < samples.length; i++, offset += 2) view.setInt16(offset, samples[i], true);
-  return buffer;
-}
 
 /**
  * Collect a small, live data snapshot for the signed-in portal so the AI can
@@ -270,6 +245,18 @@ interface Message {
   content: string;
 }
 
+/** Hands-free Voice Mode phases (the overlay's little state machine). */
+type VoicePhase = 'ready' | 'listening' | 'transcribing' | 'thinking' | 'speaking' | 'paused';
+
+const VOICE_PHASE_META: Record<VoicePhase, { label: string; hint: string }> = {
+  ready: { label: 'Starting the microphone…', hint: 'One moment' },
+  listening: { label: 'Listening…', hint: 'Tap the orb when you finish speaking' },
+  transcribing: { label: 'Transcribing your words…', hint: 'One moment' },
+  thinking: { label: 'Thinking…', hint: 'Checking your live data' },
+  speaking: { label: 'Speaking…', hint: 'Tap the orb to interrupt' },
+  paused: { label: 'Paused', hint: 'Tap the orb to speak' },
+};
+
 /** Renders **bold** segments and preserves line breaks. */
 function MessageBody({ text }: { text: string }) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -294,11 +281,18 @@ export function SusuAiChat() {
   const [language, setLanguage] = useState('en');
   const [localized, setLocalized] = useState<Record<string, { greeting: string; suggestions: string[] }>>({});
   const [translating, setTranslating] = useState(false);
-  const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [micNotice, setMicNotice] = useState<string | null>(null);
   const [ttsLoadingIdx, setTtsLoadingIdx] = useState<number | null>(null);
   const [ttsPlayingIdx, setTtsPlayingIdx] = useState<number | null>(null);
+  // Hands-free Voice Mode (ChatGPT-style): mic → ASR → auto-send → spoken
+  // reply → the mic re-arms itself for the next turn.
+  const recorder = useVoiceRecorder();
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [voicePhase, setVoicePhase] = useState<VoicePhase>('ready');
+  const [voiceMuted, setVoiceMuted] = useState(false);
+  const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
+  const voiceScrollRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const portal = useNavigationStore((s) => s.currentPortal) || 'customer';
   const config = PORTAL_CONFIG[portal] || PORTAL_CONFIG.customer;
@@ -329,20 +323,31 @@ export function SusuAiChat() {
     localizedRef.current = localized;
   }, [localized]);
   const localizingRef = useRef<Set<string>>(new Set());
-  const recorderRef = useRef<{
-    ctx: AudioContext;
-    stream: MediaStream;
-    source: MediaStreamAudioSourceNode;
-    processor: ScriptProcessorNode;
-    stopTimer: ReturnType<typeof setTimeout>;
-  } | null>(null);
-  const pcmRef = useRef<Int16Array[]>([]);
-  const finishRecordingRef = useRef<() => void>(() => {});
   const inputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Mirror of `messages` for async chains (voice turns) so `send` never reads
+  // a stale closure.
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   // Hands-free voice mode: when the current turn began with the microphone,
   // the reply is read aloud automatically (vital for low-literacy users).
   const voiceTurnRef = useRef(false);
+  // Voice-mode guards (read inside async chains, immune to stale closures)
+  const voiceActiveRef = useRef(false);
+  const voiceMutedRef = useRef(false);
+  const armVoiceRef = useRef<() => void>(() => {});
+
+  // Esc ends voice mode (same affordance as the End button)
+  useEffect(() => {
+    if (!voiceMode) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') exitVoiceMode();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [voiceMode]);
 
   // Other parts of the app (e.g. the Financial Health card) can open the chat
   useEffect(() => {
@@ -418,15 +423,22 @@ export function SusuAiChat() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading, open]);
 
-  const send = async (text: string) => {
+  // Keep the voice-mode transcript pinned to the latest turn
+  useEffect(() => {
+    voiceScrollRef.current?.scrollTo({ top: voiceScrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, voiceMode]);
+
+  const send = async (text: string, opts?: { voice?: boolean }): Promise<string | null> => {
     const content = text.trim();
-    if (!content || loading) return;
-    const next: Message[] = [...messages, { role: 'user', content }];
+    if (!content || loading) return null;
+    const fromVoiceMode = opts?.voice === true;
+    const next: Message[] = [...messagesRef.current, { role: 'user', content }];
     setMessages(next);
+    messagesRef.current = next;
     setInput('');
     setLoading(true);
     // Capture (and consume) the voice-turn flag for this request only.
-    const viaVoice = voiceTurnRef.current;
+    const viaVoice = fromVoiceMode || voiceTurnRef.current;
     voiceTurnRef.current = false;
     try {
       const res = await fetch('/api/ai/chat', {
@@ -436,38 +448,40 @@ export function SusuAiChat() {
         body: JSON.stringify({
           portal,
           language,
+          voice: fromVoiceMode, // spoken-style reply for hands-free voice mode
           context: buildLiveSnapshot(portal),
           messages: next.slice(1).map(({ role, content }) => ({ role, content })),
         }),
       });
       const data = await res.json();
       const reply = data.reply || data.error || 'Sorry, please try again.';
-      setMessages((m) => [...m, { role: 'assistant', content: reply }]);
-      // Hands-free: the question came in by voice, so answer by voice.
-      if (viaVoice) void speakMessage(next.length, reply);
+      const appended: Message[] = [...next, { role: 'assistant', content: reply }];
+      setMessages(appended);
+      messagesRef.current = appended;
+      // Hands-free chat mic: the question came in by voice, so answer by voice.
+      // (Voice MODE orchestrates its own playback after this resolves.)
+      if (viaVoice && !fromVoiceMode) void speakMessage(next.length, reply);
+      return reply;
     } catch {
       const offline = 'I could not reach the AI service. Please check your connection and try again.';
-      setMessages((m) => [...m, { role: 'assistant', content: offline }]);
+      const appended: Message[] = [...next, { role: 'assistant', content: offline }];
+      setMessages(appended);
+      messagesRef.current = appended;
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // ---- Voice input: record PCM → WAV → /api/ai/transcribe → input box ----
-  const transcribeWav = async (wav: ArrayBuffer) => {
+  // ---- Voice input: mic → WAV base64 → /api/ai/transcribe ----
+  const transcribeWav = async (audioBase64: string) => {
     setTranscribing(true);
     setMicNotice(null);
     try {
-      let binary = '';
-      const bytes = new Uint8Array(wav);
-      const CHUNK = 0x8000;
-      for (let i = 0; i < bytes.length; i += CHUNK) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-      }
       const res = await fetch('/api/ai/transcribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audioBase64: btoa(binary) }),
+        body: JSON.stringify({ audioBase64 }),
       });
       const data = await res.json();
       if (data?.text) {
@@ -484,67 +498,173 @@ export function SusuAiChat() {
     }
   };
 
-  const finishRecording = () => {
-    const rec = recorderRef.current;
-    recorderRef.current = null;
-    setRecording(false);
-    if (rec) {
-      clearTimeout(rec.stopTimer);
-      try {
-        rec.processor.disconnect();
-        rec.source.disconnect();
-      } catch {
-        // graph already torn down
-      }
-      rec.stream.getTracks().forEach((t) => t.stop());
-      void rec.ctx.close().catch(() => {});
-    }
-    const total = pcmRef.current.reduce((a, c) => a + c.length, 0);
-    if (total === 0) {
-      setMicNotice('No sound captured — tap the mic and speak clearly.');
-      return;
-    }
-    const merged = new Int16Array(total);
-    let offset = 0;
-    for (const chunk of pcmRef.current) {
-      merged.set(chunk, offset);
-      offset += chunk.length;
-    }
-    pcmRef.current = [];
-    void transcribeWav(encodeWav(merged, rec ? rec.ctx.sampleRate : 16000));
-  };
-  finishRecordingRef.current = finishRecording;
-
-  const startRecording = async () => {
-    if (recording || transcribing || loading) return;
+  // Chat-box mic: manual stop (market noise makes auto-stop annoying while the
+  // transcript is still editable); the text lands in the input box for review.
+  const startChatMic = () => {
+    if (recorder.recording || transcribing || loading) return;
     setMicNotice(null);
+    void recorder
+      .start({
+        maxMs: MAX_RECORD_MS,
+        onSegment: (ev) => {
+          if (ev.audioBase64) void transcribeWav(ev.audioBase64);
+          else setMicNotice('No sound captured — tap the mic and speak clearly.');
+        },
+      })
+      .then((started) => {
+        if (!started) setMicNotice('Microphone unavailable. Please allow mic access or type your question.');
+      });
+  };
+
+  // ---- Hands-free Voice Mode: mic → ASR → auto-send → spoken reply → the
+  // mic re-arms itself for the next turn. No typing, no tapping Send. ----
+  const speakVoiceReply = async (text: string) => {
+    setVoicePhase('speaking');
+    setVoiceNotice(null);
     try {
-      const AudioCtx =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const ctx = new AudioCtx();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const source = ctx.createMediaStreamSource(stream);
-      const processor = ctx.createScriptProcessor(4096, 1, 1);
-      pcmRef.current = [];
-      processor.onaudioprocess = (e) => {
-        const input = e.inputBuffer.getChannelData(0);
-        const chunk = new Int16Array(input.length);
-        for (let i = 0; i < input.length; i++) {
-          const s = Math.max(-1, Math.min(1, input[i]));
-          chunk[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-        }
-        pcmRef.current.push(chunk);
-      };
-      source.connect(processor);
-      processor.connect(ctx.destination); // keeps the graph pulling on every browser
-      const stopTimer = setTimeout(() => finishRecordingRef.current(), MAX_RECORD_MS);
-      recorderRef.current = { ctx, stream, source, processor, stopTimer };
-      setRecording(true);
+      // Cache hit → instant playback, no network round-trip (metered data).
+      const key = `${language}|${text}`;
+      let b64 = ttsCacheGet(key);
+      if (!b64) {
+        const res = await fetch('/api/ai/speak', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, language }),
+        });
+        const data = await res.json();
+        if (!data?.audioBase64) throw new Error(data?.error || 'TTS unavailable');
+        b64 = data.audioBase64 as string;
+        ttsCacheSet(key, b64);
+      }
+      stopSpeaking();
+      const audio = new Audio(`data:audio/wav;base64,${b64}`);
+      // Hands-free loop: the moment the reply finishes, listen again.
+      audio.onended = () => armVoiceRef.current();
+      audio.onerror = () => armVoiceRef.current();
+      audioRef.current = audio;
+      await audio.play();
     } catch {
-      setMicNotice('Microphone unavailable. Please allow mic access or type your question.');
+      setVoiceNotice('I could not speak that reply — tap the orb to continue.');
+      setVoicePhase('paused');
     }
   };
+
+  const runVoiceTurn = async (audioBase64: string) => {
+    setVoicePhase('transcribing');
+    setVoiceNotice(null);
+    try {
+      const res = await fetch('/api/ai/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioBase64 }),
+      });
+      const data = await res.json();
+      if (data?.text) {
+        setVoicePhase('thinking');
+        const reply = await send(data.text, { voice: true });
+        if (!voiceActiveRef.current) return; // voice mode exited mid-turn
+        if (!reply) {
+          setVoiceNotice('The assistant could not answer — tap the orb to try again.');
+          setVoicePhase('paused');
+          return;
+        }
+        if (voiceMutedRef.current) {
+          // Muted: the conversation continues by transcript; mic waits for a tap.
+          setVoicePhase('paused');
+          return;
+        }
+        await speakVoiceReply(reply);
+      } else {
+        setVoiceNotice(data?.error || 'Could not hear that clearly — please try again.');
+        armVoiceRef.current(); // give it another listen right away
+      }
+    } catch {
+      if (!voiceActiveRef.current) return;
+      setVoiceNotice('Voice input is unavailable right now — tap the orb to retry.');
+      setVoicePhase('paused');
+    }
+  };
+
+  const armVoiceMic = () => {
+    if (!voiceActiveRef.current) return;
+    void recorder
+      .start({
+        maxMs: MAX_RECORD_MS,
+        autoStopOnSilence: true, // the turn ends by itself when you stop talking
+        onSegment: (ev) => {
+          if (!voiceActiveRef.current) return;
+          if (ev.audioBase64) void runVoiceTurn(ev.audioBase64);
+          else {
+            setVoiceNotice('No sound captured — tap the orb and speak clearly.');
+            setVoicePhase('paused');
+          }
+        },
+      })
+      .then((started) => {
+        if (!voiceActiveRef.current) return;
+        if (started) {
+          setVoicePhase('listening');
+          setVoiceNotice(null);
+        } else {
+          setVoicePhase('paused');
+          setVoiceNotice('Microphone unavailable — tap the orb to try again.');
+        }
+      });
+  };
+  armVoiceRef.current = armVoiceMic;
+
+  const enterVoiceMode = () => {
+    voiceActiveRef.current = true;
+    setVoiceMode(true);
+    setVoiceNotice(null);
+    setVoicePhase('ready');
+    stopSpeaking();
+    // Start the mic inside the click handler so Safari keeps the user gesture.
+    armVoiceMic();
+  };
+
+  const exitVoiceMode = () => {
+    voiceActiveRef.current = false;
+    recorder.stop(); // releases the mic; the in-flight segment is discarded
+    stopSpeaking();
+    setVoiceMode(false);
+    setVoicePhase('ready');
+    setVoiceNotice(null);
+  };
+
+  const onOrbTap = () => {
+    if (voicePhase === 'listening') {
+      recorder.stop(); // finished speaking → transcribe now
+    } else if (voicePhase === 'speaking') {
+      stopSpeaking(); // interrupt the reply, take the floor back
+      armVoiceMic();
+    } else if (voicePhase === 'paused' || voicePhase === 'ready') {
+      armVoiceMic();
+    }
+    // transcribing / thinking: the orb is disabled mid-turn
+  };
+
+  const toggleVoiceMute = () => {
+    const next = !voiceMuted;
+    setVoiceMuted(next);
+    voiceMutedRef.current = next;
+    if (next && voicePhase === 'speaking') {
+      stopSpeaking();
+      armVoiceMic();
+    }
+  };
+
+  const phaseMeta = VOICE_PHASE_META[voicePhase];
+  const phaseLabel = voicePhase === 'paused' && voiceMuted ? 'Spoken replies muted' : phaseMeta.label;
+  const orbActive = voicePhase === 'listening' || voicePhase === 'speaking';
+  const orbCoreClass =
+    voicePhase === 'listening'
+      ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_60px_-10px_rgba(16,185,129,0.7)]'
+      : voicePhase === 'speaking'
+        ? 'bg-gradient-to-br from-teal-300 to-emerald-500 shadow-[0_0_70px_-8px_rgba(52,211,153,0.8)]'
+        : voicePhase === 'transcribing' || voicePhase === 'thinking'
+          ? 'bg-gradient-to-br from-amber-400 to-amber-600 shadow-[0_0_55px_-12px_rgba(245,158,11,0.6)]'
+          : 'bg-gradient-to-br from-emerald-600 to-emerald-800 shadow-[0_0_40px_-14px_rgba(16,185,129,0.5)]';
 
   // ---- Read a reply aloud (text-to-speech) ----
   const stopSpeaking = () => {
@@ -643,6 +763,14 @@ export function SusuAiChat() {
                   Online · Live data · {activeLanguage.label}
                 </p>
               </div>
+              <button
+                onClick={enterVoiceMode}
+                aria-label="Start hands-free voice mode"
+                title="Talk hands-free"
+                className="rounded-full p-1.5 transition hover:bg-white/10"
+              >
+                <AudioLines className="h-4 w-4" />
+              </button>
               <button onClick={() => setOpen(false)} aria-label="Close chat" className="rounded-full p-1.5 transition hover:bg-white/10">
                 <X className="h-4 w-4" />
               </button>
@@ -716,6 +844,13 @@ export function SusuAiChat() {
                 and tappable inside the modal (no hidden horizontal scroll) */}
             {messages.length <= 1 && !loading && (
               <div className="flex flex-wrap gap-1.5 border-t bg-background px-3 py-2.5">
+                <button
+                  onClick={enterVoiceMode}
+                  className="flex w-full items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-50 px-3 py-2 text-left text-xs font-medium text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950"
+                >
+                  <AudioLines className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="flex-1">Talk hands-free — speak naturally, replies are read aloud</span>
+                </button>
                 {strings.suggestions.map((s) => (
                   <button
                     key={s}
@@ -775,24 +910,24 @@ export function SusuAiChat() {
             >
               <button
                 type="button"
-                onClick={() => (recording ? finishRecordingRef.current() : void startRecording())}
+                onClick={() => (recorder.recording ? recorder.stop() : startChatMic())}
                 disabled={transcribing || loading}
-                aria-label={recording ? 'Stop voice recording' : 'Start voice input'}
+                aria-label={recorder.recording ? 'Stop voice recording' : 'Start voice input'}
                 className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition disabled:opacity-40 ${
-                  recording
+                  recorder.recording
                     ? 'bg-red-600 text-white shadow'
                     : 'border bg-card text-muted-foreground hover:border-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400'
                 }`}
               >
-                {recording && <span className="absolute inset-0 animate-ping rounded-xl bg-red-500/40" aria-hidden />}
-                {recording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                {recorder.recording && <span className="absolute inset-0 animate-ping rounded-xl bg-red-500/40" aria-hidden />}
+                {recorder.recording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
               </button>
               <input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
-                  recording
+                  recorder.recording
                     ? 'Listening… tap ⏹ when done'
                     : language === 'en'
                       ? 'Ask Susu AI anything…'
@@ -821,6 +956,193 @@ export function SusuAiChat() {
                 </motion.button>
               )}
             </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Hands-free Voice Mode — ChatGPT-style: speak, get spoken answers,
+          the mic re-arms itself. Esc or the End button returns to the chat
+          with the full transcript carried over. */}
+      <AnimatePresence>
+        {voiceMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[75] flex flex-col bg-gradient-to-b from-emerald-950 via-emerald-900 to-black text-white"
+            role="dialog"
+            aria-label="Susu AI voice mode"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 pt-[calc(0.9rem_+_env(safe-area-inset-top))] sm:px-6">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
+                  <AudioLines className="h-4 w-4" aria-hidden />
+                </span>
+                <div>
+                  <p className="flex items-center gap-1.5 text-sm font-semibold">
+                    Susu AI Voice
+                    <span className="rounded-full bg-amber-400/90 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-emerald-950">Beta</span>
+                  </p>
+                  <p className="text-[11px] text-emerald-200/80">Hands-free · replying in {activeLanguage.label}</p>
+                </div>
+              </div>
+              <button
+                onClick={exitVoiceMode}
+                aria-label="End voice mode"
+                title="End voice mode"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-white shadow-lg shadow-red-900/40 transition hover:bg-red-500"
+              >
+                <PhoneOff className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+
+            {/* Orb + live state */}
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-6 py-4">
+              <button
+                type="button"
+                onClick={onOrbTap}
+                disabled={voicePhase === 'transcribing' || voicePhase === 'thinking'}
+                aria-label={
+                  voicePhase === 'listening'
+                    ? 'Finish speaking and send'
+                    : voicePhase === 'speaking'
+                      ? 'Interrupt the reply and speak'
+                      : 'Tap to speak'
+                }
+                className="relative flex h-40 w-40 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 disabled:cursor-wait sm:h-44 sm:w-44"
+              >
+                {voicePhase === 'listening' && (
+                  <>
+                    <motion.span
+                      className="absolute inset-0 rounded-full border border-emerald-400/40"
+                      animate={{ scale: [1, 1.35], opacity: [0.5, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+                      aria-hidden
+                    />
+                    <motion.span
+                      className="absolute inset-0 rounded-full border border-emerald-400/30"
+                      animate={{ scale: [1, 1.35], opacity: [0.5, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeOut', delay: 1 }}
+                      aria-hidden
+                    />
+                  </>
+                )}
+                {voicePhase === 'speaking' && (
+                  <>
+                    <motion.span
+                      className="absolute inset-0 rounded-full bg-emerald-400/20"
+                      animate={{ scale: [1, 1.5], opacity: [0.6, 0] }}
+                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
+                      aria-hidden
+                    />
+                    <motion.span
+                      className="absolute inset-0 rounded-full bg-emerald-400/15"
+                      animate={{ scale: [1, 1.5], opacity: [0.6, 0] }}
+                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut', delay: 0.7 }}
+                      aria-hidden
+                    />
+                  </>
+                )}
+                {(voicePhase === 'transcribing' || voicePhase === 'thinking') && (
+                  <motion.span
+                    className="absolute -inset-2.5 rounded-full border-2 border-dashed border-amber-300/70"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                    aria-hidden
+                  />
+                )}
+                <motion.span
+                  className={`relative flex h-[82%] w-[82%] items-center justify-center rounded-full ${orbCoreClass}`}
+                  animate={{ scale: orbActive ? [1, 1.04, 1] : 1 }}
+                  transition={{ duration: 1.8, repeat: orbActive ? Infinity : 0, ease: 'easeInOut' }}
+                >
+                  <span className="flex items-center gap-1.5" aria-hidden>
+                    {[0.9, 0.65, 1.15, 0.75, 1.0, 0.85].map((d, i) => (
+                      <motion.span
+                        key={i}
+                        className="w-1.5 rounded-full bg-white"
+                        style={{ height: 14 + (i % 3) * 7, transformOrigin: 'center' }}
+                        animate={orbActive ? { scaleY: [0.35, 1, 0.55, 0.9, 0.35] } : { scaleY: 0.35 }}
+                        transition={{ duration: d, repeat: orbActive ? Infinity : 0, ease: 'easeInOut' }}
+                      />
+                    ))}
+                  </span>
+                </motion.span>
+              </button>
+
+              <div className="min-h-14 text-center">
+                <p className="text-base font-medium" aria-live="polite">
+                  {phaseLabel}
+                </p>
+                <p className="mt-1 text-xs text-emerald-200/70">{phaseMeta.hint}</p>
+                {voiceNotice && (
+                  <p className="mt-2 flex items-center justify-center gap-1.5 text-xs font-medium text-amber-300">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    {voiceNotice}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Live transcript */}
+            <div className="mx-auto mb-2 w-full max-w-lg px-4">
+              <div
+                ref={voiceScrollRef}
+                className="max-h-[24vh] space-y-2 overflow-y-auto rounded-2xl bg-black/25 p-3 sm:max-h-44"
+                aria-label="Conversation transcript"
+              >
+                {messages.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${
+                        m.role === 'user' ? 'rounded-tr-sm bg-white/15 text-white' : 'rounded-tl-sm bg-white/5 text-emerald-50'
+                      }`}
+                    >
+                      <MessageBody text={m.content} />
+                    </div>
+                  </div>
+                ))}
+                {(voicePhase === 'transcribing' || voicePhase === 'thinking') && (
+                  <div className="flex justify-start">
+                    <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-sm bg-white/5 px-3 py-2.5">
+                      {[0, 1, 2].map((i) => (
+                        <motion.span
+                          key={i}
+                          className="h-1.5 w-1.5 rounded-full bg-emerald-300"
+                          animate={{ y: [0, -3, 0], opacity: [0.4, 1, 0.4] }}
+                          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-3 px-6 pb-[calc(1.25rem_+_env(safe-area-inset-bottom))]">
+              <button
+                type="button"
+                onClick={toggleVoiceMute}
+                aria-pressed={voiceMuted}
+                aria-label={voiceMuted ? 'Unmute spoken replies' : 'Mute spoken replies'}
+                title={voiceMuted ? 'Unmute spoken replies' : 'Mute spoken replies'}
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition ${
+                  voiceMuted ? 'bg-white/10 text-emerald-200 hover:bg-white/15' : 'bg-white/15 text-white hover:bg-white/20'
+                }`}
+              >
+                {voiceMuted ? <VolumeX className="h-4 w-4" aria-hidden /> : <Volume2 className="h-4 w-4" aria-hidden />}
+              </button>
+              <button
+                type="button"
+                onClick={exitVoiceMode}
+                className="rounded-full bg-white/10 px-4 py-2 text-xs font-medium text-emerald-100 transition hover:bg-white/15"
+              >
+                End · back to chat
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
