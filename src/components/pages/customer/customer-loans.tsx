@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Slider } from '@/components/ui/slider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info, CreditCard, ShieldCheck, TrendingDown, Zap, ArrowRight, PiggyBank, Search } from 'lucide-react';
+import { Landmark, Plus, Calculator, CheckCircle, Clock, AlertCircle, XCircle, DollarSign, Calendar, Percent, FileText, ChevronRight, Info, CreditCard, ShieldCheck, TrendingDown, Zap, ArrowRight, PiggyBank, Search, Loader2 } from 'lucide-react';
 import { SwipeableRow, FAB, MobileSearchBar } from '@/components/shared/mobile-components';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import type { LoanProduct, RepaymentScheduleEntry } from '@/lib/types';
@@ -214,6 +214,8 @@ export function CustomerLoans() {
 
   // ---- Apply dialog state ----
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  /** Guards the Submit button against rapid double-clicks (duplicate applications). */
+  const [submittingApplication, setSubmittingApplication] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<LoanProduct | null>(null);
   const [applicationForm, setApplicationForm] = useState({
     amount: '',
@@ -289,6 +291,7 @@ export function CustomerLoans() {
   }
 
   function handleApply() {
+    if (submittingApplication) return; // double-click guard
     if (!selectedProduct) return;
     const { amount, purpose, duration, disbursementMethod, phoneNumber } = applicationForm;
     if (!amount || !purpose || !duration || !disbursementMethod || !phoneNumber) {
@@ -301,30 +304,36 @@ export function CustomerLoans() {
       return;
     }
 
-    // Call store action
-    applyForLoan({
-      productId: selectedProduct.id,
-      amount: numAmount,
-      purpose,
-      term: parseInt(duration),
-      termUnit: selectedProduct.termUnit,
-      disbursementMethod: disbursementMethod as 'momo' | 'bank',
-      disbursementNumber: phoneNumber,
-      interestRate: selectedProduct.interestRate,
-    });
+    setSubmittingApplication(true);
+    try {
+      // Call store action
+      applyForLoan({
+        productId: selectedProduct.id,
+        amount: numAmount,
+        purpose,
+        term: parseInt(duration),
+        termUnit: selectedProduct.termUnit,
+        disbursementMethod: disbursementMethod as 'momo' | 'bank',
+        disbursementNumber: phoneNumber,
+        interestRate: selectedProduct.interestRate,
+      });
 
-    const isAutoApprove = selectedProduct.autoApprove;
-    if (isAutoApprove) {
-      toast.success('Instant Loan Approved! 🎉', {
-        description: `${formatGHS(numAmount)} has been sent to your ${disbursementMethod === 'momo' ? 'Mobile Money' : 'bank account'} in under 60 seconds.`,
-      });
-    } else {
-      toast.success('Loan application submitted!', {
-        description: `Your application for ${formatGHS(numAmount)} (${selectedProduct.name}) is being reviewed.`,
-      });
+      const isAutoApprove = selectedProduct.autoApprove;
+      if (isAutoApprove) {
+        toast.success('Instant Loan Approved! 🎉', {
+          description: `${formatGHS(numAmount)} has been sent to your ${disbursementMethod === 'momo' ? 'Mobile Money' : 'bank account'} in under 60 seconds.`,
+        });
+      } else {
+        toast.success('Loan application submitted!', {
+          description: `Your application for ${formatGHS(numAmount)} (${selectedProduct.name}) is being reviewed — the loan officer and system admin can see it in their queues.`,
+        });
+      }
+      setApplyDialogOpen(false);
+      setSelectedProduct(null);
+      setActiveTab('my-loans');
+    } finally {
+      setSubmittingApplication(false);
     }
-    setApplyDialogOpen(false);
-    setSelectedProduct(null);
   }
 
   function toggleExpand(loanId: string) {
@@ -602,7 +611,7 @@ export function CustomerLoans() {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            filteredLoans.map((loan) => {
+                            filteredLoans.map((loan, loanIdx) => {
                             const isExpanded = expandedLoanId === loan.id;
                             const progressPercent =
                               loan.amount > 0
@@ -610,7 +619,7 @@ export function CustomerLoans() {
                                 : 0;
 
                             return (
-                              <AnimatePresence key={loan.id}>
+                              <AnimatePresence key={loan.id || `loan-row-${loanIdx}`}>
                                 <motion.tr
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
@@ -1278,10 +1287,15 @@ export function CustomerLoans() {
                   </Button>
                   <Button
                     onClick={handleApply}
+                    disabled={submittingApplication}
                     className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 sm:flex-none"
                   >
-                    <CheckCircle className="mr-1.5 h-4 w-4" />
-                    Submit Application
+                    {submittingApplication ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="mr-1.5 h-4 w-4" />
+                    )}
+                    {submittingApplication ? 'Submitting…' : 'Submit Application'}
                   </Button>
                 </DialogFooter>
               </DialogContent>

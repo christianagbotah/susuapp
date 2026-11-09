@@ -450,12 +450,16 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     if (application.termUnit === 'days') end.setDate(end.getDate() + term);
     else if (application.termUnit === 'weeks') end.setDate(end.getDate() + term * 7);
     else end.setMonth(end.getMonth() + term);
+    // Collision-proof id: a rapid double-submit lands two calls in the same
+    // millisecond, which used to produce identical `ln-<ts>` keys (React
+    // duplicate-key error) — the random suffix makes that impossible.
+    const loanId = `ln-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
     const newLoan: Loan = {
-      id: `ln-${Date.now()}`,
+      id: loanId,
       applicantId: 'usr-001',
-      applicantName: 'Ama Mensah',
-      applicantPhone: '0241234567',
+      applicantName: get().user?.name || 'Ama Mensah',
+      applicantPhone: get().user?.phone?.replace(/\s/g, '') || '0241234567',
       type: product?.type || application.type || 'personal',
       productId: application.productId,
       amount: numAmount,
@@ -492,8 +496,67 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
 
     set((s) => ({
       myLoans: [newLoan, ...s.myLoans],
-      wallets: s.wallets.map(w => w.type === 'main' ? { ...w, balance: w.balance + numAmount } : w),
+      // Money only moves when the loan is disbursed: instant (auto-approve)
+      // products pay out immediately, reviewed applications wait for the
+      // admin's disbursement — crediting the wallet at application time
+      // let customers spend money that hadn't been disbursed.
+      wallets: product?.autoApprove
+        ? s.wallets.map(w => w.type === 'main' ? { ...w, balance: w.balance + numAmount } : w)
+        : s.wallets,
     }));
+
+    // ---- Cross-portal pipeline: the application must be visible to the
+    // staff who process it, not just to the applicant. ----
+    // System admin: every loan (pending for review, active for instant
+    // products) lands in the admin loan book.
+    useAdminStore.getState().receiveLoan(newLoan);
+
+    if (product?.autoApprove) {
+      // Instant loan: disbursed already — post the books entries so the
+      // accountant sees the money move (Dr Loan Portfolio / Cr MoMo float,
+      // plus the processing-fee income when one applies).
+      const isMomo = (newLoan.disbursementMethod ?? 'momo') === 'momo';
+      const floatName = isMomo ? 'MTN MoMo Float' : 'GCB Bank — Operation Account';
+      const floatCode = isMomo ? '1020' : '1030';
+      const acc = useAccountantStore.getState();
+      if (numAmount > 0) {
+        acc.postEntry({
+          debitAccountCode: '1040', debitAccountName: 'Loan Portfolio (Net)',
+          creditAccountCode: floatCode, creditAccountName: floatName,
+          amount: numAmount,
+          narration: `Instant loan disbursed to ${newLoan.applicantName} — ${product?.name ?? 'loan'} (${newLoan.id})`,
+        });
+      }
+      if (processingFee > 0) {
+        acc.postEntry({
+          debitAccountCode: floatCode, debitAccountName: floatName,
+          creditAccountCode: '4020', creditAccountName: 'Loan Interest Income',
+          amount: processingFee,
+          narration: `Loan processing fee income — ${product?.name ?? 'loan'} (${newLoan.id})`,
+        });
+      }
+    } else {
+      // Reviewed product: enters the loan officer's pipeline at 'new' for
+      // KYC/documents, field visit and 5C appraisal.
+      const tenorMonths = application.termUnit === 'months'
+        ? term
+        : application.termUnit === 'weeks'
+          ? Math.max(1, Math.round(term / 4))
+          : Math.max(1, Math.round(term / 30));
+      useLoanOfficerStore.getState().receiveApplication({
+        id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        loanId: newLoan.id,
+        applicantName: newLoan.applicantName,
+        phone: newLoan.applicantPhone,
+        productName: product?.name || 'Personal Loan',
+        amount: numAmount,
+        tenorMonths,
+        purpose: newLoan.purpose,
+        stage: 'new',
+        submittedDate: now.split('T')[0],
+        branch: 'Accra Central',
+      });
+    }
   },
 
   makeLoanPayment: (loanId, amount, method) => {
@@ -767,6 +830,7 @@ interface AdminState {
   activePage: string;
 
   setActivePage: (page: string) => void;
+  receiveLoan: (loan: Loan) => void;
   approveLoan: (loanId: string) => void;
   rejectLoan: (loanId: string, reason: string) => void;
   resolveDispute: (disputeId: string, resolution: string) => void;
@@ -789,18 +853,48 @@ export const useAdminStore = create<AdminState>((set) => ({
 
   setActivePage: (page) => set({ activePage: page }),
 
+  /** Customer-channel intake: a newly submitted application joins the loan book. */
+  receiveLoan: (loan) => set((s) => ({ allLoans: [loan, ...s.allLoans] })),
+
   approveLoan: (loanId) => {
+    const stamp = new Date().toISOString();
     set((s) => ({
       allLoans: s.allLoans.map(l =>
-        l.id === loanId ? { ...l, status: 'approved' as const, reviewedBy: 'Daniel Tetteh', reviewDate: new Date().toISOString() } : l
+        l.id === loanId ? { ...l, status: 'approved' as const, reviewedBy: 'Daniel Tetteh', reviewDate: stamp } : l
+      ),
+    }));
+    // Sync the applicant's copy and the loan officer's pipeline so the whole
+    // chain (customer ↔ officer ↔ admin) shows the same truth.
+    useCustomerStore.setState((s) => ({
+      myLoans: s.myLoans.map(l =>
+        l.id === loanId ? { ...l, status: 'approved' as const, reviewedBy: 'Daniel Tetteh', reviewDate: stamp } : l
+      ),
+    }));
+    useLoanOfficerStore.setState((s) => ({
+      applications: s.applications.map(a =>
+        a.loanId === loanId && a.stage !== 'disbursed' && a.stage !== 'rejected'
+          ? { ...a, stage: 'approved' as const }
+          : a
       ),
     }));
   },
 
   rejectLoan: (loanId, reason) => {
+    const stamp = new Date().toISOString();
     set((s) => ({
       allLoans: s.allLoans.map(l =>
-        l.id === loanId ? { ...l, status: 'rejected' as const, reviewedBy: 'Daniel Tetteh', reviewDate: new Date().toISOString(), rejectReason: reason } : l
+        l.id === loanId ? { ...l, status: 'rejected' as const, reviewedBy: 'Daniel Tetteh', reviewDate: stamp, rejectReason: reason } : l
+      ),
+    }));
+    // Sync the applicant's copy and the loan officer's pipeline.
+    useCustomerStore.setState((s) => ({
+      myLoans: s.myLoans.map(l =>
+        l.id === loanId ? { ...l, status: 'rejected' as const, reviewedBy: 'Daniel Tetteh', reviewDate: stamp, rejectReason: reason } : l
+      ),
+    }));
+    useLoanOfficerStore.setState((s) => ({
+      applications: s.applications.map(a =>
+        a.loanId === loanId && a.stage !== 'disbursed' && a.stage !== 'approved' ? { ...a, stage: 'rejected' as const } : a
       ),
     }));
   },
@@ -858,26 +952,84 @@ export const useAdminStore = create<AdminState>((set) => ({
         });
       }
 
+      const updated: Loan = {
+        ...loan,
+        status: 'active' as const,
+        disbursementDate: new Date().toISOString().split('T')[0],
+        startDate,
+        endDate: endDate.toISOString().split('T')[0],
+        monthlyPayment: Math.round(totalRepayment / numPayments * 100) / 100,
+        disbursementMethod: method,
+        disbursementNumber: number,
+        disbursementProvider: method === 'momo' ? 'Mobile Money' : undefined,
+        repaymentSchedule: schedule,
+        totalInterest,
+        reviewedBy: 'Daniel Tetteh',
+        reviewDate: new Date().toISOString(),
+      };
+
+      // Money moves NOW: credit the applicant's main wallet and record the
+      // transaction — but only once (an already-active loan is a re-click,
+      // not a second payout).
+      if (loan.status !== 'active') {
+        const payTransaction: Transaction = {
+          id: `txn-${Date.now()}`,
+          userId: loan.applicantId,
+          type: 'loan_disbursement',
+          amount: loan.amount,
+          currency: 'GHS',
+          status: 'completed',
+          date: new Date().toISOString(),
+          description: `Loan disbursed — ${loan.purpose || 'loan'}`,
+          reference: `LND-${Date.now().toString().slice(-8)}`,
+          category: 'loan',
+          balanceAfter: 0, // filled by the wallet update below
+          counterpartName: 'iSusuPro Ghana',
+        };
+        useCustomerStore.setState((cs) => {
+          const mainId = cs.wallets.find(w => w.type === 'main')?.id;
+          return {
+            myLoans: cs.myLoans.map(l => (l.id === loanId ? updated : l)),
+            wallets: cs.wallets.map(w =>
+              w.type === 'main' && w.id === mainId ? { ...w, balance: w.balance + loan.amount } : w
+            ),
+            transactions: [
+              { ...payTransaction, balanceAfter: (cs.wallets.find(w => w.type === 'main')?.balance ?? 0) + loan.amount },
+              ...cs.transactions,
+            ],
+          };
+        });
+        // Loan officer's pipeline follows the money.
+        useLoanOfficerStore.setState((st) => ({
+          applications: st.applications.map(a => (a.loanId === loanId ? { ...a, stage: 'disbursed' as const } : a)),
+        }));
+        // The accountant's books see the disbursement: Dr Loan Portfolio /
+        // Cr float, plus the processing-fee income when one applies.
+        const isMomo = method === 'momo';
+        const floatCode = isMomo ? '1020' : '1030';
+        const floatName = isMomo ? 'MTN MoMo Float' : 'GCB Bank — Operation Account';
+        const acc = useAccountantStore.getState();
+        if (loan.amount > 0) {
+          acc.postEntry({
+            debitAccountCode: '1040', debitAccountName: 'Loan Portfolio (Net)',
+            creditAccountCode: floatCode, creditAccountName: floatName,
+            amount: loan.amount,
+            narration: `Loan disbursed to ${loan.applicantName} — ${loan.purpose || 'loan'} (${loanId})`,
+          });
+        }
+        const fee = updated.processingFee ?? 0;
+        if (fee > 0) {
+          acc.postEntry({
+            debitAccountCode: floatCode, debitAccountName: floatName,
+            creditAccountCode: '4020', creditAccountName: 'Loan Interest Income',
+            amount: fee,
+            narration: `Loan processing fee income — ${loan.applicantName} (${loanId})`,
+          });
+        }
+      }
+
       return {
-        allLoans: s.allLoans.map(l =>
-          l.id === loanId
-            ? {
-                ...l,
-                status: 'active' as const,
-                disbursementDate: new Date().toISOString().split('T')[0],
-                startDate,
-                endDate: endDate.toISOString().split('T')[0],
-                monthlyPayment: Math.round(totalRepayment / numPayments * 100) / 100,
-                disbursementMethod: method,
-                disbursementNumber: number,
-                disbursementProvider: method === 'momo' ? 'Mobile Money' : undefined,
-                repaymentSchedule: schedule,
-                totalInterest,
-                reviewedBy: 'Daniel Tetteh',
-                reviewDate: new Date().toISOString(),
-              }
-            : l
-        ),
+        allLoans: s.allLoans.map(l => (l.id === loanId ? updated : l)),
       };
     });
   },

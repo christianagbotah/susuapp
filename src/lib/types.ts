@@ -936,6 +936,9 @@ export interface StaffMember {
 
 export interface LoanApprovalRequest {
   id: string;
+  /** Join keys back into the loan officer's pipeline and the loan book. */
+  applicationId?: string;
+  loanId?: string;
   applicantName: string;
   applicantId: string;
   productName: string;
@@ -965,6 +968,8 @@ export interface BranchTarget {
 // ---- LOAN OFFICER ----
 export interface LoanApplication {
   id: string;
+  /** The customer-facing loan this pipeline entry came from (cross-store join key). */
+  loanId?: string;
   applicantName: string;
   phone: string;
   productName: string;

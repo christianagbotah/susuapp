@@ -50,13 +50,15 @@ interface BranchManagerState {
   /** Merge the logged-in staff persona into the store user (keeps other fields). */
   setUser: (patch: Partial<User>) => void;
   decideApproval: (id: string, decision: 'approved' | 'rejected') => void;
+  /** Officer-recommended applications arrive here for the BM's decision. */
+  receiveApproval: (req: LoanApprovalRequest) => void;
   updateStaffStatus: (id: string, status: StaffMember['status']) => void;
   addTarget: (target: Omit<BranchTarget, 'id'>) => void;
 }
 
 export const useBranchManagerStore = create<BranchManagerState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: staffUser('branch-manager', 'Kwame Osei', 'kwame.osei@isusupro.com', '024 000 1001', 'Makola Branch, Accra'),
       activePage: 'dashboard',
       staff: mockStaff,
@@ -64,8 +66,24 @@ export const useBranchManagerStore = create<BranchManagerState>()(
       targets: mockBranchTargets,
       setActivePage: (page) => set({ activePage: page }),
       setUser: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
-      decideApproval: (id, decision) => set((s) => ({
-        approvals: s.approvals.map((a) => (a.id === id ? { ...a, status: decision } : a)),
+      decideApproval: (id, decision) => {
+        set((s) => ({
+          approvals: s.approvals.map((a) => (a.id === id ? { ...a, status: decision } : a)),
+        }));
+        // The decision flows back into the officer's pipeline so the officer
+        // and the loan book stay in step with the manager's call.
+        const req = get().approvals.find((a) => a.id === id);
+        if (!req?.applicationId) return;
+        useLoanOfficerStore.setState((s) => ({
+          applications: s.applications.map((a) =>
+            a.id === req.applicationId && a.stage !== 'disbursed'
+              ? { ...a, stage: decision === 'approved' ? ('approved' as const) : ('rejected' as const) }
+              : a
+          ),
+        }));
+      },
+      receiveApproval: (req) => set((s) => ({
+        approvals: [req, ...s.approvals],
       })),
       updateStaffStatus: (id, status) => set((s) => ({
         staff: s.staff.map((m) => (m.id === id ? { ...m, status } : m)),
@@ -89,13 +107,15 @@ interface LoanOfficerState {
   /** Merge the logged-in staff persona into the store user (keeps other fields). */
   setUser: (patch: Partial<User>) => void;
   advanceStage: (id: string, stage: LoanApplication['stage']) => void;
+  /** Customer-channel intake: a newly submitted application enters the pipeline. */
+  receiveApplication: (app: LoanApplication) => void;
   saveAppraisal: (appraisal: LoanAppraisal) => void;
   recordFollowUp: (id: string, arrearsDays: number) => void;
 }
 
 export const useLoanOfficerStore = create<LoanOfficerState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: staffUser('loan-officer', 'Kwabena Mensah', 'kwabena.mensah@isusupro.com', '024 412 8890', 'Makola Branch, Accra'),
       activePage: 'dashboard',
       applications: mockLoanApplications,
@@ -103,8 +123,49 @@ export const useLoanOfficerStore = create<LoanOfficerState>()(
       portfolio: mockPortfolio,
       setActivePage: (page) => set({ activePage: page }),
       setUser: (patch) => set((s) => ({ user: { ...s.user, ...patch } })),
-      advanceStage: (id, stage) => set((s) => ({
-        applications: s.applications.map((a) => (a.id === id ? { ...a, stage } : a)),
+      advanceStage: (id, stage) => {
+        set((s) => ({
+          applications: s.applications.map((a) => (a.id === id ? { ...a, stage } : a)),
+        }));
+        if (stage !== 'recommended') return;
+        // Hand off to the branch manager: a recommended application becomes a
+        // pending BM approval request, scored from the officer's 5C appraisal.
+        const app = get().applications.find((a) => a.id === id);
+        if (!app || !app.loanId) return;
+        const bm = useBranchManagerStore.getState();
+        if (bm.approvals.some((r) => r.loanId === app.loanId)) return; // already handed off
+        const appraisal = get().appraisals.find((vc) => vc.applicationId === app.id);
+        const scores = appraisal
+          ? [appraisal.character, appraisal.capacity, appraisal.capital, appraisal.collateral, appraisal.conditions]
+          : null;
+        const appraisalScore = scores
+          ? Math.round((scores.reduce((sum, c) => sum + c, 0) / scores.length) * 20)
+          : 60;
+        const creditGrade =
+          appraisalScore >= 80 ? 'A' : appraisalScore >= 70 ? 'B' : appraisalScore >= 60 ? 'C' : appraisalScore >= 50 ? 'D' : 'E';
+        const monthlyDeduction = Math.round((app.amount / Math.max(1, app.tenorMonths)) * 100) / 100;
+        bm.receiveApproval({
+          id: `lar-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          applicationId: app.id,
+          loanId: app.loanId,
+          applicantName: app.applicantName,
+          applicantId: 'usr-001',
+          productName: app.productName,
+          amount: app.amount,
+          tenorMonths: app.tenorMonths,
+          interestRate: 8,
+          officerRecommendation: (appraisal?.recommendation === 'reject' ? 'reject' : appraisal?.recommendation === 'reduce_amount' ? 'review' : 'approve') as LoanApprovalRequest['officerRecommendation'],
+          officerName: get().user.name,
+          appraisalScore,
+          creditGrade,
+          status: 'pending_bm',
+          requestDate: new Date().toISOString().split('T')[0],
+          purpose: app.purpose,
+          monthlyDeduction,
+        });
+      },
+      receiveApplication: (app) => set((s) => ({
+        applications: [app, ...s.applications],
       })),
       saveAppraisal: (appraisal) => set((s) => {
         const exists = s.appraisals.some((a) => a.id === appraisal.id);
